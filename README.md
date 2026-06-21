@@ -27,8 +27,13 @@ Plex Manager serves as a beautiful, public-facing portal for your Plex server, h
 
 ### Public Portals
 - **Landing Page**: A sleek, modern login page showing live library statistics (e.g., "10,000+ Movies") to entice new users.
+- **Automated Invite Links**: Generate custom invite links with strict use-limits and automated duration tracking. Invited users claim access through a beautiful, dedicated landing page that automatically adds them to your Plex Server.
 - **Live System Status**: A public `/status` page displaying the uptime of your Plex server, request systems (Overseerr/Ombi), and download clients.
 - **Media Stack Integration**: Embed Sonarr and Radarr directly into the user portal for seamless requests.
+
+### Performance Optimized
+- **GZIP Compression**: All assets and API responses are compressed to ensure fast load times over any connection.
+- **In-Memory Caching**: Aggressive caching of Plex data (like library stats and active sessions) ensures the backend never hammers your Plex server.
 
 ---
 
