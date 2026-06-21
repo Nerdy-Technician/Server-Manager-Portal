@@ -1464,7 +1464,8 @@ const fetchImageBuffer = async (config, thumbPath) => {
     if (!thumbPath) return null;
     try {
         const uri = await getPlexConnectionUri(config);
-        const url = `${uri}${thumbPath}?X-Plex-Token=${config.plexToken}`;
+        const transcodeUrl = `/photo/:/transcode?width=150&height=225&minSize=1&upscale=1&url=${encodeURIComponent(thumbPath)}`;
+        const url = `${uri}${transcodeUrl}&X-Plex-Token=${config.plexToken}`;
         const res = await fetch(url);
         if (res.ok) {
             return Buffer.from(await res.arrayBuffer());
@@ -1534,7 +1535,7 @@ const generateNewsletterHtml = async (config) => {
         
         const renderGrid = async (categoryItems, categoryTitle, isSquare = false) => {
             if (!categoryItems || categoryItems.length === 0) return '';
-            const itemsToRender = categoryItems.slice(0, 20);
+            const itemsToRender = categoryItems.slice(0, 8);
             const imgWidth = 115;
             const imgHeight = isSquare ? 115 : 173;
             
@@ -1762,7 +1763,9 @@ app.post('/api/newsletter/send-now', requireAdmin, async (req, res) => {
             }
         }
         log(`Manual newsletter dispatch completed.`);
-    } catch(e) {
+        config.lastNewsletterSent = new Date().toISOString().split('T')[0];
+        await saveFile(CONFIG_PATH, config);
+    } catch (e) {
         log(`Newsletter send-now error: ${e.message}`);
         if (!res.headersSent) res.status(500).json({error: e.message});
     }
@@ -1836,6 +1839,33 @@ app.get('/api/users', requireAdmin, async (req, res) => {
 app.get('/api/deleted-users', requireAdmin, async (req, res) => {
     const deletedUsers = await loadFile(DELETED_USERS_PATH, []);
     res.json(deletedUsers.map(user => ({ ...user, blockId: getDeletedUserKey(user) })));
+});
+
+app.get('/api/tasks', requireAdmin, (req, res) => {
+    res.json(tasksInfo);
+});
+
+app.post('/api/tasks/run/:taskId', requireAdmin, async (req, res) => {
+    const { taskId } = req.params;
+    const task = tasksInfo.find(t => t.id === taskId);
+    if (!task) return res.status(404).json({ error: 'Task not found' });
+    
+    try {
+        const currentConfig = await loadFile(CONFIG_PATH, {});
+        task.lastRun = new Date().toISOString();
+        
+        switch(taskId) {
+            case 'syncPlexUsers': await syncUsers(currentConfig); break;
+            case 'checkAndSendNotifications': await checkAndSendNotifications(currentConfig); break;
+            case 'checkAndRevoke': await checkAndRevoke(currentConfig); break;
+            case 'checkAndSendNewsletter': await checkAndSendNewsletter(currentConfig); break;
+            case 'checkAndCleanupInactive': await checkAndCleanupInactive(currentConfig); break;
+            default: return res.status(400).json({ error: 'Invalid task' });
+        }
+        res.json({ message: `Task ${task.name} executed successfully.`, task });
+    } catch(e) {
+        res.status(500).json({ error: `Failed to execute task: ${e.message}` });
+    }
 });
 
 app.delete('/api/deleted-users/:blockId', requireAdmin, async (req, res) => {
@@ -2822,6 +2852,14 @@ const checkAndCleanupInactive = async (config) => {
     }
 };
 
+let tasksInfo = [
+    { id: 'syncPlexUsers', name: 'Sync Plex Users', description: 'Fetches latest user data from Plex.', lastRun: null, nextRun: null },
+    { id: 'checkAndSendNotifications', name: 'Expiry Notifications', description: 'Sends warning emails to users nearing expiry.', lastRun: null, nextRun: null },
+    { id: 'checkAndRevoke', name: 'Revoke Access', description: 'Removes Plex access for expired users.', lastRun: null, nextRun: null },
+    { id: 'checkAndSendNewsletter', name: 'Send Newsletter', description: 'Generates and sends automated newsletters.', lastRun: null, nextRun: null },
+    { id: 'checkAndCleanupInactive', name: 'Inactive Cleanup', description: 'Revokes access for users who have not watched anything recently.', lastRun: null, nextRun: null }
+];
+
 const startBackgroundService = async () => {
     if (serviceIntervalId) clearInterval(serviceIntervalId);
     
@@ -2831,24 +2869,43 @@ const startBackgroundService = async () => {
         return;
     }
     
-    await syncUsers(config).catch(e => log(`Error during initial sync: ${e.message}`));
-    await checkAndSendNotifications(config).catch(e => log(`Error during initial notifications check: ${e.message}`));
-    await checkAndRevoke(config).catch(e => log(`Error during initial check: ${e.message}`));
-    await checkAndSendNewsletter(config).catch(e => log(`Error during initial newsletter check: ${e.message}`));
-    await checkAndCleanupInactive(config).catch(e => log(`Error during initial inactive cleanup check: ${e.message}`));
-
     const intervalMinutes = config.checkIntervalMinutes || 60;
     const intervalMs = intervalMinutes * 60 * 1000;
     
+    const updateNextRun = () => {
+        const nextRun = new Date(Date.now() + intervalMs).toISOString();
+        tasksInfo.forEach(t => t.nextRun = nextRun);
+    };
+
+    const runBatch = async (currentConfig) => {
+        const now = new Date().toISOString();
+        tasksInfo.find(t => t.id === 'syncPlexUsers').lastRun = now;
+        await syncUsers(currentConfig).catch(e => log(`Error during sync: ${e.message}`));
+        
+        tasksInfo.find(t => t.id === 'checkAndSendNotifications').lastRun = now;
+        await checkAndSendNotifications(currentConfig).catch(e => log(`Error during notifications: ${e.message}`));
+        
+        tasksInfo.find(t => t.id === 'checkAndRevoke').lastRun = now;
+        await checkAndRevoke(currentConfig).catch(e => log(`Error during revoke: ${e.message}`));
+        
+        tasksInfo.find(t => t.id === 'checkAndSendNewsletter').lastRun = now;
+        await checkAndSendNewsletter(currentConfig).catch(e => log(`Error during newsletter: ${e.message}`));
+        
+        tasksInfo.find(t => t.id === 'checkAndCleanupInactive').lastRun = now;
+        await checkAndCleanupInactive(currentConfig).catch(e => log(`Error during inactive cleanup: ${e.message}`));
+        
+        updateNextRun();
+    };
+
     log(`Service started successfully. Checks will run every ${intervalMinutes} minute(s).`);
+    
+    // Initial run
+    await runBatch(config);
+    
     serviceIntervalId = setInterval(async () => {
         try {
             const currentConfig = await loadFile(CONFIG_PATH, config);
-            await syncUsers(currentConfig);
-            await checkAndSendNotifications(currentConfig);
-            await checkAndRevoke(currentConfig);
-            await checkAndSendNewsletter(currentConfig);
-            await checkAndCleanupInactive(currentConfig);
+            await runBatch(currentConfig);
         } catch (e) {
             log(`Error during hourly check: ${e.message}`);
         }
