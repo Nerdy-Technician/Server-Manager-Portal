@@ -549,6 +549,35 @@ const SettingsDashboard: React.FC = () => {
     const [referralRewardDays, setReferralRewardDays] = useState(7);
     const [announcement, setAnnouncement] = useState('');
     const [logoFile, setLogoFile] = useState<File | null>(null);
+    const [tasks, setTasks] = useState<any[]>([]);
+
+    const fetchTasks = async () => {
+        try {
+            const data = await apiFetch('/api/tasks');
+            setTasks(data);
+        } catch (e) {
+            addToast('Failed to load tasks', 'error');
+        }
+    };
+
+    useEffect(() => {
+        if (activeTab === 'tasks') {
+            fetchTasks();
+        }
+    }, [activeTab]);
+
+    const handleRunTask = async (taskId: string) => {
+        setLoading(true);
+        try {
+            const res = await apiFetch(`/api/tasks/run/${taskId}`, { method: 'POST' });
+            addToast(res.message || 'Task executed successfully', 'success');
+            await fetchTasks();
+        } catch (e) {
+            addToast(e instanceof Error ? e.message : 'Task failed', 'error');
+        } finally {
+            setLoading(false);
+        }
+    };
 
     useEffect(() => {
         if (initialSettings) {
@@ -753,7 +782,8 @@ const SettingsDashboard: React.FC = () => {
                             { label: 'Newsletter', value: 'newsletter' },
                             { label: 'Automated Cleanup', value: 'cleanup' },
                             { label: 'Media Stack', value: 'mediastack' },
-                            { label: 'Portal UI', value: 'branding' }
+                            { label: 'Portal UI', value: 'branding' },
+                            { label: 'Tasks', value: 'tasks' }
                         ]}
                     />
                 </div>
@@ -819,6 +849,16 @@ const SettingsDashboard: React.FC = () => {
                         }`}
                     >
                         Portal UI
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('tasks')}
+                        className={`bg-none border-none font-bold text-base py-2 px-1 transition-all border-b-2 cursor-pointer ${
+                            activeTab === 'tasks'
+                                ? 'text-plex border-plex'
+                                : 'text-muted border-transparent hover:text-text'
+                        }`}
+                    >
+                        Background Tasks
                     </button>
                 </div>
                 <div className="overflow-y-auto pr-2 flex-grow mb-4 custom-scrollbar">
@@ -1096,6 +1136,32 @@ const SettingsDashboard: React.FC = () => {
                                         <input type="number" min="0" className="w-full p-3 rounded-lg border border-border bg-background text-text outline-none focus:border-plex transition-all" value={referralRewardDays} onChange={e => setReferralRewardDays(Number(e.target.value))} />
                                     </div>
                                 </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {activeTab === 'tasks' && (
+                        <div className="mb-8 animate-fade-in">
+                            <h3 className="text-xl font-bold text-plex mb-4 border-b border-border pb-2">Background Tasks</h3>
+                            <div className="flex flex-col gap-4">
+                                {tasks.map(task => (
+                                    <div key={task.id} className="bg-background border border-border rounded-xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm">
+                                        <div>
+                                            <h4 className="font-bold text-lg mb-1">{task.name}</h4>
+                                            <p className="text-sm text-muted mb-2">{task.description}</p>
+                                            <div className="flex gap-4 text-xs">
+                                                <span className="bg-black/20 px-2 py-1 rounded"><strong>Last Run:</strong> {task.lastRun ? new Date(task.lastRun).toLocaleString() : 'Never'}</span>
+                                                <span className="bg-black/20 px-2 py-1 rounded"><strong>Next Run:</strong> {task.nextRun ? new Date(task.nextRun).toLocaleString() : 'Not Scheduled'}</span>
+                                            </div>
+                                        </div>
+                                        <button 
+                                            className="px-4 py-2 bg-plex text-background rounded-md font-bold hover:bg-plex-hover transition-colors flex items-center justify-center gap-2 whitespace-nowrap"
+                                            onClick={() => handleRunTask(task.id)}
+                                        >
+                                            Run Now
+                                        </button>
+                                    </div>
+                                ))}
                             </div>
                         </div>
                     )}
