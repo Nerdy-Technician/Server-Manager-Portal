@@ -1240,6 +1240,7 @@ app.get('/api/config', requireAdmin, async (req, res) => {
                 referralTrialDays: 3,
                 referralRewardDays: 7,
                 announcement: '',
+                hideStreamUsers: false,
                 navOrder: ['home', 'discover', 'status', 'logs', 'analytics', 'mediastack', 'request', 'settings', 'logout']
             },
         });
@@ -1253,7 +1254,7 @@ app.post('/api/config', async (req, res) => {
         newsletterFrequency, newsletterDay, publicDomain, requestUrl, contactUrl,
         sonarrUrl, sonarrApiKey, radarrUrl, radarrApiKey,
         inactiveCleanupEnabled, inactiveCleanupDays,
-        primaryColor, customLogoUrl, referralEnabled, referralTrialDays, referralRewardDays, announcement, navOrder
+        primaryColor, customLogoUrl, referralEnabled, referralTrialDays, referralRewardDays, announcement, navOrder, hideStreamUsers
     } = req.body;
 
     if (!token || !serverIdentifier) {
@@ -1310,6 +1311,7 @@ app.post('/api/config', async (req, res) => {
         referralTrialDays: parseInt(referralTrialDays, 10) || 3,
         referralRewardDays: parseInt(referralRewardDays, 10) || 7,
         announcement: announcement || '',
+        hideStreamUsers: !!hideStreamUsers,
         navOrder: Array.isArray(navOrder) ? navOrder : existingConfig.navOrder || ['home', 'discover', 'status', 'logs', 'analytics', 'mediastack', 'request', 'settings', 'logout']
     };
     await saveFile(CONFIG_PATH, config);
@@ -2550,14 +2552,16 @@ app.get('/api/plex/dashboard', requireAuth, async (req, res) => {
                 const progress = duration > 0 ? (viewOffset / duration) * 100 : 0;
                 const plexUrl = `https://app.plex.tv/desktop/#!/server/${config.serverIdentifier}/details?key=${encodeURIComponent(m.key)}`;
                 
+                const isHidden = !req.user.isAdmin && config.hideStreamUsers === true;
+                
                 return {
                     title: m.title,
                     type: m.type,
                     grandparentTitle: m.grandparentTitle,
                     year: m.year,
                     thumb: m.grandparentThumb || m.parentThumb || m.thumb,
-                    user: m.User ? m.User.title : 'Unknown User',
-                    userThumb: m.User ? m.User.thumb : null,
+                    user: isHidden ? 'Anonymous User' : (m.User ? m.User.title : 'Unknown User'),
+                    userThumb: isHidden ? null : (m.User ? m.User.thumb : null),
                     playerProduct: player.product || 'Unknown Device',
                     playerTitle: player.title || 'Unknown Player',
                     playerAddress: player.address || 'Unknown IP',

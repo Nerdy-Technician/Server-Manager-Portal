@@ -831,6 +831,7 @@ var SettingsDashboard = () => {
   const [servers, setServers] = useState([]);
   const [selectedServer, setSelectedServer] = useState("");
   const [checkInterval, setCheckInterval] = useState(60);
+  const [hideStreamUsers, setHideStreamUsers] = useState(false);
   const [activeTab, setActiveTab] = useState(() => {
     const hash = window.location.hash.replace("#", "");
     return ["plex", "smtp", "newsletter", "cleanup", "mediastack", "branding", "navigation", "status", "invites", "tasks"].includes(hash) ? hash : "plex";
@@ -924,6 +925,7 @@ var SettingsDashboard = () => {
       setReferralRewardDays(initialSettings.referralRewardDays || 7);
       setAnnouncement(initialSettings.announcement || "");
       if (initialSettings.navOrder) setNavOrder(initialSettings.navOrder);
+      setHideStreamUsers(!!initialSettings.hideStreamUsers);
       setTestRecipient("");
       setServers([]);
     }
@@ -1006,7 +1008,8 @@ var SettingsDashboard = () => {
       referralTrialDays,
       referralRewardDays,
       announcement,
-      navOrder
+      navOrder,
+      hideStreamUsers
     });
     document.documentElement.style.setProperty("--color-plex", primaryColor);
   };
@@ -1155,6 +1158,21 @@ var SettingsDashboard = () => {
             /* @__PURE__ */ jsx("input", { className: "w-full p-3 rounded-lg border border-border bg-background text-text outline-none focus:border-plex focus:ring-1 focus:ring-plex transition-all", id: "checkInterval", type: "number", value: checkInterval, onChange: (e) => setCheckInterval(Number(e.target.value)), min: "1" }),
             /* @__PURE__ */ jsx("small", { children: "How often to check for expired users in the background." })
           ] }),
+          /* @__PURE__ */ jsx("div", { className: "mb-4", style: { marginTop: "1rem" }, children: /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between p-4 border border-border rounded-lg bg-background", children: [
+            /* @__PURE__ */ jsxs("div", { children: [
+              /* @__PURE__ */ jsx("h4", { className: "font-bold text-text", children: "Hide Stream User Details" }),
+              /* @__PURE__ */ jsx("p", { className: "text-sm text-muted", children: "Hide usernames and avatars from active streams for non-admin users (e.g. on the public status page)." })
+            ] }),
+            /* @__PURE__ */ jsx(
+              "button",
+              {
+                onClick: () => setHideStreamUsers(!hideStreamUsers),
+                "aria-label": "Toggle hide stream users",
+                className: `relative inline-flex items-center w-12 h-6 rounded-full transition-all flex-shrink-0 border ${hideStreamUsers ? "bg-plex border-plex" : "bg-border border-border"}`,
+                children: /* @__PURE__ */ jsx("span", { className: `inline-block w-4 h-4 bg-white rounded-full shadow transition-transform duration-300 ${hideStreamUsers ? "translate-x-7" : "translate-x-1"}` })
+              }
+            )
+          ] }) }),
           /* @__PURE__ */ jsxs("div", { className: "mb-4", style: { marginTop: "1rem" }, children: [
             /* @__PURE__ */ jsx("label", { htmlFor: "requestUrl", children: "Request URL" }),
             /* @__PURE__ */ jsx("input", { className: "w-full p-3 rounded-lg border border-border bg-background text-text outline-none focus:border-plex focus:ring-1 focus:ring-plex transition-all", id: "requestUrl", type: "text", value: requestUrl, onChange: (e) => setRequestUrl(e.target.value), placeholder: "https://yourdomain.com" }),

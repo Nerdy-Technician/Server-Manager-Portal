@@ -696,6 +696,7 @@ const SettingsDashboard: React.FC = () => {
     const [servers, setServers] = useState<PlexServer[]>([]);
     const [selectedServer, setSelectedServer] = useState('');
     const [checkInterval, setCheckInterval] = useState(60);
+    const [hideStreamUsers, setHideStreamUsers] = useState(false);
     const [activeTab, setActiveTab] = useState(() => {
         const hash = window.location.hash.replace('#', '');
         return ['plex', 'smtp', 'newsletter', 'cleanup', 'mediastack', 'branding', 'navigation', 'status', 'invites', 'tasks'].includes(hash) ? hash : 'plex';
@@ -804,6 +805,7 @@ const SettingsDashboard: React.FC = () => {
             setReferralRewardDays(initialSettings.referralRewardDays || 7);
             setAnnouncement(initialSettings.announcement || '');
             if (initialSettings.navOrder) setNavOrder(initialSettings.navOrder);
+            setHideStreamUsers(!!initialSettings.hideStreamUsers);
             setTestRecipient('');
             setServers([]);
         }
@@ -893,7 +895,8 @@ const SettingsDashboard: React.FC = () => {
             referralTrialDays,
             referralRewardDays,
             announcement,
-            navOrder
+            navOrder,
+            hideStreamUsers
         });
         document.documentElement.style.setProperty('--color-plex', primaryColor);
     };
@@ -1056,6 +1059,19 @@ const SettingsDashboard: React.FC = () => {
                                 <label htmlFor="checkInterval">Check Interval (minutes)</label>
                                 <input className="w-full p-3 rounded-lg border border-border bg-background text-text outline-none focus:border-plex focus:ring-1 focus:ring-plex transition-all" id="checkInterval" type="number" value={checkInterval} onChange={e => setCheckInterval(Number(e.target.value))} min="1" />
                                 <small>How often to check for expired users in the background.</small>
+                            </div>
+                            
+                            <div className="mb-4" style={{ marginTop: '1rem' }}>
+                                <div className="flex items-center justify-between p-4 border border-border rounded-lg bg-background">
+                                    <div>
+                                        <h4 className="font-bold text-text">Hide Stream User Details</h4>
+                                        <p className="text-sm text-muted">Hide usernames and avatars from active streams for non-admin users (e.g. on the public status page).</p>
+                                    </div>
+                                    <button onClick={() => setHideStreamUsers(!hideStreamUsers)} aria-label="Toggle hide stream users"
+                                        className={`relative inline-flex items-center w-12 h-6 rounded-full transition-all flex-shrink-0 border ${hideStreamUsers ? 'bg-plex border-plex' : 'bg-border border-border'}`}>
+                                        <span className={`inline-block w-4 h-4 bg-white rounded-full shadow transition-transform duration-300 ${hideStreamUsers ? 'translate-x-7' : 'translate-x-1'}`} />
+                                    </button>
+                                </div>
                             </div>
                             <div className="mb-4" style={{ marginTop: '1rem' }}>
                                 <label htmlFor="requestUrl">Request URL</label>
