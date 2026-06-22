@@ -1410,13 +1410,9 @@ const StatusMonitorSettings: React.FC<{ config: any; onSave: (cfg: any) => void 
                                 className="flex-1 p-2 rounded bg-background border border-border focus:border-plex outline-none text-sm" 
                                 placeholder="Group Name" 
                             />
-                            <input 
-                                type="text" 
-                                value={group.id} 
-                                onChange={(e) => updateGroup(group.id, 'id', e.target.value)} 
-                                className="flex-1 p-2 rounded bg-background border border-border focus:border-plex outline-none text-sm font-mono" 
-                                placeholder="Group ID" 
-                            />
+                            <div className="flex-1 flex items-center px-3 py-2 rounded bg-black/40 border border-border/50 text-sm font-mono text-muted cursor-not-allowed overflow-hidden text-ellipsis whitespace-nowrap">
+                                {group.id}
+                            </div>
                         </div>
                         <button onClick={() => removeGroup(group.id)} className="text-red-400 hover:text-red-300 text-sm font-medium transition-colors bg-red-400/10 px-3 py-2 rounded flex-shrink-0">Remove</button>
                     </div>
@@ -1454,14 +1450,16 @@ const StatusMonitorSettings: React.FC<{ config: any; onSave: (cfg: any) => void 
                             <div className="flex flex-wrap items-center justify-between gap-3 mt-1 text-sm border-t border-border/50 pt-3">
                                 <div className="flex items-center gap-2">
                                     <span className="text-muted">Group:</span>
-                                    <select 
-                                        value={service.groupId || ''} 
-                                        onChange={(e) => updateService(service.id, 'groupId', e.target.value || null)} 
-                                        className="p-1.5 rounded bg-background border border-border focus:border-plex outline-none text-xs"
-                                    >
-                                        <option value="">None</option>
-                                        {localConfig.groups.map((g: any) => <option key={g.id} value={g.id}>{g.name}</option>)}
-                                    </select>
+                                    <div className="w-48">
+                                        <CustomSelect 
+                                            value={service.groupId || ''} 
+                                            onChange={(val) => updateService(service.id, 'groupId', val || null)} 
+                                            options={[
+                                                { label: 'None', value: '' },
+                                                ...localConfig.groups.map((g: any) => ({ label: g.name, value: g.id }))
+                                            ]}
+                                        />
+                                    </div>
                                 </div>
                                 <button
                                     onClick={() => updateService(service.id, 'isCritical', !service.isCritical)}
