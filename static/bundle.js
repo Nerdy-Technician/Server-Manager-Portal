@@ -760,7 +760,10 @@ var InvitesSettings = ({ addToast }) => {
           inv.durationDays,
           " days"
         ] }),
-        /* @__PURE__ */ jsx("td", { className: "p-3", children: inv.maxUses === "unlimited" ? "Unlimited" : `${inv.currentUses} / ${inv.maxUses}` }),
+        /* @__PURE__ */ jsxs("td", { className: "p-3", children: [
+          /* @__PURE__ */ jsx("div", { className: "font-medium", children: inv.maxUses === "unlimited" ? "Unlimited" : `${inv.currentUses} / ${inv.maxUses}` }),
+          inv.usedBy && inv.usedBy.length > 0 && /* @__PURE__ */ jsx("div", { className: "mt-1.5 flex flex-wrap gap-1 max-w-[200px]", children: inv.usedBy.map((u, idx) => /* @__PURE__ */ jsx("span", { className: "text-[10px] text-plex bg-plex/10 border border-plex/20 px-1.5 py-0.5 rounded shadow-sm", title: `Claimed on ${new Date(u.date).toLocaleString()} by ${u.email}`, children: u.username }, idx)) })
+        ] }),
         /* @__PURE__ */ jsxs("td", { className: "p-3 text-muted text-sm", children: [
           new Date(inv.createdAt).toLocaleDateString(),
           inv.sentTo && /* @__PURE__ */ jsxs("div", { className: "text-xs text-blue-400 mt-1", children: [

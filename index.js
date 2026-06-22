@@ -2093,8 +2093,19 @@ app.post('/api/invites/:code/claim', authRateLimit, async (req, res) => {
         await inviteUserToPlex(newUser, config).catch(e => log('Failed to invite claimed user: ' + e.message));
         
         // Update invite usage
-        invites[inviteIndex].currentUses += 1;
-        await saveFile(INVITES_PATH, invites);
+        // Re-read to prevent race condition during long Plex API calls
+        let freshInvites = await loadFile(INVITES_PATH, []);
+        const freshIndex = freshInvites.findIndex(i => i.code === req.params.code);
+        if (freshIndex !== -1) {
+            freshInvites[freshIndex].currentUses = (freshInvites[freshIndex].currentUses || 0) + 1;
+            if (!freshInvites[freshIndex].usedBy) freshInvites[freshIndex].usedBy = [];
+            freshInvites[freshIndex].usedBy.push({
+                username: plexUser.username,
+                email: plexUser.email,
+                date: new Date().toISOString()
+            });
+            await saveFile(INVITES_PATH, freshInvites);
+        }
         
         await appendAuditLog('invite_claimed', { username: plexUser.username, id: plexUser.id }, newUser, { code: invite.code });
         

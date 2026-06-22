@@ -609,7 +609,16 @@ const InvitesSettings: React.FC<{ addToast: (msg: string, type: 'success' | 'err
                                 </td>
                                 <td className="p-3 font-medium">{inv.durationDays} days</td>
                                 <td className="p-3">
-                                    {inv.maxUses === 'unlimited' ? 'Unlimited' : `${inv.currentUses} / ${inv.maxUses}`}
+                                    <div className="font-medium">{inv.maxUses === 'unlimited' ? 'Unlimited' : `${inv.currentUses} / ${inv.maxUses}`}</div>
+                                    {inv.usedBy && inv.usedBy.length > 0 && (
+                                        <div className="mt-1.5 flex flex-wrap gap-1 max-w-[200px]">
+                                            {inv.usedBy.map((u: any, idx: number) => (
+                                                <span key={idx} className="text-[10px] text-plex bg-plex/10 border border-plex/20 px-1.5 py-0.5 rounded shadow-sm" title={`Claimed on ${new Date(u.date).toLocaleString()} by ${u.email}`}>
+                                                    {u.username}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    )}
                                 </td>
                                 <td className="p-3 text-muted text-sm">
                                     {new Date(inv.createdAt).toLocaleDateString()}
