@@ -4537,20 +4537,37 @@ const Navigation: React.FC<NavigationProps> = ({ currentRoute, onNavigate, onLog
 
             {/* Desktop Sidebar */}
             <div className="hidden md:flex flex-col w-72 bg-card border-r border-border p-6 sticky top-0 h-screen shadow-2xl">
-                <div className="flex flex-col items-center mb-10">
-                    <h2 className="text-2xl font-bold text-text text-center mb-4">{serverName}</h2>
-                    <div className="relative">
-                        <div className="w-24 h-24 rounded-full p-[2px] bg-gradient-to-r from-plex to-[#e5a00d] shadow-lg shadow-plex/20">
-                            <div className="w-full h-full rounded-full overflow-hidden bg-card">
+                <div className="flex flex-col items-center mb-10 mt-4 group cursor-default">
+                    <div className="relative mb-6">
+                        {/* Soft ambient background glow */}
+                        <div className="absolute inset-0 bg-plex blur-[25px] opacity-20 group-hover:opacity-40 transition-opacity duration-700 rounded-full"></div>
+                        {/* Spinning gradient border */}
+                        <div className="absolute -inset-1 rounded-full bg-gradient-to-tr from-plex via-amber-300 to-orange-600 opacity-60 group-hover:opacity-100 group-hover:rotate-180 transition-all duration-1000 ease-out"></div>
+                        {/* Inner cutout for the image */}
+                        <div className="relative w-28 h-28 rounded-full p-[4px] shadow-2xl bg-card">
+                            <div className="w-full h-full rounded-full overflow-hidden bg-background">
                                 <img
-                                    src={adminThumb ? (adminThumb.startsWith('http') ? adminThumb : `/api/plex/image?path=${encodeURIComponent(adminThumb)}&width=192&height=192`) : '/static/logo.png'}
-                                    alt="Admin Profile"
-                                    className="w-full h-full object-cover"
+                                    src={adminThumb ? (adminThumb.startsWith('http') ? adminThumb : `/api/plex/image?path=${encodeURIComponent(adminThumb)}&width=256&height=256`) : '/static/logo.png'}
+                                    alt="Server Logo"
+                                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-out"
                                     onError={(e) => {
                                         (e.target as HTMLImageElement).src = '/static/logo.png';
                                     }}
                                 />
                             </div>
+                        </div>
+                    </div>
+                    
+                    <div className="flex flex-col items-center text-center px-2">
+                        <h2 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-b from-white via-gray-100 to-gray-400 drop-shadow-md tracking-tight leading-tight line-clamp-2">
+                            {serverName}
+                        </h2>
+                        <div className="mt-2 flex items-center gap-2">
+                            <div className="h-px w-6 bg-gradient-to-r from-transparent to-plex/50"></div>
+                            <span className="text-[10px] uppercase tracking-[0.3em] text-plex font-bold drop-shadow-[0_0_8px_rgba(229,160,13,0.5)]">
+                                Portal
+                            </span>
+                            <div className="h-px w-6 bg-gradient-to-l from-transparent to-plex/50"></div>
                         </div>
                     </div>
                 </div>
