@@ -1462,151 +1462,190 @@ app.get('/api/plex/image', requireAuth, async (req, res) => {
     }
 });
 
-// Plex interaction endpoints
-let cachedPlexStats = null;
-let lastPlexStatsFetch = 0;
+// ─── Plex Library Size Background Task ───────────────────────────────────────
+// The library sizes are computed once every 24 hours in the background.
+// The /api/plex/stats endpoint ONLY reads from the cache file — it never
+// triggers a Plex fetch itself.
 
 const PLEX_STATS_CACHE_PATH = path.join(process.cwd(), 'plex-stats.json');
-
+let cachedPlexStats = null;          // in-memory mirror of the cache file
 let isBuildingPlexStats = false;
 
-const fetchPlexStatsInternal = async (config) => {
-    // Try to load from memory
-    if (cachedPlexStats && (Date.now() - lastPlexStatsFetch < 24 * 60 * 60 * 1000)) {
-        return cachedPlexStats;
-    }
-    
-    // Try to load from disk if memory is empty
-    if (!cachedPlexStats) {
-        try {
-            const diskCache = JSON.parse(await fs.readFile(PLEX_STATS_CACHE_PATH, 'utf8'));
-            if (diskCache && diskCache.moviesBytes !== undefined) {
-                cachedPlexStats = diskCache;
-                lastPlexStatsFetch = Date.now(); // pretend we just fetched it so we don't block startup
-                // Fire an async fetch in the background to update it silently
-                if (!isBuildingPlexStats) {
-                    setTimeout(() => fetchPlexStatsInternalActual(config).catch(e => log(`Background stats update failed: ${e.message}`)), 1000);
-                }
-                return cachedPlexStats;
-            }
-        } catch (e) {
-            // No valid disk cache
+/**
+ * Reads the cached stats from disk into memory.
+ * Returns the stats object, or null if no valid cache exists yet.
+ */
+const loadPlexStatsFromDisk = async () => {
+    try {
+        const raw = await fs.readFile(PLEX_STATS_CACHE_PATH, 'utf8');
+        const parsed = JSON.parse(raw);
+        if (parsed && parsed.generatedAt) {
+            cachedPlexStats = parsed;
+            return parsed;
         }
+    } catch (e) {
+        // file doesn't exist yet — fine
     }
-
-    // If still no cache, fire build in background and return building status
-    if (!isBuildingPlexStats) {
-        log('No Plex stats cache found. Starting background generation...');
-        setTimeout(() => fetchPlexStatsInternalActual(config).catch(e => log(`Background stats update failed: ${e.message}`)), 0);
-    }
-    
-    return {
-        movies: 0, shows: 0, music: 0,
-        moviesBytes: 0, showsBytes: 0, musicBytes: 0,
-        isBuilding: true
-    };
+    return null;
 };
 
-const fetchPlexStatsInternalActual = async (config) => {
+/**
+ * Crawls Plex for library sizes (paginated, 1 000 items per request).
+ * Writes results to plex-stats.json and updates the in-memory cache.
+ * Never throws — errors are logged and the function returns null.
+ */
+const buildPlexStatsCache = async () => {
+    if (isBuildingPlexStats) {
+        log('[PlexStats] Build already in progress, skipping.');
+        return;
+    }
+    const config = await loadFile(CONFIG_PATH, null);
+    if (!config || !config.plexToken || !config.serverIdentifier) {
+        log('[PlexStats] Not configured yet — skipping build.');
+        return;
+    }
     isBuildingPlexStats = true;
+    log('[PlexStats] Starting background library size build...');
     try {
         const uri = await getPlexConnectionUri(config);
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 600000); // 10 minute timeout for huge libraries
+        const timer = setTimeout(() => controller.abort(), 600000); // 10 min hard cap
+
         const sectionsRes = await fetch(`${uri}/library/sections`, {
             headers: { 'X-Plex-Token': config.plexToken, 'Accept': 'application/json' },
             signal: controller.signal
         });
-        if (!sectionsRes.ok) throw new Error('Failed to connect to local Plex server.');
-        const sectionsData = await sectionsRes.json();
-        const directories = sectionsData.MediaContainer.Directory || [];
-        let totalMoviesCount = 0; let totalShowsCount = 0; let totalMusicCount = 0;
-        let totalMoviesBytes = 0; let totalShowsBytes = 0; let totalMusicBytes = 0;
-        
+        if (!sectionsRes.ok) throw new Error(`Sections request failed: ${sectionsRes.status}`);
+        const { MediaContainer: { Directory: directories = [] } } = await sectionsRes.json();
+
+        let totalMoviesCount = 0, totalShowsCount = 0, totalMusicCount = 0;
+        let totalMoviesBytes = 0, totalShowsBytes = 0, totalMusicBytes = 0;
+
         for (const dir of directories) {
             try {
-                // Get count
-                const sectionCountRes = await fetch(`${uri}/library/sections/${dir.key}/all?X-Plex-Container-Start=0&X-Plex-Container-Size=0`, {
-                    headers: { 'X-Plex-Token': config.plexToken, 'Accept': 'application/json' },
-                    signal: controller.signal
-                });
-                if (sectionCountRes.ok) {
-                    const sectionAllData = await sectionCountRes.json();
-                    const count = sectionAllData.MediaContainer.totalSize || sectionAllData.MediaContainer.size || 0;
-                    if (dir.type === 'movie') totalMoviesCount += count;
-                    else if (dir.type === 'show') totalShowsCount += count;
-                    else if (dir.type === 'artist') totalMusicCount += count;
+                // ── Item count (single zero-size request) ──
+                const countRes = await fetch(
+                    `${uri}/library/sections/${dir.key}/all?X-Plex-Container-Start=0&X-Plex-Container-Size=0`,
+                    { headers: { 'X-Plex-Token': config.plexToken, 'Accept': 'application/json' }, signal: controller.signal }
+                );
+                if (countRes.ok) {
+                    const { MediaContainer: mc } = await countRes.json();
+                    const count = mc.totalSize || mc.size || 0;
+                    if (dir.type === 'movie')  totalMoviesCount += count;
+                    else if (dir.type === 'show')   totalShowsCount  += count;
+                    else if (dir.type === 'artist') totalMusicCount  += count;
                 }
 
-                // Get bytes with pagination to prevent OOM / timeouts
-                let typeParam = '';
-                if (dir.type === 'movie') typeParam = '?type=1';
-                else if (dir.type === 'show') typeParam = '?type=4';
-                else if (dir.type === 'artist') typeParam = '?type=10';
-                
-                if (typeParam) {
-                    let start = 0;
-                    const size = 1000;
-                    let bytes = 0;
-                    while (true) {
-                        const sectionItemsRes = await fetch(`${uri}/library/sections/${dir.key}/all${typeParam}&X-Plex-Container-Start=${start}&X-Plex-Container-Size=${size}`, {
-                            headers: { 'X-Plex-Token': config.plexToken, 'Accept': 'application/json' },
-                            signal: controller.signal
-                        });
-                        if (!sectionItemsRes.ok) break;
-                        const data = await sectionItemsRes.json();
-                        const items = data.MediaContainer.Metadata || [];
-                        if (items.length === 0) break;
-                        
-                        for (const item of items) {
-                            if (item.Media) {
-                                for (const media of item.Media) {
-                                    if (media.Part) {
-                                        for (const part of media.Part) {
-                                            if (part.size) bytes += parseInt(part.size);
-                                        }
-                                    }
-                                }
+                // ── Bytes (paginated) ──
+                const typeParam = dir.type === 'movie' ? '?type=1' : dir.type === 'show' ? '?type=4' : dir.type === 'artist' ? '?type=10' : '';
+                if (!typeParam) continue;
+
+                let start = 0, bytes = 0;
+                const PAGE = 1000;
+                while (true) {
+                    const pageRes = await fetch(
+                        `${uri}/library/sections/${dir.key}/all${typeParam}&X-Plex-Container-Start=${start}&X-Plex-Container-Size=${PAGE}`,
+                        { headers: { 'X-Plex-Token': config.plexToken, 'Accept': 'application/json' }, signal: controller.signal }
+                    );
+                    if (!pageRes.ok) break;
+                    const { MediaContainer: { Metadata: items = [] } } = await pageRes.json();
+                    if (items.length === 0) break;
+                    for (const item of items) {
+                        for (const media of item.Media || []) {
+                            for (const part of media.Part || []) {
+                                if (part.size) bytes += parseInt(part.size);
                             }
                         }
-                        start += size;
                     }
-                    if (dir.type === 'movie') totalMoviesBytes += bytes;
-                    else if (dir.type === 'show') totalShowsBytes += bytes;
-                    else if (dir.type === 'artist') totalMusicBytes += bytes;
+                    start += PAGE;
                 }
-            } catch (e) { log(`Failed to fetch size for section ${dir.title}: ${e.message}`); }
+                if (dir.type === 'movie')  totalMoviesBytes += bytes;
+                else if (dir.type === 'show')   totalShowsBytes  += bytes;
+                else if (dir.type === 'artist') totalMusicBytes  += bytes;
+            } catch (e) {
+                log(`[PlexStats] Failed to fetch section "${dir.title}": ${e.message}`);
+            }
         }
-        clearTimeout(timeout);
-        cachedPlexStats = { 
+        clearTimeout(timer);
+
+        const stats = {
             movies: totalMoviesCount, shows: totalShowsCount, music: totalMusicCount,
-            moviesBytes: totalMoviesBytes, showsBytes: totalShowsBytes, musicBytes: totalMusicBytes 
+            moviesBytes: totalMoviesBytes, showsBytes: totalShowsBytes, musicBytes: totalMusicBytes,
+            generatedAt: Date.now()
         };
-        lastPlexStatsFetch = Date.now();
-        try {
-            await fs.writeFile(PLEX_STATS_CACHE_PATH, JSON.stringify(cachedPlexStats));
-            log('Successfully generated and saved new plex-stats.json');
-        } catch (e) {
-            log(`Failed to write plex stats cache: ${e.message}`);
-        }
-        return cachedPlexStats;
+        cachedPlexStats = stats;
+        await fs.writeFile(PLEX_STATS_CACHE_PATH, JSON.stringify(stats, null, 2));
+        log(`[PlexStats] Cache built and saved — movies: ${totalMoviesCount}, shows: ${totalShowsCount}, music: ${totalMusicCount}`);
+    } catch (e) {
+        log(`[PlexStats] Build failed: ${e.message}`);
     } finally {
         isBuildingPlexStats = false;
     }
 };
 
+/**
+ * Called once at startup.
+ * 1. Loads existing cache from disk immediately (so the API responds instantly).
+ * 2. If cache is older than 24 h (or missing), kicks off a fresh build.
+ * 3. Schedules a rebuild every 24 hours.
+ */
+const startPlexStatsBackgroundTask = async () => {
+    const INTERVAL_MS = 24 * 60 * 60 * 1000; // 24 hours
+
+    const existing = await loadPlexStatsFromDisk();
+    if (existing) {
+        const ageMs = Date.now() - (existing.generatedAt || 0);
+        log(`[PlexStats] Loaded existing cache (age: ${Math.round(ageMs / 60000)} min).`);
+        if (ageMs >= INTERVAL_MS) {
+            log('[PlexStats] Cache is stale — triggering immediate rebuild.');
+            buildPlexStatsCache(); // async, don't await
+        }
+    } else {
+        log('[PlexStats] No cache found — triggering initial build.');
+        buildPlexStatsCache(); // async, don't await
+    }
+
+    // Schedule recurring rebuild every 24 hours
+    setInterval(() => {
+        log('[PlexStats] Scheduled 24-hour rebuild starting...');
+        buildPlexStatsCache();
+    }, INTERVAL_MS);
+};
+
+// ── API endpoint — read-only, never triggers a Plex fetch ──
 app.get('/api/plex/stats', async (req, res) => {
-    const config = await loadFile(CONFIG_PATH, null);
-    if (!config || !config.plexToken || !config.serverIdentifier) {
-        return res.status(400).json({ error: 'App not configured.' });
+    if (cachedPlexStats) {
+        return res.json(cachedPlexStats);
     }
-    try {
-        const stats = await fetchPlexStatsInternal(config);
-        res.json(stats);
-    } catch (error) {
-        log(`Error fetching plex stats: ${error.message}`);
-        res.status(500).json({ error: 'Failed to fetch plex stats' });
+    // Cache not ready yet — try disk one more time
+    const disk = await loadPlexStatsFromDisk();
+    if (disk) return res.json(disk);
+    // Still nothing — build is running in background
+    return res.json({
+        movies: 0, shows: 0, music: 0,
+        moviesBytes: 0, showsBytes: 0, musicBytes: 0,
+        isBuilding: true
+    });
+});
+
+// Admin-only: manually trigger a library size rebuild
+app.post('/api/plex/stats/rebuild', requireAdmin, async (req, res) => {
+    if (isBuildingPlexStats) {
+        return res.json({ status: 'already_running', message: 'A rebuild is already in progress.' });
     }
+    // Fire async — don't block the response
+    buildPlexStatsCache();
+    return res.json({ status: 'started', message: 'Library size rebuild started in the background.' });
+});
+
+// Admin-only: get the current build status and last generated timestamp
+app.get('/api/plex/stats/status', requireAdmin, async (req, res) => {
+    const stats = cachedPlexStats || await loadPlexStatsFromDisk();
+    return res.json({
+        isBuilding: isBuildingPlexStats,
+        lastGeneratedAt: stats?.generatedAt || null,
+        hasCache: !!stats
+    });
 });
 
 const calculateUptime30Days = (healthDataObj) => {
@@ -3570,4 +3609,5 @@ app.listen(PORT, async () => {
     runMonitorCycle();
     setInterval(runMonitorCycle, 15000);
     startBackgroundService();
+    startPlexStatsBackgroundTask(); // start 24-hour library size cache task
 });
