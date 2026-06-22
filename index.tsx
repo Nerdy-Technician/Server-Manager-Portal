@@ -3508,26 +3508,7 @@ const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onLogout: 
                                     {isExpiringSoon && <p className="text-yellow-400/80 text-xs mt-2">⚠️ Expiring soon — contact the admin to renew</p>}
                                 </div>
                             )}
-                            {isPending && (
-                                <div className="rounded-xl overflow-hidden border-2 border-plex mb-5 shadow-lg shadow-plex/20">
-                                    <div className="bg-plex px-5 py-3 flex items-center gap-2">
-                                        <span className="text-xl">📧</span>
-                                        <strong className="text-background text-sm tracking-wide">TIP - Accept Your Plex Invite</strong>
-                                    </div>
-                                    <div className="bg-plex/10 p-5">
-                                        <p className="text-text text-sm leading-relaxed mb-4">You need to accept the invite in the email before Plex access is active. Your <strong className="text-plex">3-Day Free Trial</strong> remains set on your account.</p>
-                                        <div className="flex flex-col gap-2.5">
-                                            {[{ n: '1', t: '📬 Open the email from Plex — check your inbox AND spam/junk folder' }, { n: '2', t: '✅ Click the "Accept Invite" button inside the email' }, { n: '3', t: '🎉 Log into Plex and enjoy your free trial!' }].map(s => (
-                                                <div key={s.n} className="flex items-start gap-3 bg-black/20 rounded-lg px-3.5 py-2.5">
-                                                    <span className="w-5 h-5 rounded-full bg-plex text-background text-[11px] font-black flex items-center justify-center flex-shrink-0 mt-0.5">{s.n}</span>
-                                                    <span className="text-muted text-sm leading-snug">{s.t}</span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                        <p className="text-muted/60 text-xs italic mt-3">⏳ Haven't received the email? Contact the admin below.</p>
-                                    </div>
-                                </div>
-                            )}
+
                             {isRevoked && daysLeft !== null && daysLeft >= 0 && (
                                 <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4 mb-5 flex flex-col gap-3">
                                     <p className="text-yellow-400 font-semibold text-sm">⚠️ Access revoked — but you have {daysLeft} day{daysLeft !== 1 ? 's' : ''} remaining.</p>
