@@ -3798,7 +3798,7 @@ const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onLogout: 
                     <div className="flex flex-col md:flex-row items-center md:items-end gap-6">
                         {/* Avatar */}
                         {(() => {
-                            const thumbUrl = user?.thumb || sessionInfo.session.thumb;
+                            const thumbUrl = user?.thumb || sessionInfo.session.thumb || (sessionInfo.session.isAdmin ? sessionInfo.adminThumb : null);
                             if (thumbUrl) {
                                 return (
                                     <div className="relative">
@@ -3847,12 +3847,29 @@ const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onLogout: 
 
                     {/* Subscription Status */}
                     {sessionInfo.session.isAdmin ? (
-                        <div className="bg-card border border-border rounded-2xl p-6 shadow-xl flex flex-col items-center justify-center text-center md:h-[240px]">
-                            <div className="w-16 h-16 bg-plex/10 rounded-full flex items-center justify-center mb-4 border border-plex/30 shadow-[0_0_15px_rgba(229,160,13,0.15)]">
-                                <Shield className="w-8 h-8 text-plex drop-shadow-md" />
+                        <div className="flex flex-col gap-6">
+                            <div className="bg-card border border-border rounded-2xl p-6 shadow-xl flex flex-col items-center justify-center text-center md:h-[240px]">
+                                <div className="w-16 h-16 bg-plex/10 rounded-full flex items-center justify-center mb-4 border border-plex/30 shadow-[0_0_15px_rgba(229,160,13,0.15)]">
+                                    <Shield className="w-8 h-8 text-plex drop-shadow-md" />
+                                </div>
+                                <h3 className="text-xl md:text-2xl font-black text-text uppercase tracking-widest mb-1">Server Admin</h3>
+                                <p className="text-xs font-bold text-plex tracking-wider uppercase">Unlimited Access</p>
                             </div>
-                            <h3 className="text-xl md:text-2xl font-black text-text uppercase tracking-widest mb-1">Server Admin</h3>
-                            <p className="text-xs font-bold text-plex tracking-wider uppercase">Unlimited Access</p>
+                            
+                            <div className="bg-card border border-border rounded-2xl p-6 shadow-xl flex flex-col">
+                                <p className="text-muted text-xs uppercase tracking-widest font-semibold mb-4">Quick Actions</p>
+                                <div className="flex flex-col gap-3 mt-auto">
+                                    <a href="/users" className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs transition-all border bg-plex/10 border-plex/30 text-plex hover:bg-plex/20">
+                                        <Users size={16} /> Manage Users
+                                    </a>
+                                    <a href="/settings" className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs transition-all border bg-white/5 border-white/10 text-text hover:bg-white/10">
+                                        <Settings size={16} /> Server Settings
+                                    </a>
+                                    <a href="/logs" className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs transition-all border bg-white/5 border-white/10 text-text hover:bg-white/10">
+                                        <Activity size={16} /> System Logs
+                                    </a>
+                                </div>
+                            </div>
                         </div>
                     ) : (
                         user ? (
@@ -4131,7 +4148,7 @@ const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onLogout: 
                                     )}
                                 </div>
                             ) : (
-                                <div className="flex flex-col items-center justify-center p-10 bg-card border border-border rounded-2xl shadow-lg text-center flex-1 min-h-[200px]">
+                                <div className="flex flex-col items-center justify-center p-10 bg-card border border-border rounded-2xl shadow-lg text-center flex-1 min-h-[300px]">
                                     <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mb-4 text-2xl shadow-inner">🍿</div>
                                     <h3 className="font-bold text-text mb-2">No watch history yet</h3>
                                     <p className="text-muted text-sm max-w-sm">Once you start watching content on the server, your personal watch stats and history will appear right here!</p>

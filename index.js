@@ -2879,7 +2879,9 @@ app.get('/api/plex/analytics/me', requireAuth, async (req, res) => {
         if (!uri) return res.status(503).json({ error: 'Cannot connect to Plex' });
 
         let accountID = req.user.plexId;
-        if (!accountID) {
+        if (req.user.isAdmin) {
+            accountID = 1; // Server owner is always account ID 1 locally
+        } else if (!accountID) {
             const users = await loadFile(USERS_PATH, []);
             const localUser = users.find(u => u.email === req.user.email || u.username === req.user.username);
             accountID = localUser ? localUser.id : null;
