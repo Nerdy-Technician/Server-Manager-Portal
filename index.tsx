@@ -1443,26 +1443,25 @@ const StatusMonitorSettings: React.FC<{ config: any; onSave: (cfg: any) => void;
     };
 
     const removeGroup = async (id: string) => {
-        appConfirm(`Remove group ${id}? Services inside it won't be deleted but will lose their group.`, async () => {
-            try {
-                await apiFetch(`/api/status/groups/${id}`, { method: 'DELETE' });
-                await fetchConfig();
-                addToast(`Group ${id} removed.`, 'success');
-            } catch (e: any) {
-                addToast(e.message, 'error');
-            }
+        appConfirm(`Remove group ${id}? Services inside it won't be deleted but will lose their group.`, () => {
+            const newConfig = {
+                ...localConfig,
+                groups: localConfig.groups.filter((g: any) => g.id !== id),
+                services: localConfig.services.map((s: any) => s.groupId === id ? { ...s, groupId: null } : s)
+            };
+            setLocalConfig(newConfig);
+            onSave(newConfig);
         });
     };
 
     const removeService = async (id: string) => {
-        appConfirm(`Remove service ${id}?`, async () => {
-            try {
-                await apiFetch(`/api/status/config/${id}`, { method: 'DELETE' });
-                await fetchConfig();
-                addToast(`Service ${id} removed.`, 'success');
-            } catch (e: any) {
-                addToast(e.message, 'error');
-            }
+        appConfirm(`Remove service ${id}?`, () => {
+            const newConfig = {
+                ...localConfig,
+                services: localConfig.services.filter((s: any) => s.id !== id)
+            };
+            setLocalConfig(newConfig);
+            onSave(newConfig);
         });
     };
 

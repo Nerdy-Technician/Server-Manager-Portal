@@ -1517,25 +1517,24 @@ var StatusMonitorSettings = ({ config, onSave, appConfirm: appConfirm2, fetchCon
     });
   };
   const removeGroup = async (id) => {
-    appConfirm2(`Remove group ${id}? Services inside it won't be deleted but will lose their group.`, async () => {
-      try {
-        await apiFetch(`/api/status/groups/${id}`, { method: "DELETE" });
-        await fetchConfig();
-        addToast(`Group ${id} removed.`, "success");
-      } catch (e) {
-        addToast(e.message, "error");
-      }
+    appConfirm2(`Remove group ${id}? Services inside it won't be deleted but will lose their group.`, () => {
+      const newConfig = {
+        ...localConfig,
+        groups: localConfig.groups.filter((g) => g.id !== id),
+        services: localConfig.services.map((s) => s.groupId === id ? { ...s, groupId: null } : s)
+      };
+      setLocalConfig(newConfig);
+      onSave(newConfig);
     });
   };
   const removeService = async (id) => {
-    appConfirm2(`Remove service ${id}?`, async () => {
-      try {
-        await apiFetch(`/api/status/config/${id}`, { method: "DELETE" });
-        await fetchConfig();
-        addToast(`Service ${id} removed.`, "success");
-      } catch (e) {
-        addToast(e.message, "error");
-      }
+    appConfirm2(`Remove service ${id}?`, () => {
+      const newConfig = {
+        ...localConfig,
+        services: localConfig.services.filter((s) => s.id !== id)
+      };
+      setLocalConfig(newConfig);
+      onSave(newConfig);
     });
   };
   return /* @__PURE__ */ jsxs("div", { className: "flex flex-col gap-6 w-full", children: [
