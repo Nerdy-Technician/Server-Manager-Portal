@@ -3862,7 +3862,7 @@ const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onLogout: 
                     )}
 
                     {!sessionInfo.session.isAdmin && user && (
-                        <div className="bg-card border border-border rounded-2xl p-6 shadow-xl">
+                        <div className="bg-card border border-border rounded-2xl p-6 shadow-xl flex flex-col justify-center md:h-[240px]">
                             <div className="flex flex-col gap-4">
                                 <div>
                                     <p className="text-muted text-xs uppercase tracking-widest font-semibold mb-3">Subscription Status</p>
@@ -3988,7 +3988,7 @@ const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onLogout: 
                 {/* Right Column */}
                 <div className="lg:col-span-2 flex flex-col gap-6">
                     {/* Server Stats Card */}
-                    <div className="bg-card border border-border rounded-2xl p-6 shadow-xl flex flex-col justify-center relative overflow-hidden">
+                    <div className="bg-card border border-border rounded-2xl p-6 shadow-xl flex flex-col justify-center relative overflow-hidden flex-shrink-0 md:h-[240px]">
                         <div className="absolute -top-10 -right-10 p-8 opacity-5">
                             <Activity className="w-64 h-64 text-plex" />
                         </div>
@@ -4095,7 +4095,7 @@ const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onLogout: 
                                     )}
                                 </div>
                             ) : (
-                                <div className="flex flex-col items-center justify-center p-10 bg-card border border-border rounded-2xl shadow-lg text-center h-full min-h-[200px]">
+                                <div className="flex flex-col items-center justify-center p-10 bg-card border border-border rounded-2xl shadow-lg text-center flex-1 min-h-[200px]">
                                     <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mb-4 text-2xl shadow-inner">🍿</div>
                                     <h3 className="font-bold text-text mb-2">No watch history yet</h3>
                                     <p className="text-muted text-sm max-w-sm">Once you start watching content on the server, your personal watch stats and history will appear right here!</p>
