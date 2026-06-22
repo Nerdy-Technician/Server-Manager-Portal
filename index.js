@@ -406,7 +406,9 @@ const lockFile = async (path) => {
 const loadFile = async (path, defaultContent) => {
     const unlock = await lockFile(path);
     try {
-        return JSON.parse(await fs.readFile(path, 'utf-8'));
+        const content = await fs.readFile(path, 'utf-8');
+        const data = JSON.parse(content);
+        return data === null ? defaultContent : data;
     } catch (error) {
         if (error.code === 'ENOENT') {
             await fs.writeFile(path, JSON.stringify(defaultContent, null, 2));
@@ -1317,13 +1319,22 @@ app.post('/api/config', async (req, res) => {
 });
 
 app.get('/api/config/public', async (req, res) => {
-    const config = await loadFile(CONFIG_PATH, {});
-    res.json({
-        primaryColor: config.primaryColor || '#E5A00D',
-        customLogoUrl: config.customLogoUrl || '',
-        announcement: config.announcement || '',
-        referralEnabled: !!config.referralEnabled
-    });
+    try {
+        const config = (await loadFile(CONFIG_PATH, {})) || {};
+        res.json({
+            primaryColor: config.primaryColor || '#E5A00D',
+            customLogoUrl: config.customLogoUrl || '',
+            announcement: config.announcement || '',
+            referralEnabled: !!config.referralEnabled
+        });
+    } catch (error) {
+        res.json({
+            primaryColor: '#E5A00D',
+            customLogoUrl: '',
+            announcement: '',
+            referralEnabled: false
+        });
+    }
 });
 
 app.post('/api/config/logo', requireAdmin, express.raw({ type: 'image/*', limit: '5mb' }), async (req, res) => {
