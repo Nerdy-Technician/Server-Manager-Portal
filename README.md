@@ -49,8 +49,8 @@ Server Manager Portal serves as a beautiful, public-facing portal for your Plex 
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/jl94x4/Plex-Manager.git
-   cd Plex-Manager
+   git clone https://github.com/jl94x4/Server-Manager-Portal.git
+   cd Server-Manager-Portal
    ```
 
 2. **Install Dependencies:**
