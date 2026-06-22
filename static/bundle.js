@@ -637,6 +637,8 @@ var InvitesSettings = ({ addToast }) => {
   const [loading, setLoading] = useState(true);
   const [durationDays, setDurationDays] = useState(30);
   const [maxUses, setMaxUses] = useState("unlimited");
+  const [emailInvite, setEmailInvite] = useState("");
+  const [emailing, setEmailing] = useState(false);
   const fetchInvites = useCallback(async () => {
     try {
       const data = await apiFetch("/api/invites");
@@ -662,6 +664,23 @@ var InvitesSettings = ({ addToast }) => {
       addToast(e.message || "Error creating invite", "error");
     }
   };
+  const handleEmailInvite = async () => {
+    if (!emailInvite) return addToast("Please enter an email address", "error");
+    setEmailing(true);
+    try {
+      await apiFetch("/api/invites/email", {
+        method: "POST",
+        body: JSON.stringify({ email: emailInvite, durationDays })
+      });
+      addToast("Email invite sent!", "success");
+      setEmailInvite("");
+      fetchInvites();
+    } catch (e) {
+      addToast(e.message || "Error sending email invite", "error");
+    } finally {
+      setEmailing(false);
+    }
+  };
   const handleDelete = async (code) => {
     if (!confirm("Are you sure you want to delete this invite link?")) return;
     try {
@@ -682,7 +701,7 @@ var InvitesSettings = ({ addToast }) => {
     /* @__PURE__ */ jsx("p", { className: "text-sm text-muted mb-6", children: "Generate unique links to automatically invite users to your Plex server." }),
     /* @__PURE__ */ jsxs("div", { className: "bg-black/20 p-4 md:p-6 rounded-xl border border-border mb-8 shadow-sm", children: [
       /* @__PURE__ */ jsx("h4", { className: "font-bold mb-4", children: "Create New Invite Link" }),
-      /* @__PURE__ */ jsxs("div", { className: "flex flex-col md:flex-row gap-4 items-end", children: [
+      /* @__PURE__ */ jsxs("div", { className: "flex flex-col md:flex-row gap-4 items-end mb-6", children: [
         /* @__PURE__ */ jsxs("div", { className: "flex-1 w-full", children: [
           /* @__PURE__ */ jsx("label", { className: "block text-sm mb-1 font-medium", children: "Duration (Days)" }),
           /* @__PURE__ */ jsx("input", { type: "number", min: "1", className: "w-full p-2.5 rounded-lg bg-background border border-border text-text outline-none focus:border-plex", value: durationDays, onChange: (e) => setDurationDays(Number(e.target.value)) })
@@ -692,6 +711,17 @@ var InvitesSettings = ({ addToast }) => {
           /* @__PURE__ */ jsx("input", { type: "text", className: "w-full p-2.5 rounded-lg bg-background border border-border text-text outline-none focus:border-plex", value: maxUses, onChange: (e) => setMaxUses(e.target.value) })
         ] }),
         /* @__PURE__ */ jsx("button", { className: "w-full md:w-auto px-6 py-2.5 bg-plex text-background font-bold rounded-lg hover:bg-plex-hover transition-colors shadow-lg", onClick: handleCreate, children: "Generate Link" })
+      ] }),
+      /* @__PURE__ */ jsxs("div", { className: "border-t border-border/50 pt-6", children: [
+        /* @__PURE__ */ jsx("h4", { className: "font-bold mb-4", children: "Direct Email Invite" }),
+        /* @__PURE__ */ jsx("p", { className: "text-sm text-muted mb-4", children: "Send a 1-time use invite directly to a user's email address (uses the Duration defined above)." }),
+        /* @__PURE__ */ jsxs("div", { className: "flex flex-col md:flex-row gap-4 items-end", children: [
+          /* @__PURE__ */ jsxs("div", { className: "flex-1 w-full", children: [
+            /* @__PURE__ */ jsx("label", { className: "block text-sm mb-1 font-medium", children: "Email Address" }),
+            /* @__PURE__ */ jsx("input", { type: "email", placeholder: "user@example.com", className: "w-full p-2.5 rounded-lg bg-background border border-border text-text outline-none focus:border-plex", value: emailInvite, onChange: (e) => setEmailInvite(e.target.value) })
+          ] }),
+          /* @__PURE__ */ jsx("button", { disabled: emailing, className: "w-full md:w-auto px-6 py-2.5 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition-colors shadow-lg disabled:opacity-50", onClick: handleEmailInvite, children: emailing ? "Sending..." : "Send Email Invite" })
+        ] })
       ] })
     ] }),
     /* @__PURE__ */ jsx("div", { className: "overflow-x-auto", children: /* @__PURE__ */ jsxs("table", { className: "w-full text-left border-collapse min-w-[600px]", children: [
@@ -713,14 +743,16 @@ var InvitesSettings = ({ addToast }) => {
         ] }) }),
         /* @__PURE__ */ jsxs("td", { className: "p-3 font-medium", children: [
           inv.durationDays,
-          " Days"
+          " days"
         ] }),
-        /* @__PURE__ */ jsxs("td", { className: "p-3", children: [
-          inv.currentUses,
-          " / ",
-          inv.maxUses
+        /* @__PURE__ */ jsx("td", { className: "p-3", children: inv.maxUses === "unlimited" ? "Unlimited" : `${inv.currentUses} / ${inv.maxUses}` }),
+        /* @__PURE__ */ jsxs("td", { className: "p-3 text-muted text-sm", children: [
+          new Date(inv.createdAt).toLocaleDateString(),
+          inv.sentTo && /* @__PURE__ */ jsxs("div", { className: "text-xs text-blue-400 mt-1", children: [
+            "Sent to: ",
+            inv.sentTo
+          ] })
         ] }),
-        /* @__PURE__ */ jsx("td", { className: "p-3 text-muted text-sm", children: new Date(inv.createdAt).toLocaleDateString() }),
         /* @__PURE__ */ jsx("td", { className: "p-3 text-right", children: /* @__PURE__ */ jsx("button", { onClick: () => handleDelete(inv.code), className: "text-red-500 hover:text-red-400 font-bold border border-red-500/30 px-3 py-1 rounded hover:bg-red-500/10 transition-colors text-xs", children: "Revoke" }) })
       ] }, inv.code)) })
     ] }) })

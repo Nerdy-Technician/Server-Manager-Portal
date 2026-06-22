@@ -465,6 +465,8 @@ const InvitesSettings: React.FC<{ addToast: (msg: string, type: 'success' | 'err
     const [loading, setLoading] = useState(true);
     const [durationDays, setDurationDays] = useState(30);
     const [maxUses, setMaxUses] = useState<string | number>('unlimited');
+    const [emailInvite, setEmailInvite] = useState('');
+    const [emailing, setEmailing] = useState(false);
 
     const fetchInvites = useCallback(async () => {
         try {
@@ -489,6 +491,24 @@ const InvitesSettings: React.FC<{ addToast: (msg: string, type: 'success' | 'err
             fetchInvites();
         } catch (e: any) {
             addToast(e.message || 'Error creating invite', 'error');
+        }
+    };
+
+    const handleEmailInvite = async () => {
+        if (!emailInvite) return addToast('Please enter an email address', 'error');
+        setEmailing(true);
+        try {
+            await apiFetch('/api/invites/email', {
+                method: 'POST',
+                body: JSON.stringify({ email: emailInvite, durationDays })
+            });
+            addToast('Email invite sent!', 'success');
+            setEmailInvite('');
+            fetchInvites();
+        } catch (e: any) {
+            addToast(e.message || 'Error sending email invite', 'error');
+        } finally {
+            setEmailing(false);
         }
     };
 
@@ -517,7 +537,7 @@ const InvitesSettings: React.FC<{ addToast: (msg: string, type: 'success' | 'err
             
             <div className="bg-black/20 p-4 md:p-6 rounded-xl border border-border mb-8 shadow-sm">
                 <h4 className="font-bold mb-4">Create New Invite Link</h4>
-                <div className="flex flex-col md:flex-row gap-4 items-end">
+                <div className="flex flex-col md:flex-row gap-4 items-end mb-6">
                     <div className="flex-1 w-full">
                         <label className="block text-sm mb-1 font-medium">Duration (Days)</label>
                         <input type="number" min="1" className="w-full p-2.5 rounded-lg bg-background border border-border text-text outline-none focus:border-plex" value={durationDays} onChange={e => setDurationDays(Number(e.target.value))} />
@@ -527,6 +547,20 @@ const InvitesSettings: React.FC<{ addToast: (msg: string, type: 'success' | 'err
                         <input type="text" className="w-full p-2.5 rounded-lg bg-background border border-border text-text outline-none focus:border-plex" value={maxUses} onChange={e => setMaxUses(e.target.value)} />
                     </div>
                     <button className="w-full md:w-auto px-6 py-2.5 bg-plex text-background font-bold rounded-lg hover:bg-plex-hover transition-colors shadow-lg" onClick={handleCreate}>Generate Link</button>
+                </div>
+                
+                <div className="border-t border-border/50 pt-6">
+                    <h4 className="font-bold mb-4">Direct Email Invite</h4>
+                    <p className="text-sm text-muted mb-4">Send a 1-time use invite directly to a user's email address (uses the Duration defined above).</p>
+                    <div className="flex flex-col md:flex-row gap-4 items-end">
+                        <div className="flex-1 w-full">
+                            <label className="block text-sm mb-1 font-medium">Email Address</label>
+                            <input type="email" placeholder="user@example.com" className="w-full p-2.5 rounded-lg bg-background border border-border text-text outline-none focus:border-plex" value={emailInvite} onChange={e => setEmailInvite(e.target.value)} />
+                        </div>
+                        <button disabled={emailing} className="w-full md:w-auto px-6 py-2.5 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition-colors shadow-lg disabled:opacity-50" onClick={handleEmailInvite}>
+                            {emailing ? 'Sending...' : 'Send Email Invite'}
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -554,9 +588,14 @@ const InvitesSettings: React.FC<{ addToast: (msg: string, type: 'success' | 'err
                                         </button>
                                     </div>
                                 </td>
-                                <td className="p-3 font-medium">{inv.durationDays} Days</td>
-                                <td className="p-3">{inv.currentUses} / {inv.maxUses}</td>
-                                <td className="p-3 text-muted text-sm">{new Date(inv.createdAt).toLocaleDateString()}</td>
+                                <td className="p-3 font-medium">{inv.durationDays} days</td>
+                                <td className="p-3">
+                                    {inv.maxUses === 'unlimited' ? 'Unlimited' : `${inv.currentUses} / ${inv.maxUses}`}
+                                </td>
+                                <td className="p-3 text-muted text-sm">
+                                    {new Date(inv.createdAt).toLocaleDateString()}
+                                    {inv.sentTo && <div className="text-xs text-blue-400 mt-1">Sent to: {inv.sentTo}</div>}
+                                </td>
                                 <td className="p-3 text-right">
                                     <button onClick={() => handleDelete(inv.code)} className="text-red-500 hover:text-red-400 font-bold border border-red-500/30 px-3 py-1 rounded hover:bg-red-500/10 transition-colors text-xs">Revoke</button>
                                 </td>

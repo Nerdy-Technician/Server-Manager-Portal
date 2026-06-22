@@ -1920,6 +1920,55 @@ app.post('/api/invites', requireAdmin, async (req, res) => {
     res.json(newInvite);
 });
 
+app.post('/api/invites/email', requireAdmin, async (req, res) => {
+    const { email, durationDays } = req.body;
+    if (!email) return res.status(400).json({ error: 'Email is required' });
+
+    const config = await loadFile(CONFIG_PATH, {});
+    if (!config.smtpHost || !config.smtpUser) {
+        return res.status(400).json({ error: 'SMTP settings are not configured. Cannot send email.' });
+    }
+
+    const invites = await loadFile(INVITES_PATH, []);
+    const code = randomBytes(6).toString('hex');
+    const newInvite = {
+        code,
+        durationDays: parseInt(durationDays, 10) || 30,
+        maxUses: 1,
+        currentUses: 0,
+        createdBy: req.user.username || 'admin',
+        createdAt: new Date().toISOString(),
+        sentTo: email
+    };
+    
+    try {
+        const publicDomain = config.publicDomain || 'https://portal.yourdomain.com';
+        const inviteUrl = `${publicDomain}/invite/${code}`;
+        const adminProfile = await getAdminProfile(config);
+        const serverName = adminProfile ? adminProfile.serverName : 'Our Plex Server';
+
+        const subject = `You've been invited to ${serverName}!`;
+        const html = `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #1a1a1a; color: #ffffff; border-radius: 10px;">
+                <h2 style="color: #e5a00d; text-align: center;">Welcome to ${serverName}!</h2>
+                <p style="font-size: 16px; line-height: 1.5; text-align: center;">You have been invited to join our private media server.</p>
+                <div style="text-align: center; margin: 30px 0;">
+                    <a href="${inviteUrl}" style="background-color: #e5a00d; color: #000000; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold; font-size: 16px;">Claim Your Access</a>
+                </div>
+                <p style="font-size: 14px; color: #aaaaaa; text-align: center;">This invite link is for single use only. It will grant you access for ${newInvite.durationDays} days.</p>
+            </div>
+        `;
+        
+        await sendEmail(config, email, subject, html);
+        invites.push(newInvite);
+        await saveFile(INVITES_PATH, invites);
+        res.json({ message: 'Invite sent successfully', invite: newInvite });
+    } catch (err) {
+        log('Failed to send email invite: ' + err.message);
+        res.status(500).json({ error: 'Failed to send email. Please check your SMTP settings.' });
+    }
+});
+
 app.delete('/api/invites/:code', requireAdmin, async (req, res) => {
     let invites = await loadFile(INVITES_PATH, []);
     invites = invites.filter(i => i.code !== req.params.code);
