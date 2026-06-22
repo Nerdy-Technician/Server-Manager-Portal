@@ -464,7 +464,7 @@ const InvitesSettings: React.FC<{ addToast: (msg: string, type: 'success' | 'err
     const [invites, setInvites] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [durationDays, setDurationDays] = useState(30);
-    const [maxUses, setMaxUses] = useState<string | number>('unlimited');
+    const [maxUses, setMaxUses] = useState<string | number>(1);
     const [emailInvite, setEmailInvite] = useState('');
     const [emailing, setEmailing] = useState(false);
 

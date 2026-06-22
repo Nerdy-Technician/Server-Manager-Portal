@@ -636,7 +636,7 @@ var InvitesSettings = ({ addToast }) => {
   const [invites, setInvites] = useState([]);
   const [loading, setLoading] = useState(true);
   const [durationDays, setDurationDays] = useState(30);
-  const [maxUses, setMaxUses] = useState("unlimited");
+  const [maxUses, setMaxUses] = useState(1);
   const [emailInvite, setEmailInvite] = useState("");
   const [emailing, setEmailing] = useState(false);
   const fetchInvites = useCallback(async () => {
