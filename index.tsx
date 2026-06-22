@@ -3774,33 +3774,30 @@ const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onLogout: 
             {toast && <Toast message={toast.message} type={toast.type} onDismiss={() => setToast(null)} />}
 
             {/* Massive Hero Banner */}
-            <div className="relative w-full mt-4">
-                {/* Animated Banner Header */}
-                <div className="relative w-full h-48 md:h-64 rounded-2xl overflow-hidden shadow-2xl bg-card border border-border">
-                    <div className="absolute inset-0 bg-background overflow-hidden">
-                        {dashboardData?.recentMovies?.length > 0 ? (
-                            <div className="absolute -inset-[50%] opacity-20 transform -rotate-12 scale-110 flex gap-4 overflow-hidden pointer-events-none justify-center">
-                                 {[...Array(6)].map((_, colIdx) => (
-                                     <div key={colIdx} className={`flex flex-col gap-4 ${colIdx % 2 === 0 ? 'animate-[scrollVertical_40s_linear_infinite]' : 'animate-[scrollVertical_50s_linear_infinite_reverse]'}`}>
-                                         {[...dashboardData.recentMovies, ...dashboardData.recentMovies].sort(() => 0.5 - Math.random()).map((m: any, i: number) => m.thumb && (
-                                             <img key={`c${colIdx}-${i}`} src={`/api/plex/image?path=${encodeURIComponent(m.thumb)}&width=200&height=300`} className="w-32 md:w-48 rounded-xl object-cover" alt="" />
-                                         ))}
-                                     </div>
-                                 ))}
-                            </div>
-                        ) : heroBg && (
-                            <div 
-                                className="absolute inset-0 bg-cover bg-center opacity-30 blur-2xl scale-110"
-                                style={{ backgroundImage: `url(${heroBg})` }}
-                            />
-                        )}
-                        <div className="absolute inset-0 bg-gradient-to-t from-card via-card/80 to-transparent" />
-                        <div className="absolute inset-0 bg-gradient-to-r from-card via-card/40 to-transparent" />
-                    </div>
+            <div className="relative w-full rounded-2xl overflow-hidden shadow-2xl bg-card border border-border mt-4">
+                {/* Blurred Background */}
+                <div className="absolute inset-0 bg-background overflow-hidden">
+                    {dashboardData?.recentMovies?.length > 0 ? (
+                        <div className="absolute -inset-[50%] opacity-20 transform -rotate-12 scale-110 flex gap-4 overflow-hidden pointer-events-none justify-center">
+                             {[...Array(6)].map((_, colIdx) => (
+                                 <div key={colIdx} className={`flex flex-col gap-4 ${colIdx % 2 === 0 ? 'animate-[scrollVertical_40s_linear_infinite]' : 'animate-[scrollVertical_50s_linear_infinite_reverse]'}`}>
+                                     {[...dashboardData.recentMovies, ...dashboardData.recentMovies].sort(() => 0.5 - Math.random()).map((m: any, i: number) => m.thumb && (
+                                         <img key={`c${colIdx}-${i}`} src={`/api/plex/image?path=${encodeURIComponent(m.thumb)}&width=200&height=300`} className="w-32 md:w-48 rounded-xl object-cover" alt="" />
+                                     ))}
+                                 </div>
+                             ))}
+                        </div>
+                    ) : heroBg && (
+                        <div 
+                            className="absolute inset-0 bg-cover bg-center opacity-30 blur-2xl scale-110"
+                            style={{ backgroundImage: `url(${heroBg})` }}
+                        />
+                    )}
+                    <div className="absolute inset-0 bg-gradient-to-t from-card via-card/80 to-transparent" />
+                    <div className="absolute inset-0 bg-gradient-to-r from-card via-card/40 to-transparent" />
                 </div>
                 
-                {/* Avatar & Welcome Text */}
-                <div className="relative -mt-16 md:-mt-20 px-6 md:px-10 flex flex-col items-center md:items-start text-center md:text-left z-10 mb-8">
+                <div className="relative pt-24 pb-8 px-6 md:px-10 flex flex-col items-center md:items-start text-center md:text-left z-10">
                     <div className="flex flex-col md:flex-row items-center md:items-end gap-6">
                         {/* Avatar */}
                         {(() => {
@@ -4049,16 +4046,18 @@ const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onLogout: 
                                             </div>
                                             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                                                 {analytics.topContent.slice(0, 3).map((item: any) => (
-                                                    <a key={item.key} href={item.plexUrl} target="_blank" rel="noreferrer" className="group relative rounded-xl overflow-hidden aspect-[2/3] bg-background border border-white/5 transition-transform hover:scale-105 hover:shadow-xl hover:border-plex/50">
-                                                        {item.thumbUrl ? (
-                                                            <img src={item.thumbUrl} alt={item.title} className="w-full h-full object-cover transition-opacity group-hover:opacity-60" />
-                                                        ) : (
-                                                            <div className="w-full h-full flex items-center justify-center p-4 text-center bg-white/5">
-                                                                <span className="text-xs font-bold text-muted line-clamp-3">{item.title}</span>
-                                                            </div>
-                                                        )}
-                                                        <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/90 via-black/60 to-transparent">
-                                                            <p className="text-xs font-bold text-white truncate text-shadow-sm">{item.title}</p>
+                                                    <a key={item.key} href={item.plexUrl} target="_blank" rel="noreferrer" className="group flex flex-col gap-2">
+                                                        <div className="relative rounded-xl overflow-hidden aspect-[2/3] bg-background border border-white/5 transition-transform group-hover:scale-105 group-hover:shadow-xl group-hover:border-plex/50">
+                                                            {item.thumbUrl ? (
+                                                                <img src={item.thumbUrl} alt={item.title} className="w-full h-full object-cover transition-opacity group-hover:opacity-80" />
+                                                            ) : (
+                                                                <div className="w-full h-full flex items-center justify-center p-4 text-center bg-white/5">
+                                                                    <span className="text-xs font-bold text-muted line-clamp-3">{item.title}</span>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                        <div className="flex flex-col px-1">
+                                                            <p className="text-xs font-bold text-text truncate group-hover:text-plex transition-colors">{item.title}</p>
                                                             <p className="text-[10px] text-plex font-black mt-0.5 uppercase tracking-wider">{item.plays} plays</p>
                                                         </div>
                                                     </a>
@@ -4117,17 +4116,19 @@ const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onLogout: 
                             <h3 className="text-xl font-bold text-text mb-4">Recently Added Movies</h3>
                             <div className="flex overflow-x-auto gap-4 pb-4 snap-x hide-scrollbar scroll-smooth">
                                 {dashboardData.recentMovies.map((item: any, idx: number) => (
-                                    <a key={idx} href={item.plexUrl} target="_blank" rel="noreferrer" className="snap-start shrink-0 w-32 md:w-40 group relative rounded-xl overflow-hidden aspect-[2/3] bg-background border border-white/5 transition-transform hover:scale-105 hover:shadow-xl hover:border-plex/50">
-                                        {item.thumb ? (
-                                            <img src={`/api/plex/image?path=${encodeURIComponent(item.thumb)}&width=300&height=450`} alt={item.title} className="w-full h-full object-cover transition-opacity group-hover:opacity-60" />
-                                        ) : (
-                                            <div className="w-full h-full flex items-center justify-center p-4 text-center bg-white/5">
-                                                <span className="text-xs font-bold text-muted line-clamp-3">{item.title}</span>
-                                            </div>
-                                        )}
-                                        <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/90 via-black/60 to-transparent">
-                                            <p className="text-xs font-bold text-white truncate text-shadow-sm">{item.title}</p>
-                                            {item.year && <p className="text-[10px] text-gray-300 mt-0.5">{item.year}</p>}
+                                    <a key={idx} href={item.plexUrl} target="_blank" rel="noreferrer" className="snap-start shrink-0 w-32 md:w-40 group flex flex-col gap-2">
+                                        <div className="relative rounded-xl overflow-hidden aspect-[2/3] bg-background border border-white/5 transition-transform group-hover:scale-105 group-hover:shadow-xl group-hover:border-plex/50">
+                                            {item.thumb ? (
+                                                <img src={`/api/plex/image?path=${encodeURIComponent(item.thumb)}&width=300&height=450`} alt={item.title} className="w-full h-full object-cover transition-opacity group-hover:opacity-80" />
+                                            ) : (
+                                                <div className="w-full h-full flex items-center justify-center p-4 text-center bg-white/5">
+                                                    <span className="text-xs font-bold text-muted line-clamp-3">{item.title}</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div className="flex flex-col px-1">
+                                            <p className="text-xs font-bold text-text truncate group-hover:text-plex transition-colors">{item.title}</p>
+                                            {item.year && <p className="text-[10px] text-muted font-semibold mt-0.5">{item.year}</p>}
                                         </div>
                                     </a>
                                 ))}
@@ -4140,17 +4141,19 @@ const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onLogout: 
                             <h3 className="text-xl font-bold text-text mb-4">Recently Added TV Shows</h3>
                             <div className="flex overflow-x-auto gap-4 pb-4 snap-x hide-scrollbar scroll-smooth">
                                 {dashboardData.recentShows.map((item: any, idx: number) => (
-                                    <a key={idx} href={item.plexUrl} target="_blank" rel="noreferrer" className="snap-start shrink-0 w-32 md:w-40 group relative rounded-xl overflow-hidden aspect-[2/3] bg-background border border-white/5 transition-transform hover:scale-105 hover:shadow-xl hover:border-plex/50">
-                                        {item.thumb ? (
-                                            <img src={`/api/plex/image?path=${encodeURIComponent(item.thumb)}&width=300&height=450`} alt={item.title} className="w-full h-full object-cover transition-opacity group-hover:opacity-60" />
-                                        ) : (
-                                            <div className="w-full h-full flex items-center justify-center p-4 text-center bg-white/5">
-                                                <span className="text-xs font-bold text-muted line-clamp-3">{item.title}</span>
-                                            </div>
-                                        )}
-                                        <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/90 via-black/60 to-transparent">
-                                            <p className="text-xs font-bold text-white truncate text-shadow-sm">{item.title}</p>
-                                            {item.year && <p className="text-[10px] text-gray-300 mt-0.5">{item.year}</p>}
+                                    <a key={idx} href={item.plexUrl} target="_blank" rel="noreferrer" className="snap-start shrink-0 w-32 md:w-40 group flex flex-col gap-2">
+                                        <div className="relative rounded-xl overflow-hidden aspect-[2/3] bg-background border border-white/5 transition-transform group-hover:scale-105 group-hover:shadow-xl group-hover:border-plex/50">
+                                            {item.thumb ? (
+                                                <img src={`/api/plex/image?path=${encodeURIComponent(item.thumb)}&width=300&height=450`} alt={item.title} className="w-full h-full object-cover transition-opacity group-hover:opacity-80" />
+                                            ) : (
+                                                <div className="w-full h-full flex items-center justify-center p-4 text-center bg-white/5">
+                                                    <span className="text-xs font-bold text-muted line-clamp-3">{item.title}</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div className="flex flex-col px-1">
+                                            <p className="text-xs font-bold text-text truncate group-hover:text-plex transition-colors">{item.title}</p>
+                                            {item.year && <p className="text-[10px] text-muted font-semibold mt-0.5">{item.year}</p>}
                                         </div>
                                     </a>
                                 ))}
