@@ -773,6 +773,13 @@ var SettingsDashboard = () => {
   const addToast = useCallback((message, type = "success") => {
     setToasts((t) => [...t, { id: Date.now(), message, type }]);
   }, []);
+  const fetchStatusConfig = useCallback(async () => {
+    try {
+      const sConf = await apiFetch("/api/status/config");
+      setStatusConfig(sConf);
+    } catch (e) {
+    }
+  }, []);
   useEffect(() => {
     const fetchConfig = async () => {
       setLoading(true);
@@ -784,11 +791,7 @@ var SettingsDashboard = () => {
         }
         const usersData = await apiFetch("/api/users");
         setUsers(usersData);
-        try {
-          const sConf = await apiFetch("/api/status/config");
-          setStatusConfig(sConf);
-        } catch (e) {
-        }
+        await fetchStatusConfig();
       } catch (error) {
         addToast("Failed to load config", "error");
       } finally {
