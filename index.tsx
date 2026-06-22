@@ -3849,7 +3849,7 @@ const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onLogout: 
                 </div>
             </div>
 
-                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
                 {/* Left Column */}
                 <div className="lg:col-span-1 flex flex-col gap-6">
 
@@ -4011,7 +4011,7 @@ const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onLogout: 
 
                         {/* Recent History (Moved to Left Column) */}
                         {(sessionInfo.session.isAdmin || user) && !analyticsLoading && analytics?.recentHistory && analytics.recentHistory.length > 0 && (
-                            <div className="bg-card border border-border rounded-2xl p-6 shadow-xl mt-2">
+                            <div className="bg-card border border-border rounded-2xl p-6 shadow-xl">
                                 <div className="flex items-center justify-between mb-6">
                                     <h3 className="text-xl font-bold text-text">Recently Watched</h3>
                                     {analytics.recentHistory.length > RECENT_HISTORY_PAGE_SIZE && (
