@@ -3674,6 +3674,7 @@ const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onLogout: 
     const [recentHistoryPage, setRecentHistoryPage] = useState(0);
     const RECENT_HISTORY_PAGE_SIZE = 8;
     const [analyticsDays, setAnalyticsDays] = useState<number | 'all'>(30);
+    const [analyticsDaysOpen, setAnalyticsDaysOpen] = useState(false);
 
     const user = sessionInfo.account;
     const [optOutNewsletter, setOptOutNewsletter] = useState(user?.optOutNewsletter || false);
@@ -4088,18 +4089,49 @@ const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onLogout: 
                                 <h2 className="text-lg md:text-xl font-bold text-text flex items-center gap-2">
                                     <Activity className="w-5 h-5 text-plex" /> Your Analytics
                                 </h2>
-                                <select 
-                                    value={analyticsDays}
-                                    onChange={(e) => setAnalyticsDays(e.target.value === 'all' ? 'all' : parseInt(e.target.value))}
-                                    className="bg-background border border-border rounded-lg px-3 py-1.5 text-sm font-medium text-text focus:outline-none focus:border-plex transition-colors cursor-pointer"
-                                >
-                                    <option value={7}>Last 7 Days</option>
-                                    <option value={30}>Last 30 Days</option>
-                                    <option value={60}>Last 60 Days</option>
-                                    <option value={90}>Last 90 Days</option>
-                                    <option value={180}>Last 180 Days</option>
-                                    <option value="all">All Time</option>
-                                </select>
+                                <div className="relative">
+                                    <button 
+                                        onClick={() => setAnalyticsDaysOpen(!analyticsDaysOpen)}
+                                        className="flex items-center gap-2 bg-background border border-border rounded-lg px-3 py-1.5 text-sm font-medium text-text focus:outline-none focus:border-plex hover:border-plex/50 transition-colors cursor-pointer"
+                                    >
+                                        <span>
+                                            {analyticsDays === 7 ? 'Last 7 Days' : 
+                                             analyticsDays === 30 ? 'Last 30 Days' : 
+                                             analyticsDays === 60 ? 'Last 60 Days' : 
+                                             analyticsDays === 90 ? 'Last 90 Days' : 
+                                             analyticsDays === 180 ? 'Last 180 Days' : 
+                                             'All Time'}
+                                        </span>
+                                        <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${analyticsDaysOpen ? 'rotate-180 text-plex' : 'text-muted'}`} />
+                                    </button>
+                                    
+                                    {analyticsDaysOpen && (
+                                        <>
+                                            <div className="fixed inset-0 z-40" onClick={() => setAnalyticsDaysOpen(false)} />
+                                            <div className="absolute right-0 mt-2 w-40 bg-card border border-border rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.5)] z-50 overflow-hidden flex flex-col py-1 animate-in fade-in slide-in-from-top-2 duration-200">
+                                                {[
+                                                    { value: 7, label: 'Last 7 Days' },
+                                                    { value: 30, label: 'Last 30 Days' },
+                                                    { value: 60, label: 'Last 60 Days' },
+                                                    { value: 90, label: 'Last 90 Days' },
+                                                    { value: 180, label: 'Last 180 Days' },
+                                                    { value: 'all', label: 'All Time' }
+                                                ].map(opt => (
+                                                    <button
+                                                        key={opt.value}
+                                                        onClick={() => {
+                                                            setAnalyticsDays(opt.value as any);
+                                                            setAnalyticsDaysOpen(false);
+                                                        }}
+                                                        className={`w-full text-left px-4 py-2.5 text-sm transition-colors ${analyticsDays === opt.value ? 'bg-plex/10 text-plex font-bold border-l-2 border-plex' : 'text-text hover:bg-white/5 border-l-2 border-transparent'}`}
+                                                    >
+                                                        {opt.label}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </>
+                                    )}
+                                </div>
                             </div>
                             
                             {analyticsLoading ? (
