@@ -3948,7 +3948,6 @@ const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onLogout: 
                                     <a href="/logs" className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs transition-all border bg-white/5 border-white/10 text-text hover:bg-white/10">
                                         <Activity size={16} /> System Logs
                                     </a>
-                                    <RebuildLibraryCacheButton />
                                 </div>
                             </div>
                         </div>
