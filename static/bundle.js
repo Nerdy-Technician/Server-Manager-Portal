@@ -1,5 +1,5 @@
 // index.tsx
-import { useState, useEffect, useMemo as useMemo2, useCallback, useRef } from "react";
+import React, { useState, useEffect, useMemo as useMemo2, useCallback, useRef } from "react";
 import { createRoot } from "react-dom/client";
 
 // node_modules/lucide-react/dist/esm/createLucideIcon.mjs
@@ -144,30 +144,45 @@ var ChevronDown = createLucideIcon("chevron-down", __iconNode4);
 var __iconNode5 = [["path", { d: "m18 15-6-6-6 6", key: "153udz" }]];
 var ChevronUp = createLucideIcon("chevron-up", __iconNode5);
 
-// node_modules/lucide-react/dist/esm/icons/clock.mjs
+// node_modules/lucide-react/dist/esm/icons/circle-alert.mjs
 var __iconNode6 = [
+  ["circle", { cx: "12", cy: "12", r: "10", key: "1mglay" }],
+  ["line", { x1: "12", x2: "12", y1: "8", y2: "12", key: "1pkeuh" }],
+  ["line", { x1: "12", x2: "12.01", y1: "16", y2: "16", key: "4dfq90" }]
+];
+var CircleAlert = createLucideIcon("circle-alert", __iconNode6);
+
+// node_modules/lucide-react/dist/esm/icons/circle-check-big.mjs
+var __iconNode7 = [
+  ["path", { d: "M21.801 10A10 10 0 1 1 17 3.335", key: "yps3ct" }],
+  ["path", { d: "m9 11 3 3L22 4", key: "1pflzl" }]
+];
+var CircleCheckBig = createLucideIcon("circle-check-big", __iconNode7);
+
+// node_modules/lucide-react/dist/esm/icons/clock.mjs
+var __iconNode8 = [
   ["circle", { cx: "12", cy: "12", r: "10", key: "1mglay" }],
   ["path", { d: "M12 6v6l4 2", key: "mmk7yg" }]
 ];
-var Clock = createLucideIcon("clock", __iconNode6);
+var Clock = createLucideIcon("clock", __iconNode8);
 
 // node_modules/lucide-react/dist/esm/icons/cloud-download.mjs
-var __iconNode7 = [
+var __iconNode9 = [
   ["path", { d: "M12 13v8l-4-4", key: "1f5nwf" }],
   ["path", { d: "m12 21 4-4", key: "1lfcce" }],
   ["path", { d: "M4.393 15.269A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.436 8.284", key: "ui1hmy" }]
 ];
-var CloudDownload = createLucideIcon("cloud-download", __iconNode7);
+var CloudDownload = createLucideIcon("cloud-download", __iconNode9);
 
 // node_modules/lucide-react/dist/esm/icons/copy.mjs
-var __iconNode8 = [
+var __iconNode10 = [
   ["rect", { width: "14", height: "14", x: "8", y: "8", rx: "2", ry: "2", key: "17jyea" }],
   ["path", { d: "M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2", key: "zix9uf" }]
 ];
-var Copy = createLucideIcon("copy", __iconNode8);
+var Copy = createLucideIcon("copy", __iconNode10);
 
 // node_modules/lucide-react/dist/esm/icons/file-text.mjs
-var __iconNode9 = [
+var __iconNode11 = [
   [
     "path",
     {
@@ -180,10 +195,10 @@ var __iconNode9 = [
   ["path", { d: "M16 13H8", key: "t4e002" }],
   ["path", { d: "M16 17H8", key: "z1uh3a" }]
 ];
-var FileText = createLucideIcon("file-text", __iconNode9);
+var FileText = createLucideIcon("file-text", __iconNode11);
 
 // node_modules/lucide-react/dist/esm/icons/film.mjs
-var __iconNode10 = [
+var __iconNode12 = [
   ["rect", { width: "18", height: "18", x: "3", y: "3", rx: "2", key: "afitv7" }],
   ["path", { d: "M7 3v18", key: "bbkbws" }],
   ["path", { d: "M3 7.5h4", key: "zfgn84" }],
@@ -193,10 +208,10 @@ var __iconNode10 = [
   ["path", { d: "M17 7.5h4", key: "myr1c1" }],
   ["path", { d: "M17 16.5h4", key: "go4c1d" }]
 ];
-var Film = createLucideIcon("film", __iconNode10);
+var Film = createLucideIcon("film", __iconNode12);
 
 // node_modules/lucide-react/dist/esm/icons/hard-drive.mjs
-var __iconNode11 = [
+var __iconNode13 = [
   ["path", { d: "M10 16h.01", key: "1bzywj" }],
   [
     "path",
@@ -208,10 +223,10 @@ var __iconNode11 = [
   ["path", { d: "M21.946 12.013H2.054", key: "zqlbp7" }],
   ["path", { d: "M6 16h.01", key: "1pmjb7" }]
 ];
-var HardDrive = createLucideIcon("hard-drive", __iconNode11);
+var HardDrive = createLucideIcon("hard-drive", __iconNode13);
 
 // node_modules/lucide-react/dist/esm/icons/house.mjs
-var __iconNode12 = [
+var __iconNode14 = [
   ["path", { d: "M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8", key: "5wwlr5" }],
   [
     "path",
@@ -221,10 +236,10 @@ var __iconNode12 = [
     }
   ]
 ];
-var House = createLucideIcon("house", __iconNode12);
+var House = createLucideIcon("house", __iconNode14);
 
 // node_modules/lucide-react/dist/esm/icons/layers.mjs
-var __iconNode13 = [
+var __iconNode15 = [
   [
     "path",
     {
@@ -247,26 +262,35 @@ var __iconNode13 = [
     }
   ]
 ];
-var Layers = createLucideIcon("layers", __iconNode13);
+var Layers = createLucideIcon("layers", __iconNode15);
 
 // node_modules/lucide-react/dist/esm/icons/log-out.mjs
-var __iconNode14 = [
+var __iconNode16 = [
   ["path", { d: "m16 17 5-5-5-5", key: "1bji2h" }],
   ["path", { d: "M21 12H9", key: "dn1m92" }],
   ["path", { d: "M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4", key: "1uf3rs" }]
 ];
-var LogOut = createLucideIcon("log-out", __iconNode14);
+var LogOut = createLucideIcon("log-out", __iconNode16);
 
 // node_modules/lucide-react/dist/esm/icons/music.mjs
-var __iconNode15 = [
+var __iconNode17 = [
   ["path", { d: "M9 18V5l12-2v13", key: "1jmyc2" }],
   ["circle", { cx: "6", cy: "18", r: "3", key: "fqmcym" }],
   ["circle", { cx: "18", cy: "16", r: "3", key: "1hluhg" }]
 ];
-var Music = createLucideIcon("music", __iconNode15);
+var Music = createLucideIcon("music", __iconNode17);
+
+// node_modules/lucide-react/dist/esm/icons/refresh-cw.mjs
+var __iconNode18 = [
+  ["path", { d: "M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8", key: "v9h5vc" }],
+  ["path", { d: "M21 3v5h-5", key: "1q7to0" }],
+  ["path", { d: "M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16", key: "3uifl3" }],
+  ["path", { d: "M8 16H3v5", key: "1cv678" }]
+];
+var RefreshCw = createLucideIcon("refresh-cw", __iconNode18);
 
 // node_modules/lucide-react/dist/esm/icons/settings.mjs
-var __iconNode16 = [
+var __iconNode19 = [
   [
     "path",
     {
@@ -276,10 +300,22 @@ var __iconNode16 = [
   ],
   ["circle", { cx: "12", cy: "12", r: "3", key: "1v7zrd" }]
 ];
-var Settings = createLucideIcon("settings", __iconNode16);
+var Settings = createLucideIcon("settings", __iconNode19);
+
+// node_modules/lucide-react/dist/esm/icons/shield.mjs
+var __iconNode20 = [
+  [
+    "path",
+    {
+      d: "M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z",
+      key: "oel41y"
+    }
+  ]
+];
+var Shield = createLucideIcon("shield", __iconNode20);
 
 // node_modules/lucide-react/dist/esm/icons/sparkles.mjs
-var __iconNode17 = [
+var __iconNode21 = [
   [
     "path",
     {
@@ -291,10 +327,10 @@ var __iconNode17 = [
   ["path", { d: "M22 4h-4", key: "gwowj6" }],
   ["circle", { cx: "4", cy: "20", r: "2", key: "6kqj1y" }]
 ];
-var Sparkles = createLucideIcon("sparkles", __iconNode17);
+var Sparkles = createLucideIcon("sparkles", __iconNode21);
 
 // node_modules/lucide-react/dist/esm/icons/square-play.mjs
-var __iconNode18 = [
+var __iconNode22 = [
   ["rect", { x: "3", y: "3", width: "18", height: "18", rx: "2", key: "h1oib" }],
   [
     "path",
@@ -304,10 +340,10 @@ var __iconNode18 = [
     }
   ]
 ];
-var SquarePlay = createLucideIcon("square-play", __iconNode18);
+var SquarePlay = createLucideIcon("square-play", __iconNode22);
 
 // node_modules/lucide-react/dist/esm/icons/star.mjs
-var __iconNode19 = [
+var __iconNode23 = [
   [
     "path",
     {
@@ -316,37 +352,37 @@ var __iconNode19 = [
     }
   ]
 ];
-var Star = createLucideIcon("star", __iconNode19);
+var Star = createLucideIcon("star", __iconNode23);
 
 // node_modules/lucide-react/dist/esm/icons/trending-up.mjs
-var __iconNode20 = [
+var __iconNode24 = [
   ["path", { d: "M16 7h6v6", key: "box55l" }],
   ["path", { d: "m22 7-8.5 8.5-5-5L2 17", key: "1t1m79" }]
 ];
-var TrendingUp = createLucideIcon("trending-up", __iconNode20);
+var TrendingUp = createLucideIcon("trending-up", __iconNode24);
 
 // node_modules/lucide-react/dist/esm/icons/tv.mjs
-var __iconNode21 = [
+var __iconNode25 = [
   ["path", { d: "m17 2-5 5-5-5", key: "16satq" }],
   ["rect", { width: "20", height: "15", x: "2", y: "7", rx: "2", key: "1e6viu" }]
 ];
-var Tv = createLucideIcon("tv", __iconNode21);
+var Tv = createLucideIcon("tv", __iconNode25);
 
 // node_modules/lucide-react/dist/esm/icons/users.mjs
-var __iconNode22 = [
+var __iconNode26 = [
   ["path", { d: "M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2", key: "1yyitq" }],
   ["path", { d: "M16 3.128a4 4 0 0 1 0 7.744", key: "16gr8j" }],
   ["path", { d: "M22 21v-2a4 4 0 0 0-3-3.87", key: "kshegd" }],
   ["circle", { cx: "9", cy: "7", r: "4", key: "nufk8" }]
 ];
-var Users = createLucideIcon("users", __iconNode22);
+var Users = createLucideIcon("users", __iconNode26);
 
 // node_modules/lucide-react/dist/esm/icons/x.mjs
-var __iconNode23 = [
+var __iconNode27 = [
   ["path", { d: "M18 6 6 18", key: "1bl5f8" }],
   ["path", { d: "m6 6 12 12", key: "d8bk6v" }]
 ];
-var X = createLucideIcon("x", __iconNode23);
+var X = createLucideIcon("x", __iconNode27);
 
 // index.tsx
 import { Fragment, jsx, jsxs } from "react/jsx-runtime";
@@ -3482,6 +3518,78 @@ var Login = ({ onLoginSuccess, publicConfig }) => {
     error && /* @__PURE__ */ jsx("div", { className: "error-message", style: { marginTop: "1rem" }, children: error })
   ] });
 };
+var RebuildLibraryCacheButton = () => {
+  const [status, setStatus] = React.useState("idle");
+  const [lastBuilt, setLastBuilt] = React.useState(null);
+  const pollRef = React.useRef(null);
+  React.useEffect(() => {
+    apiFetch("/api/plex/stats/status").then((s) => {
+      if (s.lastGeneratedAt) setLastBuilt(s.lastGeneratedAt);
+      if (s.isBuilding) startPolling();
+    }).catch(() => {
+    });
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
+  }, []);
+  const startPolling = () => {
+    setStatus("building");
+    if (pollRef.current) clearInterval(pollRef.current);
+    pollRef.current = setInterval(async () => {
+      try {
+        const s = await apiFetch("/api/plex/stats/status");
+        if (s.lastGeneratedAt) setLastBuilt(s.lastGeneratedAt);
+        if (!s.isBuilding) {
+          clearInterval(pollRef.current);
+          setStatus("done");
+          setTimeout(() => setStatus("idle"), 4e3);
+        }
+      } catch {
+        clearInterval(pollRef.current);
+        setStatus("error");
+      }
+    }, 3e3);
+  };
+  const handleRebuild = async () => {
+    setStatus("starting");
+    try {
+      await apiFetch("/api/plex/stats/rebuild", { method: "POST" });
+      startPolling();
+    } catch {
+      setStatus("error");
+      setTimeout(() => setStatus("idle"), 3e3);
+    }
+  };
+  const isRunning = status === "building" || status === "starting";
+  return /* @__PURE__ */ jsxs("div", { className: "flex flex-col gap-1.5", children: [
+    /* @__PURE__ */ jsx(
+      "button",
+      {
+        onClick: handleRebuild,
+        disabled: isRunning,
+        className: `w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs transition-all border
+                    ${status === "done" ? "bg-green-500/10 border-green-500/30 text-green-400" : status === "error" ? "bg-red-500/10 border-red-500/30 text-red-400" : isRunning ? "bg-white/5 border-white/10 text-muted cursor-not-allowed" : "bg-white/5 border-white/10 text-text hover:bg-white/10"}`,
+        children: isRunning ? /* @__PURE__ */ jsxs(Fragment, { children: [
+          /* @__PURE__ */ jsx("div", { className: "w-3 h-3 rounded-full border-2 border-current border-t-transparent animate-spin" }),
+          " Building Cache..."
+        ] }) : status === "done" ? /* @__PURE__ */ jsxs(Fragment, { children: [
+          /* @__PURE__ */ jsx(CircleCheckBig, { size: 14 }),
+          " Cache Updated!"
+        ] }) : status === "error" ? /* @__PURE__ */ jsxs(Fragment, { children: [
+          /* @__PURE__ */ jsx(CircleAlert, { size: 14 }),
+          " Build Failed"
+        ] }) : /* @__PURE__ */ jsxs(Fragment, { children: [
+          /* @__PURE__ */ jsx(RefreshCw, { size: 14 }),
+          " Rebuild Library Cache"
+        ] })
+      }
+    ),
+    lastBuilt && /* @__PURE__ */ jsxs("p", { className: "text-[10px] text-muted text-center", children: [
+      "Last built: ",
+      new Date(lastBuilt).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })
+    ] })
+  ] });
+};
 var UserDashboard = ({ sessionInfo, publicConfig, onLogout, refreshSession, onViewAdmin, onViewStatus, onViewDashboard }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [toast, setToast] = useState(null);
@@ -3490,6 +3598,12 @@ var UserDashboard = ({ sessionInfo, publicConfig, onLogout, refreshSession, onVi
   const [serverStats, setServerStats] = useState(null);
   const [dashboardData, setDashboardData] = useState(null);
   const [serverDataLoading, setServerDataLoading] = useState(true);
+  const [topContentPage, setTopContentPage] = useState(0);
+  const TOP_CONTENT_PAGE_SIZE = 12;
+  const [recentHistoryPage, setRecentHistoryPage] = useState(0);
+  const RECENT_HISTORY_PAGE_SIZE = 5;
+  const [analyticsDays, setAnalyticsDays] = useState(30);
+  const [analyticsDaysOpen, setAnalyticsDaysOpen] = useState(false);
   const user = sessionInfo.account;
   const [optOutNewsletter, setOptOutNewsletter] = useState(user?.optOutNewsletter || false);
   const handleToggleNewsletter = async () => {
@@ -3528,13 +3642,16 @@ var UserDashboard = ({ sessionInfo, publicConfig, onLogout, refreshSession, onVi
   }, []);
   useEffect(() => {
     const fetchAnalytics = async () => {
-      if (sessionInfo?.session?.isAdmin || !user) {
+      if (!sessionInfo?.session?.isAdmin && !user) {
         setAnalyticsLoading(false);
         return;
       }
       try {
-        const res = await apiFetch("/api/plex/analytics/me");
+        setAnalyticsLoading(true);
+        const res = await apiFetch(`/api/plex/analytics/me?days=${analyticsDays}`);
         setAnalytics(res);
+        setTopContentPage(0);
+        setRecentHistoryPage(0);
       } catch (e) {
         console.error("Failed to fetch analytics", e);
       } finally {
@@ -3542,19 +3659,35 @@ var UserDashboard = ({ sessionInfo, publicConfig, onLogout, refreshSession, onVi
       }
     };
     fetchAnalytics();
-  }, [user, sessionInfo.session.isAdmin]);
+  }, [user, sessionInfo.session.isAdmin, analyticsDays]);
   useEffect(() => {
+    let pollTimer = null;
+    let isMounted = true;
     const fetchServerData = async () => {
+      if (!isMounted) return;
       try {
-        const p1 = apiFetch("/api/plex/stats").then((res) => setServerStats(res)).catch((e) => console.error("Failed to fetch server stats", e));
-        const p2 = apiFetch("/api/plex/dashboard?limit=15").then((res) => setDashboardData(res)).catch((e) => console.error("Failed to fetch dashboard data", e));
+        const p1 = apiFetch("/api/plex/stats").then((res) => {
+          if (isMounted) {
+            setServerStats(res);
+            if (res?.isBuilding) {
+              pollTimer = setTimeout(fetchServerData, 5e3);
+            }
+          }
+        }).catch((e) => console.error("Failed to fetch server stats", e));
+        const p2 = dashboardData ? Promise.resolve() : apiFetch("/api/plex/dashboard?limit=15").then((res) => {
+          if (isMounted) setDashboardData(res);
+        }).catch((e) => console.error("Failed to fetch dashboard data", e));
         await Promise.all([p1, p2]);
       } finally {
-        setServerDataLoading(false);
+        if (isMounted) setServerDataLoading(false);
       }
     };
     fetchServerData();
-  }, []);
+    return () => {
+      isMounted = false;
+      if (pollTimer) clearTimeout(pollTimer);
+    };
+  }, [dashboardData]);
   const handleRelink = async () => {
     setIsLoading(true);
     try {
@@ -3590,7 +3723,7 @@ var UserDashboard = ({ sessionInfo, publicConfig, onLogout, refreshSession, onVi
       ] }),
       /* @__PURE__ */ jsx("div", { className: "relative pt-24 pb-8 px-6 md:px-10 flex flex-col items-center md:items-start text-center md:text-left z-10", children: /* @__PURE__ */ jsxs("div", { className: "flex flex-col md:flex-row items-center md:items-end gap-6", children: [
         (() => {
-          const thumbUrl = user?.thumb || sessionInfo.session.thumb;
+          const thumbUrl = user?.thumb || sessionInfo.session.thumb || (sessionInfo.session.isAdmin ? sessionInfo.adminThumb : null);
           if (thumbUrl) {
             return /* @__PURE__ */ jsxs("div", { className: "relative", children: [
               /* @__PURE__ */ jsx(
@@ -3618,16 +3751,31 @@ var UserDashboard = ({ sessionInfo, publicConfig, onLogout, refreshSession, onVi
         ] })
       ] }) })
     ] }),
-    /* @__PURE__ */ jsxs("div", { className: "grid grid-cols-1 lg:grid-cols-3 gap-6", children: [
+    /* @__PURE__ */ jsxs("div", { className: "grid grid-cols-1 lg:grid-cols-3 gap-6 items-start", children: [
       /* @__PURE__ */ jsxs("div", { className: "lg:col-span-1 flex flex-col gap-6", children: [
-        sessionInfo.session.isAdmin && /* @__PURE__ */ jsxs("div", { className: "bg-plex/5 border border-plex/20 rounded-2xl p-6 text-sm text-muted leading-relaxed shadow-lg", children: [
-          /* @__PURE__ */ jsx("span", { className: "text-plex font-bold", children: "Server Administrator" }),
-          " \u2014 You own this server. Use the Admin Panel to manage users and settings. Your personal watch stats will appear below if you switch to a normal user account."
-        ] }),
-        sessionInfo.session.isAdmin ? /* @__PURE__ */ jsxs("div", { className: "bg-card border border-border rounded-2xl p-6 shadow-xl flex flex-col items-center justify-center text-center md:h-[240px]", children: [
-          /* @__PURE__ */ jsx("div", { className: "w-16 h-16 bg-plex/10 rounded-full flex items-center justify-center mb-4 border border-plex/30 shadow-[0_0_15px_rgba(229,160,13,0.15)]", children: /* @__PURE__ */ jsx(Shield, { className: "w-8 h-8 text-plex drop-shadow-md" }) }),
-          /* @__PURE__ */ jsx("h3", { className: "text-xl md:text-2xl font-black text-text uppercase tracking-widest mb-1", children: "Server Admin" }),
-          /* @__PURE__ */ jsx("p", { className: "text-xs font-bold text-plex tracking-wider uppercase", children: "Unlimited Access" })
+        sessionInfo.session.isAdmin ? /* @__PURE__ */ jsxs("div", { className: "flex flex-col gap-6", children: [
+          /* @__PURE__ */ jsxs("div", { className: "bg-card border border-border rounded-2xl p-6 shadow-xl flex flex-col items-center justify-center text-center md:h-[240px]", children: [
+            /* @__PURE__ */ jsx("div", { className: "w-16 h-16 bg-plex/10 rounded-full flex items-center justify-center mb-4 border border-plex/30 shadow-[0_0_15px_rgba(229,160,13,0.15)]", children: /* @__PURE__ */ jsx(Shield, { className: "w-8 h-8 text-plex drop-shadow-md" }) }),
+            /* @__PURE__ */ jsx("h3", { className: "text-xl md:text-2xl font-black text-text uppercase tracking-widest mb-1", children: "Server Admin" }),
+            /* @__PURE__ */ jsx("p", { className: "text-xs font-bold text-plex tracking-wider uppercase", children: "Unlimited Access" })
+          ] }),
+          /* @__PURE__ */ jsxs("div", { className: "bg-card border border-border rounded-2xl p-6 shadow-xl flex flex-col", children: [
+            /* @__PURE__ */ jsx("p", { className: "text-muted text-xs uppercase tracking-widest font-semibold mb-4", children: "Quick Actions" }),
+            /* @__PURE__ */ jsxs("div", { className: "flex flex-col gap-3 mt-auto", children: [
+              /* @__PURE__ */ jsxs("a", { href: "/users", className: "w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs transition-all border bg-plex/10 border-plex/30 text-plex hover:bg-plex/20", children: [
+                /* @__PURE__ */ jsx(Users, { size: 16 }),
+                " Manage Users"
+              ] }),
+              /* @__PURE__ */ jsxs("a", { href: "/settings", className: "w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs transition-all border bg-white/5 border-white/10 text-text hover:bg-white/10", children: [
+                /* @__PURE__ */ jsx(Settings, { size: 16 }),
+                " Server Settings"
+              ] }),
+              /* @__PURE__ */ jsxs("a", { href: "/logs", className: "w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs transition-all border bg-white/5 border-white/10 text-text hover:bg-white/10", children: [
+                /* @__PURE__ */ jsx(Activity, { size: 16 }),
+                " System Logs"
+              ] })
+            ] })
+          ] })
         ] }) : user ? /* @__PURE__ */ jsx("div", { className: "bg-card border border-border rounded-2xl p-6 shadow-xl flex flex-col justify-center md:h-[240px]", children: /* @__PURE__ */ jsxs("div", { className: "flex flex-col gap-4", children: [
           /* @__PURE__ */ jsxs("div", { children: [
             /* @__PURE__ */ jsx("p", { className: "text-muted text-xs uppercase tracking-widest font-semibold mb-3", children: "Subscription Status" }),
@@ -3737,6 +3885,47 @@ var UserDashboard = ({ sessionInfo, publicConfig, onLogout, refreshSession, onVi
                 }
               )
             ] })
+          ] }),
+          (sessionInfo.session.isAdmin || user) && !analyticsLoading && analytics?.recentHistory && analytics.recentHistory.length > 0 && /* @__PURE__ */ jsxs("div", { className: "bg-card border border-border rounded-2xl p-6 shadow-xl", children: [
+            /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between mb-6", children: [
+              /* @__PURE__ */ jsx("h3", { className: "text-xl font-bold text-text", children: "Recently Watched" }),
+              analytics.recentHistory.length > RECENT_HISTORY_PAGE_SIZE && /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2", children: [
+                /* @__PURE__ */ jsx(
+                  "button",
+                  {
+                    onClick: () => setRecentHistoryPage((p) => Math.max(0, p - 1)),
+                    disabled: recentHistoryPage === 0,
+                    className: "p-1.5 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-text",
+                    children: /* @__PURE__ */ jsx(ChevronUp, { className: "w-4 h-4 -rotate-90" })
+                  }
+                ),
+                /* @__PURE__ */ jsxs("span", { className: "text-xs text-muted font-medium w-8 text-center", children: [
+                  recentHistoryPage + 1,
+                  " / ",
+                  Math.ceil(analytics.recentHistory.length / RECENT_HISTORY_PAGE_SIZE)
+                ] }),
+                /* @__PURE__ */ jsx(
+                  "button",
+                  {
+                    onClick: () => setRecentHistoryPage((p) => Math.min(Math.ceil(analytics.recentHistory.length / RECENT_HISTORY_PAGE_SIZE) - 1, p + 1)),
+                    disabled: recentHistoryPage >= Math.ceil(analytics.recentHistory.length / RECENT_HISTORY_PAGE_SIZE) - 1,
+                    className: "p-1.5 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-text",
+                    children: /* @__PURE__ */ jsx(ChevronDown, { className: "w-4 h-4 -rotate-90" })
+                  }
+                )
+              ] })
+            ] }),
+            /* @__PURE__ */ jsx("div", { className: "flex flex-col gap-3", children: analytics.recentHistory.slice(recentHistoryPage * RECENT_HISTORY_PAGE_SIZE, (recentHistoryPage + 1) * RECENT_HISTORY_PAGE_SIZE).map((item, idx) => /* @__PURE__ */ jsxs("a", { href: item.plexUrl, target: "_blank", rel: "noreferrer", className: "flex items-center gap-3 p-2.5 rounded-xl hover:bg-white/5 border border-transparent hover:border-white/10 transition-all group", children: [
+              /* @__PURE__ */ jsx("div", { className: "w-12 h-12 rounded-lg overflow-hidden bg-background flex-shrink-0 shadow-md", children: item.thumbUrl ? /* @__PURE__ */ jsx("img", { src: item.thumbUrl, alt: item.title, className: "w-full h-full object-cover" }) : /* @__PURE__ */ jsx("div", { className: "w-full h-full flex items-center justify-center", children: /* @__PURE__ */ jsx(SquarePlay, { className: "w-5 h-5 text-muted/50" }) }) }),
+              /* @__PURE__ */ jsxs("div", { className: "flex-1 min-w-0", children: [
+                /* @__PURE__ */ jsx("h4", { className: "font-bold text-text text-sm truncate group-hover:text-plex transition-colors", children: item.title }),
+                item.episodeTitle && /* @__PURE__ */ jsx("p", { className: "text-xs text-muted truncate mt-0.5", children: item.episodeTitle }),
+                /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-1 mt-1", children: [
+                  /* @__PURE__ */ jsx(Clock, { className: "w-3 h-3 text-muted" }),
+                  /* @__PURE__ */ jsx("p", { className: "text-[10px] text-muted", children: new Date(item.viewedAt * 1e3).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" }) })
+                ] })
+              ] })
+            ] }, idx)) })
           ] })
         ] })
       ] }),
@@ -3744,10 +3933,19 @@ var UserDashboard = ({ sessionInfo, publicConfig, onLogout, refreshSession, onVi
         /* @__PURE__ */ jsxs("div", { className: "bg-card border border-border rounded-2xl p-6 shadow-xl flex flex-col justify-center relative overflow-hidden flex-shrink-0 md:h-[240px]", children: [
           /* @__PURE__ */ jsx("div", { className: "absolute -top-10 -right-10 p-8 opacity-5", children: /* @__PURE__ */ jsx(Activity, { className: "w-64 h-64 text-plex" }) }),
           /* @__PURE__ */ jsxs("div", { className: "relative z-10", children: [
-            /* @__PURE__ */ jsx("p", { className: "text-muted text-sm uppercase tracking-widest font-semibold mb-6", children: "Server Library Size" }),
+            /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between mb-6", children: [
+              /* @__PURE__ */ jsx("p", { className: "text-muted text-sm uppercase tracking-widest font-semibold", children: "Server Library Size" }),
+              sessionInfo.session.isAdmin && /* @__PURE__ */ jsx(RebuildLibraryCacheButton, {})
+            ] }),
             serverDataLoading ? /* @__PURE__ */ jsxs("div", { className: "flex gap-3 items-center text-muted", children: [
               /* @__PURE__ */ jsx("div", { className: "w-5 h-5 rounded-full border-2 border-plex border-t-transparent animate-spin" }),
               " Fetching latest library sizes..."
+            ] }) : serverStats?.isBuilding ? /* @__PURE__ */ jsxs("div", { className: "flex flex-col gap-2", children: [
+              /* @__PURE__ */ jsxs("div", { className: "flex gap-3 items-center text-muted", children: [
+                /* @__PURE__ */ jsx("div", { className: "w-5 h-5 rounded-full border-2 border-plex border-t-transparent animate-spin" }),
+                " Building library size cache in background..."
+              ] }),
+              /* @__PURE__ */ jsx("p", { className: "text-xs text-muted/60", children: "This runs once and may take a few minutes for large libraries. The page will auto-update when ready." })
             ] }) : serverStats ? /* @__PURE__ */ jsxs("div", { className: "grid grid-cols-1 sm:grid-cols-3 gap-4", children: [
               /* @__PURE__ */ jsxs("div", { className: "bg-background/60 p-4 rounded-2xl border border-white/5 flex flex-col items-center justify-center text-center shadow-inner hover:bg-background/80 transition-colors", children: [
                 /* @__PURE__ */ jsx(Film, { className: "w-7 h-7 text-plex mb-2 opacity-80" }),
@@ -3797,20 +3995,88 @@ var UserDashboard = ({ sessionInfo, publicConfig, onLogout, refreshSession, onVi
             ] }) : /* @__PURE__ */ jsx("div", { className: "text-muted text-sm bg-background/50 p-4 rounded-xl border border-white/5", children: "Could not load server statistics at this time." })
           ] })
         ] }),
-        !sessionInfo.session.isAdmin && user && /* @__PURE__ */ jsx(Fragment, { children: analyticsLoading ? /* @__PURE__ */ jsx("div", { className: "flex items-center justify-center p-8 bg-card border border-border rounded-2xl shadow-lg", children: /* @__PURE__ */ jsxs("div", { className: "flex flex-col items-center gap-3", children: [
-          /* @__PURE__ */ jsx("div", { className: "w-6 h-6 rounded-full border-2 border-plex border-t-transparent animate-spin" }),
-          /* @__PURE__ */ jsx("span", { className: "text-muted text-sm font-medium", children: "Loading your stats..." })
-        ] }) }) : analytics && analytics.totalPlays > 0 ? /* @__PURE__ */ jsxs("div", { className: "flex flex-col gap-6", children: [
-          analytics.topContent && analytics.topContent.length > 0 && /* @__PURE__ */ jsxs("div", { className: "bg-card border border-border rounded-2xl p-6 shadow-xl", children: [
-            /* @__PURE__ */ jsx("div", { className: "flex items-center justify-between mb-6", children: /* @__PURE__ */ jsxs("div", { children: [
-              /* @__PURE__ */ jsx("h3", { className: "text-xl font-bold text-text mb-1", children: "Your Most Watched" }),
-              /* @__PURE__ */ jsxs("p", { className: "text-muted text-sm", children: [
-                "Based on your ",
-                analytics.totalPlays,
-                " total plays"
+        (sessionInfo.session.isAdmin || user) && /* @__PURE__ */ jsxs("div", { className: "flex flex-col gap-4", children: [
+          /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between bg-card border border-border rounded-2xl p-4 shadow-sm", children: [
+            /* @__PURE__ */ jsxs("h2", { className: "text-lg md:text-xl font-bold text-text flex items-center gap-2", children: [
+              /* @__PURE__ */ jsx(Activity, { className: "w-5 h-5 text-plex" }),
+              " Your Analytics"
+            ] }),
+            /* @__PURE__ */ jsxs("div", { className: "relative", children: [
+              /* @__PURE__ */ jsxs(
+                "button",
+                {
+                  onClick: () => setAnalyticsDaysOpen(!analyticsDaysOpen),
+                  className: "flex items-center gap-2 bg-background border border-border rounded-lg px-3 py-1.5 text-sm font-medium text-text focus:outline-none focus:border-plex hover:border-plex/50 transition-colors cursor-pointer",
+                  children: [
+                    /* @__PURE__ */ jsx("span", { children: analyticsDays === 7 ? "Last 7 Days" : analyticsDays === 30 ? "Last 30 Days" : analyticsDays === 60 ? "Last 60 Days" : analyticsDays === 90 ? "Last 90 Days" : analyticsDays === 180 ? "Last 180 Days" : "All Time" }),
+                    /* @__PURE__ */ jsx(ChevronDown, { className: `w-4 h-4 transition-transform duration-200 ${analyticsDaysOpen ? "rotate-180 text-plex" : "text-muted"}` })
+                  ]
+                }
+              ),
+              analyticsDaysOpen && /* @__PURE__ */ jsxs(Fragment, { children: [
+                /* @__PURE__ */ jsx("div", { className: "fixed inset-0 z-40", onClick: () => setAnalyticsDaysOpen(false) }),
+                /* @__PURE__ */ jsx("div", { className: "absolute right-0 mt-2 w-40 bg-card border border-border rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.5)] z-50 overflow-hidden flex flex-col py-1 animate-in fade-in slide-in-from-top-2 duration-200", children: [
+                  { value: 7, label: "Last 7 Days" },
+                  { value: 30, label: "Last 30 Days" },
+                  { value: 60, label: "Last 60 Days" },
+                  { value: 90, label: "Last 90 Days" },
+                  { value: 180, label: "Last 180 Days" },
+                  { value: "all", label: "All Time" }
+                ].map((opt) => /* @__PURE__ */ jsx(
+                  "button",
+                  {
+                    onClick: () => {
+                      setAnalyticsDays(opt.value);
+                      setAnalyticsDaysOpen(false);
+                    },
+                    className: `w-full text-left px-4 py-2.5 text-sm transition-colors ${analyticsDays === opt.value ? "bg-plex/10 text-plex font-bold border-l-2 border-plex" : "text-text hover:bg-white/5 border-l-2 border-transparent"}`,
+                    children: opt.label
+                  },
+                  opt.value
+                )) })
               ] })
-            ] }) }),
-            /* @__PURE__ */ jsx("div", { className: "grid grid-cols-2 md:grid-cols-3 gap-4", children: analytics.topContent.slice(0, 3).map((item) => /* @__PURE__ */ jsxs("a", { href: item.plexUrl, target: "_blank", rel: "noreferrer", className: "group flex flex-col gap-2", children: [
+            ] })
+          ] }),
+          analyticsLoading ? /* @__PURE__ */ jsx("div", { className: "flex items-center justify-center p-8 bg-card border border-border rounded-2xl shadow-lg", children: /* @__PURE__ */ jsxs("div", { className: "flex flex-col items-center gap-3", children: [
+            /* @__PURE__ */ jsx("div", { className: "w-6 h-6 rounded-full border-2 border-plex border-t-transparent animate-spin" }),
+            /* @__PURE__ */ jsx("span", { className: "text-muted text-sm font-medium", children: "Loading your stats..." })
+          ] }) }) : analytics && analytics.totalPlays > 0 ? /* @__PURE__ */ jsx("div", { className: "flex flex-col gap-6", children: analytics.topContent && analytics.topContent.length > 0 && /* @__PURE__ */ jsxs("div", { className: "bg-card border border-border rounded-2xl p-6 shadow-xl", children: [
+            /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between mb-6", children: [
+              /* @__PURE__ */ jsxs("div", { children: [
+                /* @__PURE__ */ jsx("h3", { className: "text-xl font-bold text-text mb-1", children: "Your Most Watched" }),
+                /* @__PURE__ */ jsxs("p", { className: "text-muted text-sm", children: [
+                  "Based on your ",
+                  analytics.totalPlays,
+                  " total plays"
+                ] })
+              ] }),
+              analytics.topContent.length > TOP_CONTENT_PAGE_SIZE && /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2", children: [
+                /* @__PURE__ */ jsx(
+                  "button",
+                  {
+                    onClick: () => setTopContentPage((p) => Math.max(0, p - 1)),
+                    disabled: topContentPage === 0,
+                    className: "p-1.5 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-text",
+                    children: /* @__PURE__ */ jsx(ChevronUp, { className: "w-4 h-4 -rotate-90" })
+                  }
+                ),
+                /* @__PURE__ */ jsxs("span", { className: "text-xs text-muted font-medium w-8 text-center", children: [
+                  topContentPage + 1,
+                  " / ",
+                  Math.ceil(analytics.topContent.length / TOP_CONTENT_PAGE_SIZE)
+                ] }),
+                /* @__PURE__ */ jsx(
+                  "button",
+                  {
+                    onClick: () => setTopContentPage((p) => Math.min(Math.ceil(analytics.topContent.length / TOP_CONTENT_PAGE_SIZE) - 1, p + 1)),
+                    disabled: topContentPage >= Math.ceil(analytics.topContent.length / TOP_CONTENT_PAGE_SIZE) - 1,
+                    className: "p-1.5 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-text",
+                    children: /* @__PURE__ */ jsx(ChevronDown, { className: "w-4 h-4 -rotate-90" })
+                  }
+                )
+              ] })
+            ] }),
+            /* @__PURE__ */ jsx("div", { className: "grid grid-cols-3 md:grid-cols-6 gap-3 md:gap-4", children: analytics.topContent.slice(topContentPage * TOP_CONTENT_PAGE_SIZE, (topContentPage + 1) * TOP_CONTENT_PAGE_SIZE).map((item) => /* @__PURE__ */ jsxs("a", { href: item.plexUrl, target: "_blank", rel: "noreferrer", className: "group flex flex-col gap-2", children: [
               /* @__PURE__ */ jsx("div", { className: "relative rounded-xl overflow-hidden aspect-[2/3] bg-background border border-white/5 transition-transform group-hover:scale-105 group-hover:shadow-xl group-hover:border-plex/50", children: item.thumbUrl ? /* @__PURE__ */ jsx("img", { src: item.thumbUrl, alt: item.title, className: "w-full h-full object-cover transition-opacity group-hover:opacity-80" }) : /* @__PURE__ */ jsx("div", { className: "w-full h-full flex items-center justify-center p-4 text-center bg-white/5", children: /* @__PURE__ */ jsx("span", { className: "text-xs font-bold text-muted line-clamp-3", children: item.title }) }) }),
               /* @__PURE__ */ jsxs("div", { className: "flex flex-col px-1", children: [
                 /* @__PURE__ */ jsx("p", { className: "text-xs font-bold text-text truncate group-hover:text-plex transition-colors", children: item.title }),
@@ -3820,29 +4086,15 @@ var UserDashboard = ({ sessionInfo, publicConfig, onLogout, refreshSession, onVi
                 ] })
               ] })
             ] }, item.key)) })
-          ] }),
-          analytics.recentHistory && analytics.recentHistory.length > 0 && /* @__PURE__ */ jsxs("div", { className: "bg-card border border-border rounded-2xl p-6 shadow-xl", children: [
-            /* @__PURE__ */ jsx("h3", { className: "text-xl font-bold text-text mb-6", children: "Recently Watched" }),
-            /* @__PURE__ */ jsx("div", { className: "flex flex-col gap-4", children: analytics.recentHistory.slice(0, 3).map((item, idx) => /* @__PURE__ */ jsxs("a", { href: item.plexUrl, target: "_blank", rel: "noreferrer", className: "flex items-center gap-4 p-3 rounded-xl hover:bg-white/5 border border-transparent hover:border-white/10 transition-all group", children: [
-              /* @__PURE__ */ jsx("div", { className: "w-16 h-16 rounded-lg overflow-hidden bg-background flex-shrink-0 shadow-md", children: item.thumbUrl ? /* @__PURE__ */ jsx("img", { src: item.thumbUrl, alt: item.title, className: "w-full h-full object-cover" }) : /* @__PURE__ */ jsx("div", { className: "w-full h-full flex items-center justify-center", children: /* @__PURE__ */ jsx(SquarePlay, { className: "w-6 h-6 text-muted/50" }) }) }),
-              /* @__PURE__ */ jsxs("div", { className: "flex-1 min-w-0", children: [
-                /* @__PURE__ */ jsx("h4", { className: "font-bold text-text text-sm truncate group-hover:text-plex transition-colors", children: item.title }),
-                item.episodeTitle && /* @__PURE__ */ jsx("p", { className: "text-muted text-xs truncate mt-0.5", children: item.episodeTitle }),
-                /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2 mt-2 text-xs font-medium text-muted/70", children: [
-                  /* @__PURE__ */ jsx(Clock, { size: 12 }),
-                  /* @__PURE__ */ jsx("span", { children: new Date(item.viewedAt * 1e3).toLocaleString(void 0, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) })
-                ] })
-              ] })
-            ] }, idx)) })
+          ] }) }) : /* @__PURE__ */ jsxs("div", { className: "flex flex-col items-center justify-center p-10 bg-card border border-border rounded-2xl shadow-lg text-center flex-1 min-h-[300px]", children: [
+            /* @__PURE__ */ jsx("div", { className: "w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mb-4 text-2xl shadow-inner", children: "\u{1F37F}" }),
+            /* @__PURE__ */ jsx("h3", { className: "font-bold text-text mb-2", children: "No watch history yet" }),
+            /* @__PURE__ */ jsx("p", { className: "text-muted text-sm max-w-sm", children: "Once you start watching content on the server, your personal watch stats and history will appear right here!" })
           ] })
-        ] }) : /* @__PURE__ */ jsxs("div", { className: "flex flex-col items-center justify-center p-10 bg-card border border-border rounded-2xl shadow-lg text-center flex-1 min-h-[200px]", children: [
-          /* @__PURE__ */ jsx("div", { className: "w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mb-4 text-2xl shadow-inner", children: "\u{1F37F}" }),
-          /* @__PURE__ */ jsx("h3", { className: "font-bold text-text mb-2", children: "No watch history yet" }),
-          /* @__PURE__ */ jsx("p", { className: "text-muted text-sm max-w-sm", children: "Once you start watching content on the server, your personal watch stats and history will appear right here!" })
-        ] }) })
+        ] })
       ] })
     ] }),
-    dashboardData && /* @__PURE__ */ jsxs("div", { className: "flex flex-col gap-6 w-full mt-4", children: [
+    dashboardData && /* @__PURE__ */ jsxs("div", { className: "flex flex-col gap-6 w-full", children: [
       dashboardData.recentMovies?.length > 0 && /* @__PURE__ */ jsxs("div", { className: "bg-card border border-border rounded-2xl p-6 shadow-xl overflow-hidden w-full", children: [
         /* @__PURE__ */ jsx("h3", { className: "text-xl font-bold text-text mb-4", children: "Recently Added Movies" }),
         /* @__PURE__ */ jsx("div", { className: "flex overflow-x-auto gap-4 pb-4 snap-x hide-scrollbar scroll-smooth", children: dashboardData.recentMovies.map((item, idx) => /* @__PURE__ */ jsxs("a", { href: item.plexUrl, target: "_blank", rel: "noreferrer", className: "snap-start shrink-0 w-32 md:w-40 group flex flex-col gap-2", children: [
@@ -4617,6 +4869,7 @@ var MainApp = () => {
     if (route !== "loading" && route !== "invite") {
       let path = "/";
       if (route === "admin") path = "/admin";
+      if (route === "users") path = "/users";
       if (route === "user") path = "/portal";
       if (route === "status") path = "/status";
       if (route === "dashboard") path = "/dashboard";
@@ -4682,7 +4935,7 @@ var MainApp = () => {
     if (currentRoute === "logs" && isAdmin) return /* @__PURE__ */ jsx(LogsDashboard, { onLogout: handleLogout });
     if (currentRoute === "mediastack") return /* @__PURE__ */ jsx(MediaStackDashboard, { isAdmin });
     if (currentRoute === "analytics") return /* @__PURE__ */ jsx(AnalyticsDashboard, { isAdmin, sessionInfo });
-    if (currentRoute === "users" || currentRoute === "admin") return /* @__PURE__ */ jsx(AdminDashboard, { onLogout: handleLogout, onViewUserPortal: () => setRoute("user"), onViewStatus: () => setRoute("status"), onViewDashboard: () => setRoute("dashboard") });
+    if (currentRoute === "admin" || currentRoute === "users") return /* @__PURE__ */ jsx(AdminDashboard, { onLogout: handleLogout, onViewUserPortal: () => setRoute("user"), onViewStatus: () => setRoute("status"), onViewDashboard: () => setRoute("dashboard") });
     return /* @__PURE__ */ jsx(UserDashboard, { sessionInfo, publicConfig, onLogout: handleLogout, refreshSession: checkSession, onViewAdmin: () => setRoute("users"), onViewStatus: () => setRoute("status"), onViewDashboard: () => setRoute("dashboard") });
   };
   return /* @__PURE__ */ jsxs("div", { className: "flex w-full min-h-screen bg-background", children: [
@@ -4811,6 +5064,22 @@ lucide-react/dist/esm/icons/chevron-up.mjs:
    * See the LICENSE file in the root directory of this source tree.
    *)
 
+lucide-react/dist/esm/icons/circle-alert.mjs:
+  (**
+   * @license lucide-react v1.21.0 - ISC
+   *
+   * This source code is licensed under the ISC license.
+   * See the LICENSE file in the root directory of this source tree.
+   *)
+
+lucide-react/dist/esm/icons/circle-check-big.mjs:
+  (**
+   * @license lucide-react v1.21.0 - ISC
+   *
+   * This source code is licensed under the ISC license.
+   * See the LICENSE file in the root directory of this source tree.
+   *)
+
 lucide-react/dist/esm/icons/clock.mjs:
   (**
    * @license lucide-react v1.21.0 - ISC
@@ -4891,7 +5160,23 @@ lucide-react/dist/esm/icons/music.mjs:
    * See the LICENSE file in the root directory of this source tree.
    *)
 
+lucide-react/dist/esm/icons/refresh-cw.mjs:
+  (**
+   * @license lucide-react v1.21.0 - ISC
+   *
+   * This source code is licensed under the ISC license.
+   * See the LICENSE file in the root directory of this source tree.
+   *)
+
 lucide-react/dist/esm/icons/settings.mjs:
+  (**
+   * @license lucide-react v1.21.0 - ISC
+   *
+   * This source code is licensed under the ISC license.
+   * See the LICENSE file in the root directory of this source tree.
+   *)
+
+lucide-react/dist/esm/icons/shield.mjs:
   (**
    * @license lucide-react v1.21.0 - ISC
    *

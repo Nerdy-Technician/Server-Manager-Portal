@@ -5342,11 +5342,12 @@ const MainApp: React.FC = () => {
         fetchPublicConfig();
     }, [fetchPublicConfig]);
 
-    const setRoute = useCallback((route: 'login' | 'admin' | 'user' | 'status' | 'dashboard' | 'settings' | 'logs' | 'analytics' | 'mediastack' | 'invite' | 'loading') => {
+    const setRoute = useCallback((route: 'login' | 'admin' | 'user' | 'users' | 'status' | 'dashboard' | 'settings' | 'logs' | 'analytics' | 'mediastack' | 'invite' | 'loading') => {
         setCurrentRoute(route);
         if (route !== 'loading' && route !== 'invite') {
             let path = '/';
             if (route === 'admin') path = '/admin';
+            if (route === 'users') path = '/users';
             if (route === 'user') path = '/portal';
             if (route === 'status') path = '/status';
             if (route === 'dashboard') path = '/dashboard';
@@ -5377,8 +5378,8 @@ const MainApp: React.FC = () => {
             else if (path === '/analytics') setCurrentRoute('analytics');
             else if (path === '/settings' && !data.session.isAdmin) setCurrentRoute('user');
             else if (path === '/portal') setCurrentRoute('user');
-            else if (path === '/admin') setCurrentRoute('admin');
-            else if (path === '/users') setCurrentRoute('admin');
+            else if (path === '/admin') setCurrentRoute('users');
+            else if (path === '/users') setCurrentRoute('users');
             else {
                 // If at root or unknown, push to default route
                 window.history.replaceState({}, '', '/portal');
@@ -5422,8 +5423,8 @@ const MainApp: React.FC = () => {
         if (currentRoute === 'logs' && isAdmin) return <LogsDashboard onLogout={handleLogout} />;
         if (currentRoute === 'mediastack') return <MediaStackDashboard isAdmin={isAdmin} />;
         if (currentRoute === 'analytics') return <AnalyticsDashboard isAdmin={isAdmin} sessionInfo={sessionInfo} />;
-        if (currentRoute === 'admin') return <AdminDashboard onLogout={handleLogout} onViewUserPortal={() => setRoute('user')} onViewStatus={() => setRoute('status')} onViewDashboard={() => setRoute('dashboard')} />;
-        return <UserDashboard sessionInfo={sessionInfo} publicConfig={publicConfig} onLogout={handleLogout} refreshSession={checkSession} onViewAdmin={() => setRoute('admin')} onViewStatus={() => setRoute('status')} onViewDashboard={() => setRoute('dashboard')} />;
+        if (currentRoute === 'admin' || currentRoute === 'users') return <AdminDashboard onLogout={handleLogout} onViewUserPortal={() => setRoute('user')} onViewStatus={() => setRoute('status')} onViewDashboard={() => setRoute('dashboard')} />;
+        return <UserDashboard sessionInfo={sessionInfo} publicConfig={publicConfig} onLogout={handleLogout} refreshSession={checkSession} onViewAdmin={() => setRoute('users')} onViewStatus={() => setRoute('status')} onViewDashboard={() => setRoute('dashboard')} />;
     };
 
     return (
