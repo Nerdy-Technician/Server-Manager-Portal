@@ -1479,7 +1479,7 @@ const loadPlexStatsFromDisk = async () => {
     try {
         const raw = await fs.readFile(PLEX_STATS_CACHE_PATH, 'utf8');
         const parsed = JSON.parse(raw);
-        if (parsed && parsed.generatedAt) {
+        if (parsed && parsed.moviesBytes !== undefined) {
             cachedPlexStats = parsed;
             return parsed;
         }

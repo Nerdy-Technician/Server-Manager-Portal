@@ -3811,18 +3811,36 @@ const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onLogout: 
     }, [user, sessionInfo.session.isAdmin, analyticsDays]);
 
     useEffect(() => {
+        let pollTimer: any = null;
+        let isMounted = true;
+        
         const fetchServerData = async () => {
+            if (!isMounted) return;
             try {
-                const p1 = apiFetch('/api/plex/stats').then(res => setServerStats(res)).catch(e => console.error("Failed to fetch server stats", e));
-                const p2 = apiFetch('/api/plex/dashboard?limit=15').then(res => setDashboardData(res)).catch(e => console.error("Failed to fetch dashboard data", e));
+                const p1 = apiFetch('/api/plex/stats').then(res => {
+                    if (isMounted) {
+                        setServerStats(res);
+                        if (res?.isBuilding) {
+                            pollTimer = setTimeout(fetchServerData, 5000);
+                        }
+                    }
+                }).catch(e => console.error("Failed to fetch server stats", e));
+                
+                const p2 = dashboardData ? Promise.resolve() : apiFetch('/api/plex/dashboard?limit=15').then(res => {
+                    if (isMounted) setDashboardData(res);
+                }).catch(e => console.error("Failed to fetch dashboard data", e));
                 
                 await Promise.all([p1, p2]);
             } finally {
-                setServerDataLoading(false);
+                if (isMounted) setServerDataLoading(false);
             }
         };
         fetchServerData();
-    }, []);
+        return () => { 
+            isMounted = false;
+            if (pollTimer) clearTimeout(pollTimer); 
+        };
+    }, [dashboardData]);
 
     const handleRelink = async () => {
         setIsLoading(true);
@@ -4143,7 +4161,10 @@ const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onLogout: 
                             <Activity className="w-64 h-64 text-plex" />
                         </div>
                         <div className="relative z-10">
-                            <p className="text-muted text-sm uppercase tracking-widest font-semibold mb-6">Server Library Size</p>
+                            <div className="flex items-center justify-between mb-6">
+                                <p className="text-muted text-sm uppercase tracking-widest font-semibold">Server Library Size</p>
+                                {sessionInfo.session.isAdmin && <RebuildLibraryCacheButton />}
+                            </div>
                             {serverDataLoading ? (
                                 <div className="flex gap-3 items-center text-muted"><div className="w-5 h-5 rounded-full border-2 border-plex border-t-transparent animate-spin" /> Fetching latest library sizes...</div>
                             ) : serverStats?.isBuilding ? (
