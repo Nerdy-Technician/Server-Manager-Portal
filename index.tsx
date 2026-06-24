@@ -705,7 +705,7 @@ const SettingsDashboard: React.FC = () => {
     const [servers, setServers] = useState<PlexServer[]>([]);
     const [selectedServer, setSelectedServer] = useState('');
     const [checkInterval, setCheckInterval] = useState(60);
-    const [hideStreamUsers, setHideStreamUsers] = useState(false);
+    const [hideStreamUsers, setHideStreamUsers] = useState<string>('false');
     const [activeTab, setActiveTab] = useState(() => {
         const hash = window.location.hash.replace('#', '');
         return ['plex', 'smtp', 'newsletter', 'cleanup', 'mediastack', 'branding', 'navigation', 'status', 'invites', 'tasks'].includes(hash) ? hash : 'plex';
@@ -814,7 +814,7 @@ const SettingsDashboard: React.FC = () => {
             setReferralRewardDays(initialSettings.referralRewardDays || 7);
             setAnnouncement(initialSettings.announcement || '');
             if (initialSettings.navOrder) setNavOrder(initialSettings.navOrder);
-            setHideStreamUsers(!!initialSettings.hideStreamUsers);
+            setHideStreamUsers(initialSettings.hideStreamUsers === true ? 'anonymous' : (initialSettings.hideStreamUsers || 'false'));
             setTestRecipient('');
             setServers([]);
         }
@@ -1073,13 +1073,20 @@ const SettingsDashboard: React.FC = () => {
                             <div className="mb-4" style={{ marginTop: '1rem' }}>
                                 <div className="flex items-center justify-between p-4 border border-border rounded-lg bg-background">
                                     <div>
-                                        <h4 className="font-bold text-text">Hide Stream User Details</h4>
-                                        <p className="text-sm text-muted">Hide usernames and avatars from active streams for non-admin users (e.g. on the public status page).</p>
+                                        <h4 className="font-bold text-text">Stream User Privacy</h4>
+                                        <p className="text-sm text-muted">Control how stream users are displayed to non-admins (e.g. on the public status page).</p>
                                     </div>
-                                    <button onClick={() => setHideStreamUsers(!hideStreamUsers)} aria-label="Toggle hide stream users"
-                                        className={`relative inline-flex items-center w-12 h-6 rounded-full transition-all flex-shrink-0 border ${hideStreamUsers ? 'bg-plex border-plex' : 'bg-border border-border'}`}>
-                                        <span className={`inline-block w-4 h-4 bg-white rounded-full shadow transition-transform duration-300 ${hideStreamUsers ? 'translate-x-7' : 'translate-x-1'}`} />
-                                    </button>
+                                    <div className="w-56 ml-4 flex-shrink-0">
+                                        <CustomSelect
+                                            value={String(hideStreamUsers)}
+                                            onChange={(val) => setHideStreamUsers(val)}
+                                            options={[
+                                                { label: 'Show Names', value: 'false' },
+                                                { label: 'Show as Anonymous', value: 'anonymous' },
+                                                { label: 'Hide Completely', value: 'hidden' }
+                                            ]}
+                                        />
+                                    </div>
                                 </div>
                             </div>
                             <div className="mb-4" style={{ marginTop: '1rem' }}>
@@ -4776,10 +4783,12 @@ const StreamDetailsModal: React.FC<{ session: any, onClose: () => void }> = ({ s
                         <div className="absolute inset-0 bg-gradient-to-t from-card to-transparent md:bg-gradient-to-r"></div>
                     </div>
                     {/* User Avatar Badge */}
-                    <div className="absolute top-4 left-4 flex items-center gap-2 bg-black/60 backdrop-blur-md rounded-full pr-4 p-1.5 shadow-lg border border-white/10 z-10">
-                        <img src={session.userThumb ? session.userThumb : 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'} className="w-8 h-8 rounded-full object-cover" onError={(e) => { e.currentTarget.src = 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'; }} />
-                        <span className="text-xs font-bold text-white truncate max-w-[120px]">{session.user}</span>
-                    </div>
+                    {session.user && (
+                        <div className="absolute top-4 left-4 flex items-center gap-2 bg-black/60 backdrop-blur-md rounded-full pr-4 p-1.5 shadow-lg border border-white/10 z-10">
+                            <img src={session.userThumb ? session.userThumb : 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'} className="w-8 h-8 rounded-full object-cover" onError={(e) => { e.currentTarget.src = 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'; }} />
+                            <span className="text-xs font-bold text-white truncate max-w-[120px]">{session.user}</span>
+                        </div>
+                    )}
                 </div>
 
                 {/* Details Side */}
@@ -4904,10 +4913,12 @@ const LibraryDashboard: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                                             <img src={`/api/plex/image?path=${encodeURIComponent(session.thumb)}&width=300&height=500`} alt={session.title} loading="lazy" className="absolute inset-0 w-full h-full object-cover drop-shadow-2xl" />
                                         </div>
                                         <div className="p-3 md:p-4 flex flex-col flex-grow min-w-0 justify-center relative">
-                                            <div className="absolute top-3 right-3 flex items-center gap-2 bg-black/50 backdrop-blur-md rounded-full pr-3 p-1 shadow-md border border-white/5">
-                                                <img src={session.userThumb ? session.userThumb : 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'} alt={session.user} className="w-5 h-5 rounded-full object-cover" onError={(e) => { e.currentTarget.src = 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'; }} />
-                                                <span className="text-[10px] font-bold text-white/90 truncate max-w-[80px] md:max-w-[100px]">{session.user}</span>
-                                            </div>
+                                            {session.user && (
+                                                <div className="absolute top-3 right-3 flex items-center gap-2 bg-black/50 backdrop-blur-md rounded-full pr-3 p-1 shadow-md border border-white/5">
+                                                    <img src={session.userThumb ? session.userThumb : 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'} alt={session.user} className="w-5 h-5 rounded-full object-cover" onError={(e) => { e.currentTarget.src = 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'; }} />
+                                                    <span className="text-[10px] font-bold text-white/90 truncate max-w-[80px] md:max-w-[100px]">{session.user}</span>
+                                                </div>
+                                            )}
 
                                             <div className="activity-header mb-1 pr-24 md:pr-32">
                                                 <div className="activity-title-group">

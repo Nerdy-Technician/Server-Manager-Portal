@@ -1206,7 +1206,7 @@ app.get('/api/config', requireAdmin, async (req, res) => {
                 referralTrialDays: config.referralTrialDays || 3,
                 referralRewardDays: config.referralRewardDays || 7,
                 announcement: config.announcement || '',
-                hideStreamUsers: !!config.hideStreamUsers,
+                hideStreamUsers: config.hideStreamUsers === true ? 'anonymous' : (config.hideStreamUsers || 'false'),
                 navOrder: config.navOrder || ['home', 'discover', 'users', 'status', 'logs', 'analytics', 'mediastack', 'request', 'settings', 'logout']
             },
         });
@@ -1241,7 +1241,7 @@ app.get('/api/config', requireAdmin, async (req, res) => {
                 referralTrialDays: 3,
                 referralRewardDays: 7,
                 announcement: '',
-                hideStreamUsers: false,
+                hideStreamUsers: 'false',
                 navOrder: ['home', 'discover', 'users', 'status', 'logs', 'analytics', 'mediastack', 'request', 'settings', 'logout']
             },
         });
@@ -1312,7 +1312,7 @@ app.post('/api/config', async (req, res) => {
         referralTrialDays: parseInt(referralTrialDays, 10) || 3,
         referralRewardDays: parseInt(referralRewardDays, 10) || 7,
         announcement: announcement || '',
-        hideStreamUsers: !!hideStreamUsers,
+        hideStreamUsers: hideStreamUsers === true ? 'anonymous' : (hideStreamUsers === false ? 'false' : (hideStreamUsers || 'false')),
         navOrder: Array.isArray(navOrder) ? navOrder : existingConfig.navOrder || ['home', 'discover', 'users', 'status', 'logs', 'analytics', 'mediastack', 'request', 'settings', 'logout']
     };
     await saveFile(CONFIG_PATH, config);
@@ -2685,7 +2685,8 @@ app.get('/api/plex/dashboard', requireAuth, async (req, res) => {
                 const progress = duration > 0 ? (viewOffset / duration) * 100 : 0;
                 const plexUrl = `https://app.plex.tv/desktop/#!/server/${config.serverIdentifier}/details?key=${encodeURIComponent(m.key)}`;
                 
-                const isHidden = !req.user.isAdmin && config.hideStreamUsers === true;
+                const hideConfig = config.hideStreamUsers === true ? 'anonymous' : (config.hideStreamUsers || 'false');
+                const isHidden = !req.user.isAdmin && (hideConfig === 'anonymous' || hideConfig === 'hidden');
                 
                 return {
                     title: m.title,
@@ -2693,7 +2694,7 @@ app.get('/api/plex/dashboard', requireAuth, async (req, res) => {
                     grandparentTitle: m.grandparentTitle,
                     year: m.year,
                     thumb: m.grandparentThumb || m.parentThumb || m.thumb,
-                    user: isHidden ? 'Anonymous User' : (m.User ? m.User.title : 'Unknown User'),
+                    user: (isHidden && hideConfig === 'hidden') ? null : (isHidden ? 'Anonymous' : (m.User ? m.User.title : 'Unknown User')),
                     userThumb: isHidden ? null : (m.User ? m.User.thumb : null),
                     playerProduct: player.product || 'Unknown Device',
                     playerTitle: player.title || 'Unknown Player',

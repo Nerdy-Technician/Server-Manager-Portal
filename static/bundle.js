@@ -883,7 +883,7 @@ var SettingsDashboard = () => {
   const [servers, setServers] = useState([]);
   const [selectedServer, setSelectedServer] = useState("");
   const [checkInterval, setCheckInterval] = useState(60);
-  const [hideStreamUsers, setHideStreamUsers] = useState(false);
+  const [hideStreamUsers, setHideStreamUsers] = useState("false");
   const [activeTab, setActiveTab] = useState(() => {
     const hash = window.location.hash.replace("#", "");
     return ["plex", "smtp", "newsletter", "cleanup", "mediastack", "branding", "navigation", "status", "invites", "tasks"].includes(hash) ? hash : "plex";
@@ -977,7 +977,7 @@ var SettingsDashboard = () => {
       setReferralRewardDays(initialSettings.referralRewardDays || 7);
       setAnnouncement(initialSettings.announcement || "");
       if (initialSettings.navOrder) setNavOrder(initialSettings.navOrder);
-      setHideStreamUsers(!!initialSettings.hideStreamUsers);
+      setHideStreamUsers(initialSettings.hideStreamUsers === true ? "anonymous" : initialSettings.hideStreamUsers || "false");
       setTestRecipient("");
       setServers([]);
     }
@@ -1212,18 +1212,21 @@ var SettingsDashboard = () => {
           ] }),
           /* @__PURE__ */ jsx("div", { className: "mb-4", style: { marginTop: "1rem" }, children: /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between p-4 border border-border rounded-lg bg-background", children: [
             /* @__PURE__ */ jsxs("div", { children: [
-              /* @__PURE__ */ jsx("h4", { className: "font-bold text-text", children: "Hide Stream User Details" }),
-              /* @__PURE__ */ jsx("p", { className: "text-sm text-muted", children: "Hide usernames and avatars from active streams for non-admin users (e.g. on the public status page)." })
+              /* @__PURE__ */ jsx("h4", { className: "font-bold text-text", children: "Stream User Privacy" }),
+              /* @__PURE__ */ jsx("p", { className: "text-sm text-muted", children: "Control how stream users are displayed to non-admins (e.g. on the public status page)." })
             ] }),
-            /* @__PURE__ */ jsx(
-              "button",
+            /* @__PURE__ */ jsx("div", { className: "w-56 ml-4 flex-shrink-0", children: /* @__PURE__ */ jsx(
+              CustomSelect,
               {
-                onClick: () => setHideStreamUsers(!hideStreamUsers),
-                "aria-label": "Toggle hide stream users",
-                className: `relative inline-flex items-center w-12 h-6 rounded-full transition-all flex-shrink-0 border ${hideStreamUsers ? "bg-plex border-plex" : "bg-border border-border"}`,
-                children: /* @__PURE__ */ jsx("span", { className: `inline-block w-4 h-4 bg-white rounded-full shadow transition-transform duration-300 ${hideStreamUsers ? "translate-x-7" : "translate-x-1"}` })
+                value: String(hideStreamUsers),
+                onChange: (val) => setHideStreamUsers(val),
+                options: [
+                  { label: "Show Names", value: "false" },
+                  { label: "Show as Anonymous", value: "anonymous" },
+                  { label: "Hide Completely", value: "hidden" }
+                ]
               }
-            )
+            ) })
           ] }) }),
           /* @__PURE__ */ jsxs("div", { className: "mb-4", style: { marginTop: "1rem" }, children: [
             /* @__PURE__ */ jsx("label", { htmlFor: "requestUrl", children: "Request URL" }),
@@ -4396,7 +4399,7 @@ var StreamDetailsModal = ({ session, onClose }) => {
         /* @__PURE__ */ jsx("img", { src: `/api/plex/image?path=${encodeURIComponent(session.thumb)}&width=400&height=600`, alt: session.title, className: "absolute inset-0 w-full h-full object-cover opacity-80" }),
         /* @__PURE__ */ jsx("div", { className: "absolute inset-0 bg-gradient-to-t from-card to-transparent md:bg-gradient-to-r" })
       ] }),
-      /* @__PURE__ */ jsxs("div", { className: "absolute top-4 left-4 flex items-center gap-2 bg-black/60 backdrop-blur-md rounded-full pr-4 p-1.5 shadow-lg border border-white/10 z-10", children: [
+      session.user && /* @__PURE__ */ jsxs("div", { className: "absolute top-4 left-4 flex items-center gap-2 bg-black/60 backdrop-blur-md rounded-full pr-4 p-1.5 shadow-lg border border-white/10 z-10", children: [
         /* @__PURE__ */ jsx("img", { src: session.userThumb ? session.userThumb : "https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y", className: "w-8 h-8 rounded-full object-cover", onError: (e) => {
           e.currentTarget.src = "https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y";
         } }),
@@ -4515,7 +4518,7 @@ var LibraryDashboard = ({ onBack }) => {
               /* @__PURE__ */ jsx("img", { src: `/api/plex/image?path=${encodeURIComponent(session.thumb)}&width=300&height=500`, alt: session.title, loading: "lazy", className: "absolute inset-0 w-full h-full object-cover drop-shadow-2xl" })
             ] }),
             /* @__PURE__ */ jsxs("div", { className: "p-3 md:p-4 flex flex-col flex-grow min-w-0 justify-center relative", children: [
-              /* @__PURE__ */ jsxs("div", { className: "absolute top-3 right-3 flex items-center gap-2 bg-black/50 backdrop-blur-md rounded-full pr-3 p-1 shadow-md border border-white/5", children: [
+              session.user && /* @__PURE__ */ jsxs("div", { className: "absolute top-3 right-3 flex items-center gap-2 bg-black/50 backdrop-blur-md rounded-full pr-3 p-1 shadow-md border border-white/5", children: [
                 /* @__PURE__ */ jsx("img", { src: session.userThumb ? session.userThumb : "https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y", alt: session.user, className: "w-5 h-5 rounded-full object-cover", onError: (e) => {
                   e.currentTarget.src = "https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y";
                 } }),
