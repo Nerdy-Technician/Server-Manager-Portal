@@ -12,12 +12,17 @@ import http from 'http';
 import https from 'https';
 import compression from 'compression';
 import { execSync } from 'child_process';
+import fsSync from 'fs';
 
 let appVersion = 'v1.0.0';
 try {
-    const gitHash = execSync('git rev-parse --short HEAD').toString().trim();
-    appVersion = `v1.0.0-${gitHash}`;
-} catch (e) {}
+    appVersion = fsSync.readFileSync('version.txt', 'utf8').trim();
+} catch (e) {
+    try {
+        const gitHash = execSync('git rev-parse --short HEAD').toString().trim();
+        appVersion = `v1.0.0-${gitHash}`;
+    } catch(err) {}
+}
 
 const app = express();
 app.use(compression());
