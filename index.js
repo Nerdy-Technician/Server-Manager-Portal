@@ -19,7 +19,7 @@ try {
     appVersion = fsSync.readFileSync('version.txt', 'utf8').trim();
 } catch (e) {
     try {
-        const gitHash = execSync('git rev-parse --short HEAD').toString().trim();
+        const gitHash = execSync('git rev-parse --short HEAD', { stdio: 'pipe' }).toString().trim();
         appVersion = `v1.0.0-${gitHash}`;
     } catch(err) {}
 }
