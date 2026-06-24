@@ -1206,6 +1206,7 @@ app.get('/api/config', requireAdmin, async (req, res) => {
                 referralTrialDays: config.referralTrialDays || 3,
                 referralRewardDays: config.referralRewardDays || 7,
                 announcement: config.announcement || '',
+                hideStreamUsers: !!config.hideStreamUsers,
                 navOrder: config.navOrder || ['home', 'discover', 'users', 'status', 'logs', 'analytics', 'mediastack', 'request', 'settings', 'logout']
             },
         });

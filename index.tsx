@@ -53,6 +53,15 @@ const CustomSelect: React.FC<CustomSelectProps> = ({ id, value, onChange, option
     );
 };
 
+const hexToRgb = (hex: string) => {
+    hex = hex.replace(/^#/, '');
+    if (hex.length === 3) hex = hex.split('').map(x => x + x).join('');
+    const r = parseInt(hex.slice(0, 2), 16) || 0;
+    const g = parseInt(hex.slice(2, 4), 16) || 0;
+    const b = parseInt(hex.slice(4, 6), 16) || 0;
+    return `${r} ${g} ${b}`;
+};
+
 export let appConfirm: (message: string, onConfirm: () => void) => void = () => { console.warn('appConfirm not initialized'); };
 
 const ConfirmModal: React.FC<{ isOpen: boolean; message: string; onConfirm: () => void; onCancel: () => void; }> = ({ isOpen, message, onConfirm, onCancel }) => {
@@ -898,7 +907,7 @@ const SettingsDashboard: React.FC = () => {
             navOrder,
             hideStreamUsers
         });
-        document.documentElement.style.setProperty('--color-plex', primaryColor);
+        document.documentElement.style.setProperty('--color-plex', hexToRgb(primaryColor));
     };
 
     const handleTestEmail = async () => {
@@ -2496,7 +2505,7 @@ const AnalyticsDashboard: React.FC<{ isAdmin: boolean, sessionInfo: any }> = ({ 
                          <p className="text-muted text-sm uppercase tracking-wider font-bold mb-2 flex items-center gap-2"><Clock className="w-4 h-4 text-plex"/> Peak Viewing Hours</p>
                          <div className="flex items-end gap-1 h-12 w-full mt-auto">
                             {peakHours.map((val, idx) => (
-                                <div key={idx} className="flex-1 bg-plex/20 hover:bg-plex/80 transition-colors rounded-t-sm relative group" style={{ height: `${Math.max((val / maxPeakHour) * 100, 5)}%` }}>
+                                <div key={idx} className="flex-1 bg-plex opacity-20 hover:opacity-80 transition-opacity rounded-t-sm relative group" style={{ height: `${Math.max((val / maxPeakHour) * 100, 5)}%` }}>
                                     <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 bg-black/80 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-10">
                                         {idx === 0 ? '12 AM' : idx < 12 ? `${idx} AM` : idx === 12 ? '12 PM' : `${idx - 12} PM`}: {val} plays
                                     </div>
@@ -5334,7 +5343,7 @@ const MainApp: React.FC = () => {
             const data = await apiFetch('/api/config/public');
             setPublicConfig(data);
             if (data.primaryColor) {
-                document.documentElement.style.setProperty('--color-plex', data.primaryColor);
+                document.documentElement.style.setProperty('--color-plex', hexToRgb(data.primaryColor));
             }
             if (data.customLogoUrl) {
                 updateFavicon(data.customLogoUrl);

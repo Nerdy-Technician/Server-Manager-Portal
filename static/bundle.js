@@ -418,6 +418,14 @@ var CustomSelect = ({ id, value, onChange, options, className }) => {
     )) })
   ] });
 };
+var hexToRgb = (hex) => {
+  hex = hex.replace(/^#/, "");
+  if (hex.length === 3) hex = hex.split("").map((x) => x + x).join("");
+  const r = parseInt(hex.slice(0, 2), 16) || 0;
+  const g = parseInt(hex.slice(2, 4), 16) || 0;
+  const b = parseInt(hex.slice(4, 6), 16) || 0;
+  return `${r} ${g} ${b}`;
+};
 var appConfirm = () => {
   console.warn("appConfirm not initialized");
 };
@@ -1055,7 +1063,7 @@ var SettingsDashboard = () => {
       navOrder,
       hideStreamUsers
     });
-    document.documentElement.style.setProperty("--color-plex", primaryColor);
+    document.documentElement.style.setProperty("--color-plex", hexToRgb(primaryColor));
   };
   const handleTestEmail = async () => {
     if (!smtpHost || !smtpUser || !smtpPass || !testRecipient) {
@@ -2487,7 +2495,7 @@ var AnalyticsDashboard = ({ isAdmin, sessionInfo }) => {
           /* @__PURE__ */ jsx(Clock, { className: "w-4 h-4 text-plex" }),
           " Peak Viewing Hours"
         ] }),
-        /* @__PURE__ */ jsx("div", { className: "flex items-end gap-1 h-12 w-full mt-auto", children: peakHours.map((val, idx) => /* @__PURE__ */ jsx("div", { className: "flex-1 bg-plex/20 hover:bg-plex/80 transition-colors rounded-t-sm relative group", style: { height: `${Math.max(val / maxPeakHour * 100, 5)}%` }, children: /* @__PURE__ */ jsxs("div", { className: "absolute bottom-full left-1/2 -translate-x-1/2 mb-1 bg-black/80 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-10", children: [
+        /* @__PURE__ */ jsx("div", { className: "flex items-end gap-1 h-12 w-full mt-auto", children: peakHours.map((val, idx) => /* @__PURE__ */ jsx("div", { className: "flex-1 bg-plex opacity-20 hover:opacity-80 transition-opacity rounded-t-sm relative group", style: { height: `${Math.max(val / maxPeakHour * 100, 5)}%` }, children: /* @__PURE__ */ jsxs("div", { className: "absolute bottom-full left-1/2 -translate-x-1/2 mb-1 bg-black/80 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-10", children: [
           idx === 0 ? "12 AM" : idx < 12 ? `${idx} AM` : idx === 12 ? "12 PM" : `${idx - 12} PM`,
           ": ",
           val,
@@ -4858,7 +4866,7 @@ var MainApp = () => {
       const data = await apiFetch("/api/config/public");
       setPublicConfig(data);
       if (data.primaryColor) {
-        document.documentElement.style.setProperty("--color-plex", data.primaryColor);
+        document.documentElement.style.setProperty("--color-plex", hexToRgb(data.primaryColor));
       }
       if (data.customLogoUrl) {
         updateFavicon(data.customLogoUrl);
