@@ -4726,7 +4726,7 @@ var Navigation = ({ currentRoute, onNavigate, onLogout, isAdmin, serverName, adm
             /* @__PURE__ */ jsx("span", { className: "text-[10px] uppercase tracking-[0.3em] text-plex font-bold drop-shadow-[0_0_8px_rgba(229,160,13,0.5)]", children: "Portal" }),
             /* @__PURE__ */ jsx("div", { className: "h-px w-6 bg-gradient-to-l from-transparent to-plex/50" })
           ] }),
-          appVersion && /* @__PURE__ */ jsx("div", { className: "mt-2 text-[9px] text-muted/50 font-mono tracking-wider opacity-60 hover:opacity-100 transition-opacity", children: appVersion })
+          appVersion && /* @__PURE__ */ jsx("div", { className: "mt-2 text-[10px] text-white/50 font-mono tracking-wider opacity-80 hover:opacity-100 transition-opacity", children: appVersion })
         ] })
       ] })
     ] }),

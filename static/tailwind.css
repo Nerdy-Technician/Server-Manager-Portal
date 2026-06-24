@@ -2785,6 +2785,10 @@ input[type="date"], input[type="time"], input[type="datetime-local"], input[type
   color: rgb(255 255 255 / var(--tw-text-opacity, 1));
 }
 
+.text-white\/50 {
+  color: rgb(255 255 255 / 0.5);
+}
+
 .text-white\/90 {
   color: rgb(255 255 255 / 0.9);
 }
