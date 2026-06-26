@@ -3721,7 +3721,7 @@ app.get('/api/media-stack/trending', requireAuth, async (req, res) => {
 
 async function calculateTrendingStats() {
     try {
-        const config = await readConfig();
+        const config = await loadFile(CONFIG_PATH, null);
         if (!config || !config.plexToken || !config.serverIdentifier) return;
         
         const uri = await getPlexConnectionUri(config);
@@ -3729,8 +3729,8 @@ async function calculateTrendingStats() {
 
         log('Starting background calculation of Plex Trending Stats...');
         
-        // Fetch up to 10,000 history items
-        const response = await fetch(`${uri}/status/sessions/history/all?limit=10000&X-Plex-Token=${config.plexToken}`, { headers: { 'Accept': 'application/json' } }).catch(() => null);
+        // Fetch up to 10,000 most recent history items
+        const response = await fetch(`${uri}/status/sessions/history/all?sort=viewedAt%3Adesc&limit=10000&X-Plex-Token=${config.plexToken}`, { headers: { 'Accept': 'application/json' } }).catch(() => null);
         if (!response) return;
         const historyRes = await response.json().catch(() => null);
         if (!historyRes || !historyRes.MediaContainer || !historyRes.MediaContainer.Metadata) {
