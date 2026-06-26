@@ -3713,8 +3713,8 @@ input[type="date"], input[type="time"], input[type="datetime-local"], input[type
     top: 0px;
   }
 
-  .md\:top-6 {
-    top: 1.5rem;
+  .md\:top-\[88px\] {
+    top: 88px;
   }
 
   .md\:mx-0 {
@@ -3744,10 +3744,6 @@ input[type="date"], input[type="time"], input[type="datetime-local"], input[type
 
   .md\:mt-1 {
     margin-top: 0.25rem;
-  }
-
-  .md\:mt-\[58px\] {
-    margin-top: 58px;
   }
 
   .md\:line-clamp-3 {
