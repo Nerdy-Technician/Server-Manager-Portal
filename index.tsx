@@ -493,11 +493,15 @@ const InvitesSettings: React.FC<{ addToast: (msg: string, type: 'success' | 'err
     const [maxUses, setMaxUses] = useState<string | number>(1);
     const [emailInvite, setEmailInvite] = useState('');
     const [emailing, setEmailing] = useState(false);
+    const [libraries, setLibraries] = useState<any[]>([]);
+    const [selectedLibraries, setSelectedLibraries] = useState<string[]>([]);
 
     const fetchInvites = useCallback(async () => {
         try {
             const data = await apiFetch('/api/invites');
             setInvites(data);
+            const libData = await apiFetch('/api/plex/libraries').catch(() => []);
+            setLibraries(libData || []);
         } catch (e) {
             addToast('Failed to load invites', 'error');
         } finally {
@@ -511,7 +515,7 @@ const InvitesSettings: React.FC<{ addToast: (msg: string, type: 'success' | 'err
         try {
             await apiFetch('/api/invites', {
                 method: 'POST',
-                body: JSON.stringify({ durationDays, maxUses })
+                body: JSON.stringify({ durationDays, maxUses, libraryIds: selectedLibraries })
             });
             addToast('Invite link created', 'success');
             fetchInvites();
@@ -526,7 +530,7 @@ const InvitesSettings: React.FC<{ addToast: (msg: string, type: 'success' | 'err
         try {
             await apiFetch('/api/invites/email', {
                 method: 'POST',
-                body: JSON.stringify({ email: emailInvite, durationDays })
+                body: JSON.stringify({ email: emailInvite, durationDays, libraryIds: selectedLibraries })
             });
             addToast('Email invite sent!', 'success');
             setEmailInvite('');
@@ -575,6 +579,28 @@ const InvitesSettings: React.FC<{ addToast: (msg: string, type: 'success' | 'err
                     </div>
                     <button className="w-full md:w-auto px-6 py-2.5 bg-plex text-background font-bold rounded-lg hover:bg-plex-hover transition-colors shadow-lg" onClick={handleCreate}>Generate Link</button>
                 </div>
+                
+                {libraries.length > 0 && (
+                    <div className="mb-6">
+                        <label className="block text-sm mb-2 font-medium">Libraries to Share (Leave unselected to share ALL libraries)</label>
+                        <div className="flex flex-wrap gap-2">
+                            {libraries.map(lib => (
+                                <label key={lib.id} className="flex items-center gap-2 bg-background border border-border px-3 py-2 rounded-lg cursor-pointer hover:border-plex transition-colors">
+                                    <input 
+                                        type="checkbox" 
+                                        checked={selectedLibraries.includes(lib.id)} 
+                                        onChange={(e) => {
+                                            if (e.target.checked) setSelectedLibraries([...selectedLibraries, lib.id]);
+                                            else setSelectedLibraries(selectedLibraries.filter(id => id !== lib.id));
+                                        }}
+                                        className="accent-plex"
+                                    />
+                                    <span className="text-sm font-medium">{lib.title}</span>
+                                </label>
+                            ))}
+                        </div>
+                    </div>
+                )}
 
                 <div className="border-t border-border/50 pt-6">
                     <h4 className="font-bold mb-4">Direct Email Invite</h4>
@@ -598,13 +624,14 @@ const InvitesSettings: React.FC<{ addToast: (msg: string, type: 'success' | 'err
                             <th className="p-3">Invite Link</th>
                             <th className="p-3">Duration</th>
                             <th className="p-3">Uses</th>
+                            <th className="p-3">Libraries</th>
                             <th className="p-3">Created</th>
                             <th className="p-3 text-right">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         {invites.length === 0 ? (
-                            <tr><td colSpan={5} className="p-8 text-center text-muted">No active invites. Create one above!</td></tr>
+                            <tr><td colSpan={6} className="p-8 text-center text-muted">No active invites. Create one above!</td></tr>
                         ) : invites.map(inv => (
                             <tr key={inv.code} className="border-b border-border/50 hover:bg-white/5 transition-colors">
                                 <td className="p-3">
@@ -627,6 +654,11 @@ const InvitesSettings: React.FC<{ addToast: (msg: string, type: 'success' | 'err
                                             ))}
                                         </div>
                                     )}
+                                </td>
+                                <td className="p-3 text-sm">
+                                    {inv.libraryIds && inv.libraryIds.length > 0 
+                                        ? libraries.filter(l => inv.libraryIds.includes(l.id)).map(l => l.title).join(', ') || `${inv.libraryIds.length} selected`
+                                        : <span className="text-plex opacity-80">All Libraries</span>}
                                 </td>
                                 <td className="p-3 text-muted text-sm">
                                     {new Date(inv.createdAt).toLocaleDateString()}
@@ -678,6 +710,8 @@ const SettingsDashboard: React.FC = () => {
                 }
                 const usersData = await apiFetch('/api/users');
                 setUsers(usersData);
+                const libData = await apiFetch('/api/plex/libraries').catch(() => []);
+                setLibraries(libData || []);
                 await fetchStatusConfig();
             } catch (error) {
                 addToast("Failed to load config", "error");
@@ -705,6 +739,8 @@ const SettingsDashboard: React.FC = () => {
     const [selectedServer, setSelectedServer] = useState('');
     const [checkInterval, setCheckInterval] = useState(60);
     const [hideStreamUsers, setHideStreamUsers] = useState<string>('false');
+    const [defaultLibraryIds, setDefaultLibraryIds] = useState<string[]>([]);
+    const [libraries, setLibraries] = useState<any[]>([]);
     const [activeTab, setActiveTab] = useState(() => {
         const hash = window.location.hash.replace('#', '');
         return ['plex', 'smtp', 'newsletter', 'cleanup', 'mediastack', 'branding', 'navigation', 'status', 'invites', 'tasks'].includes(hash) ? hash : 'plex';
@@ -814,6 +850,7 @@ const SettingsDashboard: React.FC = () => {
             setAnnouncement(initialSettings.announcement || '');
             if (initialSettings.navOrder) setNavOrder(initialSettings.navOrder);
             setHideStreamUsers(initialSettings.hideStreamUsers === true ? 'anonymous' : (initialSettings.hideStreamUsers || 'false'));
+            if (initialSettings.defaultLibraryIds) setDefaultLibraryIds(initialSettings.defaultLibraryIds);
             setTestRecipient('');
             setServers([]);
         }
@@ -904,7 +941,8 @@ const SettingsDashboard: React.FC = () => {
             referralRewardDays,
             announcement,
             navOrder,
-            hideStreamUsers
+            hideStreamUsers,
+            defaultLibraryIds
         });
         document.documentElement.style.setProperty('--color-plex', hexToRgb(primaryColor));
     };
@@ -1067,6 +1105,29 @@ const SettingsDashboard: React.FC = () => {
                                 <input className="w-full p-3 rounded-lg border border-border bg-background text-text outline-none focus:border-plex focus:ring-1 focus:ring-plex transition-all" id="checkInterval" type="number" value={checkInterval} onChange={e => setCheckInterval(Number(e.target.value))} min="1" />
                                 <small>How often to check for expired users in the background.</small>
                             </div>
+                            
+                            {libraries.length > 0 && (
+                                <div className="mb-4 mt-4">
+                                    <label className="block mb-2 font-medium">Default Trial/Automated Libraries</label>
+                                    <small className="block mb-2 text-muted">Libraries to share automatically when users request a trial or link their account. Leave empty to share ALL libraries.</small>
+                                    <div className="flex flex-wrap gap-3 p-4 bg-black/10 rounded-lg border border-border">
+                                        {libraries.map(lib => (
+                                            <label key={lib.id} className="flex items-center gap-2 cursor-pointer hover:text-plex transition-colors">
+                                                <input 
+                                                    type="checkbox" 
+                                                    checked={defaultLibraryIds.includes(lib.id)} 
+                                                    onChange={(e) => {
+                                                        if (e.target.checked) setDefaultLibraryIds([...defaultLibraryIds, lib.id]);
+                                                        else setDefaultLibraryIds(defaultLibraryIds.filter(id => id !== lib.id));
+                                                    }}
+                                                    className="accent-plex"
+                                                />
+                                                <span className="text-sm font-medium">{lib.title}</span>
+                                            </label>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
 
                             <div className="mb-4" style={{ marginTop: '1rem' }}>
                                 <div className="flex items-center justify-between p-4 border border-border rounded-lg bg-background">

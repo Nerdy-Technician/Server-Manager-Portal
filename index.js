@@ -668,18 +668,23 @@ const revokePlexAccess = async (user, config) => {
     }
 };
 
-const inviteUserToPlex = async (user, config) => {
+const inviteUserToPlex = async (user, config, libraryIds = null) => {
     if (!user.email || !config.serverIdentifier) {
         log(`Error: Cannot invite ${user.username} due to missing email or server ID.`);
         return false;
     }
     log(`Inviting user to Plex: ${user.username} (${user.email})`);
     try {
+        const sharedServer = { invited_email: user.email };
+        if (libraryIds && Array.isArray(libraryIds) && libraryIds.length > 0) {
+            sharedServer.library_section_ids = libraryIds;
+        }
+
         const inviteRes = await apiFetch(`https://plex.tv/api/servers/${config.serverIdentifier}/shared_servers`, config.plexToken, {
             method: 'POST',
             body: JSON.stringify({
                 server_id: config.serverIdentifier,
-                shared_server: { invited_email: user.email }
+                shared_server: sharedServer
             }),
             headers: { 'Content-Type': 'application/json' }
         });
@@ -1219,7 +1224,8 @@ app.get('/api/config', requireAdmin, async (req, res) => {
                 referralRewardDays: config.referralRewardDays || 7,
                 announcement: config.announcement || '',
                 hideStreamUsers: config.hideStreamUsers === true ? 'anonymous' : (config.hideStreamUsers || 'false'),
-                navOrder: config.navOrder || ['home', 'discover', 'users', 'status', 'logs', 'analytics', 'mediastack', 'request', 'settings', 'logout']
+                navOrder: config.navOrder || ['home', 'discover', 'users', 'status', 'logs', 'analytics', 'mediastack', 'request', 'settings', 'logout'],
+                defaultLibraryIds: config.defaultLibraryIds || null
             },
         });
     } else {
@@ -1254,7 +1260,8 @@ app.get('/api/config', requireAdmin, async (req, res) => {
                 referralRewardDays: 7,
                 announcement: '',
                 hideStreamUsers: 'false',
-                navOrder: ['home', 'discover', 'users', 'status', 'logs', 'analytics', 'mediastack', 'request', 'settings', 'logout']
+                navOrder: ['home', 'discover', 'users', 'status', 'logs', 'analytics', 'mediastack', 'request', 'settings', 'logout'],
+                defaultLibraryIds: null
             },
         });
     }
@@ -1267,7 +1274,7 @@ app.post('/api/config', async (req, res) => {
         newsletterFrequency, newsletterDay, publicDomain, requestUrl, contactUrl,
         sonarrUrl, sonarrApiKey, radarrUrl, radarrApiKey,
         inactiveCleanupEnabled, inactiveCleanupDays,
-        primaryColor, customLogoUrl, referralEnabled, referralTrialDays, referralRewardDays, announcement, navOrder, hideStreamUsers
+        primaryColor, customLogoUrl, referralEnabled, referralTrialDays, referralRewardDays, announcement, navOrder, hideStreamUsers, defaultLibraryIds
     } = req.body;
 
     if (!token || !serverIdentifier) {
@@ -1325,7 +1332,8 @@ app.post('/api/config', async (req, res) => {
         referralRewardDays: parseInt(referralRewardDays, 10) || 7,
         announcement: announcement || '',
         hideStreamUsers: hideStreamUsers === true ? 'anonymous' : (hideStreamUsers === false ? 'false' : (hideStreamUsers || 'false')),
-        navOrder: Array.isArray(navOrder) ? navOrder : existingConfig.navOrder || ['home', 'discover', 'users', 'status', 'logs', 'analytics', 'mediastack', 'request', 'settings', 'logout']
+        navOrder: Array.isArray(navOrder) ? navOrder : existingConfig.navOrder || ['home', 'discover', 'users', 'status', 'logs', 'analytics', 'mediastack', 'request', 'settings', 'logout'],
+        defaultLibraryIds: Array.isArray(defaultLibraryIds) ? defaultLibraryIds : null
     };
     await saveFile(CONFIG_PATH, config);
     log('Configuration saved successfully.');
@@ -2062,7 +2070,7 @@ app.get('/api/invites', requireAdmin, async (req, res) => {
 });
 
 app.post('/api/invites', requireAdmin, async (req, res) => {
-    const { durationDays, maxUses } = req.body;
+    const { durationDays, maxUses, libraryIds } = req.body;
     const invites = await loadFile(INVITES_PATH, []);
     
     const code = randomBytes(6).toString('hex');
@@ -2071,6 +2079,7 @@ app.post('/api/invites', requireAdmin, async (req, res) => {
         durationDays: parseInt(durationDays, 10) || 30,
         maxUses: maxUses === 'unlimited' ? 'unlimited' : (parseInt(maxUses, 10) || 1),
         currentUses: 0,
+        libraryIds: Array.isArray(libraryIds) && libraryIds.length > 0 ? libraryIds : null,
         createdBy: req.user.username || 'admin',
         createdAt: new Date().toISOString()
     };
@@ -2081,7 +2090,7 @@ app.post('/api/invites', requireAdmin, async (req, res) => {
 });
 
 app.post('/api/invites/email', requireAdmin, async (req, res) => {
-    const { email, durationDays } = req.body;
+    const { email, durationDays, libraryIds } = req.body;
     if (!email) return res.status(400).json({ error: 'Email is required' });
 
     const config = await loadFile(CONFIG_PATH, {});
@@ -2096,6 +2105,7 @@ app.post('/api/invites/email', requireAdmin, async (req, res) => {
         durationDays: parseInt(durationDays, 10) || 30,
         maxUses: 1,
         currentUses: 0,
+        libraryIds: Array.isArray(libraryIds) && libraryIds.length > 0 ? libraryIds : null,
         createdBy: req.user.username || 'admin',
         createdAt: new Date().toISOString(),
         sentTo: email
@@ -2239,7 +2249,7 @@ app.post('/api/invites/:code/claim', authRateLimit, async (req, res) => {
         await saveFile(USERS_PATH, users);
         
         // Send actual Plex invite
-        await inviteUserToPlex(newUser, config).catch(e => log('Failed to invite claimed user: ' + e.message));
+        await inviteUserToPlex(newUser, config, invite.libraryIds).catch(e => log('Failed to invite claimed user: ' + e.message));
         
         // Update invite usage
         // Re-read to prevent race condition during long Plex API calls
@@ -2367,7 +2377,7 @@ app.put('/api/users/:id', requireAdmin, async (req, res) => {
         if (users[userIndex].plexAccessStatus === 'revoked') {
             const days = getDaysUntilExpiry(users[userIndex].expiryDate);
             if (days === null || days >= 0) {
-                const invited = await inviteUserToPlex(users[userIndex], config);
+                const invited = await inviteUserToPlex(users[userIndex], config, config.defaultLibraryIds);
                 if (invited) {
                     users[userIndex].plexAccessStatus = 'pending';
                     await saveFile(USERS_PATH, users);
@@ -2427,7 +2437,7 @@ app.post('/api/users/bulk-update', requireAdmin, async (req, res) => {
                 if (user.plexAccessStatus === 'revoked') {
                     const days = getDaysUntilExpiry(user.expiryDate);
                     if (days === null || days >= 0) {
-                        const invited = await inviteUserToPlex(user, config);
+                        const invited = await inviteUserToPlex(user, config, config.defaultLibraryIds);
                         if (invited) {
                             user.plexAccessStatus = 'pending';
                             await appendAuditLog('relink_invite_sent', req.user, user);
@@ -2522,21 +2532,7 @@ app.post('/api/users/request-invite', requireAuth, async (req, res) => {
         }
 
         log(`Inviting new user ${newUser.username} to server...`);
-        const inviteRes = await apiFetch(`https://plex.tv/api/servers/${config.serverIdentifier}/shared_servers`, config.plexToken, {
-            method: 'POST',
-            body: JSON.stringify({
-                server_id: config.serverIdentifier,
-                shared_server: { invited_email: newUser.email }
-            }),
-            headers: { 'Content-Type': 'application/json' }
-        });
-
-        if (!inviteRes.ok) {
-            const errText = await inviteRes.text();
-            log(`Note: Plex API returned an error during invite (${inviteRes.status}): ${errText}`);
-            // We do not throw an error here. If Plex says they are already invited, 
-            // we still want to save them locally so they don't get stuck in a request loop!
-        }
+        await inviteUserToPlex(newUser, config, config.defaultLibraryIds).catch(e => log('Failed to invite trial user: ' + e.message));
 
         users.push(newUser);
         await saveFile(USERS_PATH, users);
@@ -2577,20 +2573,7 @@ app.post('/api/users/relink', requireAuth, async (req, res) => {
 
     try {
         log(`Re-linking user ${user.username}...`);
-        const inviteRes = await apiFetch(`https://plex.tv/api/servers/${config.serverIdentifier}/shared_servers`, config.plexToken, {
-            method: 'POST',
-            body: JSON.stringify({
-                server_id: config.serverIdentifier,
-                shared_server: { invited_email: user.email }
-            }),
-            headers: { 'Content-Type': 'application/json' }
-        });
-
-        if (!inviteRes.ok) {
-            // It might fail if they are already linked, but that's okay we just catch it
-            const errText = await inviteRes.text();
-            log(`Re-link Plex API response: ${inviteRes.status} ${errText}`);
-        }
+        await inviteUserToPlex(user, config, config.defaultLibraryIds).catch(e => log('Failed to re-link user: ' + e.message));
 
         user.plexAccessStatus = 'pending';
         await saveFile(USERS_PATH, users);
@@ -2664,6 +2647,32 @@ app.post('/api/status/config', requireAuth, requireAdmin, async (req, res) => {
 });
 
 // --- Plex Dashboard & Image Proxy ---
+
+app.get('/api/plex/libraries', requireAdmin, async (req, res) => {
+    try {
+        const config = await loadFile(CONFIG_PATH, null);
+        if (!config || !config.plexToken || !config.serverIdentifier) {
+            return res.status(503).json({ error: 'Plex not configured' });
+        }
+        const uri = await getPlexConnectionUri(config);
+        if (!uri) return res.status(503).json({ error: 'Cannot connect to Plex' });
+
+        const sectionsRes = await fetch(`${uri}/library/sections?X-Plex-Token=${config.plexToken}`, { headers: { 'Accept': 'application/json' } }).then(r => r.json()).catch(() => null);
+        
+        let libraries = [];
+        if (sectionsRes && sectionsRes.MediaContainer && sectionsRes.MediaContainer.Directory) {
+            libraries = sectionsRes.MediaContainer.Directory.map(s => ({
+                id: s.key,
+                title: s.title,
+                type: s.type
+            }));
+        }
+        res.json(libraries);
+    } catch (e) {
+        log(`Error fetching Plex libraries: ${e.message}`);
+        res.status(500).json({ error: 'Failed to fetch libraries' });
+    }
+});
 
 // Note: Duplicate route /api/plex/image handler removed. The primary handler is defined above.
 

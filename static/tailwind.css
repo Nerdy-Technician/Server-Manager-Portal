@@ -2823,6 +2823,10 @@ input[type="date"], input[type="time"], input[type="datetime-local"], input[type
   color: rgb(139 148 158 / 0.5);
 }
 
+.accent-plex {
+  accent-color: rgb(var(--color-plex) / 1);
+}
+
 .opacity-0 {
   opacity: 0;
 }
@@ -3307,6 +3311,11 @@ input[type="date"], input[type="time"], input[type="datetime-local"], input[type
   --tw-scale-x: 1.05;
   --tw-scale-y: 1.05;
   transform: translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y));
+}
+
+.hover\:border-plex:hover {
+  --tw-border-opacity: 1;
+  border-color: rgb(var(--color-plex) / var(--tw-border-opacity, 1));
 }
 
 .hover\:border-plex\/50:hover {

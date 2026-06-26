@@ -705,10 +705,14 @@ var InvitesSettings = ({ addToast }) => {
   const [maxUses, setMaxUses] = useState(1);
   const [emailInvite, setEmailInvite] = useState("");
   const [emailing, setEmailing] = useState(false);
+  const [libraries, setLibraries] = useState([]);
+  const [selectedLibraries, setSelectedLibraries] = useState([]);
   const fetchInvites = useCallback(async () => {
     try {
       const data = await apiFetch("/api/invites");
       setInvites(data);
+      const libData = await apiFetch("/api/plex/libraries").catch(() => []);
+      setLibraries(libData || []);
     } catch (e) {
       addToast("Failed to load invites", "error");
     } finally {
@@ -722,7 +726,7 @@ var InvitesSettings = ({ addToast }) => {
     try {
       await apiFetch("/api/invites", {
         method: "POST",
-        body: JSON.stringify({ durationDays, maxUses })
+        body: JSON.stringify({ durationDays, maxUses, libraryIds: selectedLibraries })
       });
       addToast("Invite link created", "success");
       fetchInvites();
@@ -736,7 +740,7 @@ var InvitesSettings = ({ addToast }) => {
     try {
       await apiFetch("/api/invites/email", {
         method: "POST",
-        body: JSON.stringify({ email: emailInvite, durationDays })
+        body: JSON.stringify({ email: emailInvite, durationDays, libraryIds: selectedLibraries })
       });
       addToast("Email invite sent!", "success");
       setEmailInvite("");
@@ -779,6 +783,24 @@ var InvitesSettings = ({ addToast }) => {
         ] }),
         /* @__PURE__ */ jsx("button", { className: "w-full md:w-auto px-6 py-2.5 bg-plex text-background font-bold rounded-lg hover:bg-plex-hover transition-colors shadow-lg", onClick: handleCreate, children: "Generate Link" })
       ] }),
+      libraries.length > 0 && /* @__PURE__ */ jsxs("div", { className: "mb-6", children: [
+        /* @__PURE__ */ jsx("label", { className: "block text-sm mb-2 font-medium", children: "Libraries to Share (Leave unselected to share ALL libraries)" }),
+        /* @__PURE__ */ jsx("div", { className: "flex flex-wrap gap-2", children: libraries.map((lib) => /* @__PURE__ */ jsxs("label", { className: "flex items-center gap-2 bg-background border border-border px-3 py-2 rounded-lg cursor-pointer hover:border-plex transition-colors", children: [
+          /* @__PURE__ */ jsx(
+            "input",
+            {
+              type: "checkbox",
+              checked: selectedLibraries.includes(lib.id),
+              onChange: (e) => {
+                if (e.target.checked) setSelectedLibraries([...selectedLibraries, lib.id]);
+                else setSelectedLibraries(selectedLibraries.filter((id) => id !== lib.id));
+              },
+              className: "accent-plex"
+            }
+          ),
+          /* @__PURE__ */ jsx("span", { className: "text-sm font-medium", children: lib.title })
+        ] }, lib.id)) })
+      ] }),
       /* @__PURE__ */ jsxs("div", { className: "border-t border-border/50 pt-6", children: [
         /* @__PURE__ */ jsx("h4", { className: "font-bold mb-4", children: "Direct Email Invite" }),
         /* @__PURE__ */ jsx("p", { className: "text-sm text-muted mb-4", children: "Send a 1-time use invite directly to a user's email address (uses the Duration defined above)." }),
@@ -796,10 +818,11 @@ var InvitesSettings = ({ addToast }) => {
         /* @__PURE__ */ jsx("th", { className: "p-3", children: "Invite Link" }),
         /* @__PURE__ */ jsx("th", { className: "p-3", children: "Duration" }),
         /* @__PURE__ */ jsx("th", { className: "p-3", children: "Uses" }),
+        /* @__PURE__ */ jsx("th", { className: "p-3", children: "Libraries" }),
         /* @__PURE__ */ jsx("th", { className: "p-3", children: "Created" }),
         /* @__PURE__ */ jsx("th", { className: "p-3 text-right", children: "Actions" })
       ] }) }),
-      /* @__PURE__ */ jsx("tbody", { children: invites.length === 0 ? /* @__PURE__ */ jsx("tr", { children: /* @__PURE__ */ jsx("td", { colSpan: 5, className: "p-8 text-center text-muted", children: "No active invites. Create one above!" }) }) : invites.map((inv) => /* @__PURE__ */ jsxs("tr", { className: "border-b border-border/50 hover:bg-white/5 transition-colors", children: [
+      /* @__PURE__ */ jsx("tbody", { children: invites.length === 0 ? /* @__PURE__ */ jsx("tr", { children: /* @__PURE__ */ jsx("td", { colSpan: 6, className: "p-8 text-center text-muted", children: "No active invites. Create one above!" }) }) : invites.map((inv) => /* @__PURE__ */ jsxs("tr", { className: "border-b border-border/50 hover:bg-white/5 transition-colors", children: [
         /* @__PURE__ */ jsx("td", { className: "p-3", children: /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2", children: [
           /* @__PURE__ */ jsxs("span", { className: "font-mono text-sm text-plex select-all", children: [
             window.location.origin,
@@ -816,6 +839,7 @@ var InvitesSettings = ({ addToast }) => {
           /* @__PURE__ */ jsx("div", { className: "font-medium", children: inv.maxUses === "unlimited" ? "Unlimited" : `${inv.currentUses} / ${inv.maxUses}` }),
           inv.usedBy && inv.usedBy.length > 0 && /* @__PURE__ */ jsx("div", { className: "mt-1.5 flex flex-wrap gap-1 max-w-[200px]", children: inv.usedBy.map((u, idx) => /* @__PURE__ */ jsx("span", { className: "text-[10px] text-plex bg-plex/10 border border-plex/20 px-1.5 py-0.5 rounded shadow-sm", title: `Claimed on ${new Date(u.date).toLocaleString()} by ${u.email}`, children: u.username }, idx)) })
         ] }),
+        /* @__PURE__ */ jsx("td", { className: "p-3 text-sm", children: inv.libraryIds && inv.libraryIds.length > 0 ? libraries.filter((l) => inv.libraryIds.includes(l.id)).map((l) => l.title).join(", ") || `${inv.libraryIds.length} selected` : /* @__PURE__ */ jsx("span", { className: "text-plex opacity-80", children: "All Libraries" }) }),
         /* @__PURE__ */ jsxs("td", { className: "p-3 text-muted text-sm", children: [
           new Date(inv.createdAt).toLocaleDateString(),
           inv.sentTo && /* @__PURE__ */ jsxs("div", { className: "text-xs text-blue-400 mt-1", children: [
@@ -858,6 +882,8 @@ var SettingsDashboard = () => {
         }
         const usersData = await apiFetch("/api/users");
         setUsers(usersData);
+        const libData = await apiFetch("/api/plex/libraries").catch(() => []);
+        setLibraries(libData || []);
         await fetchStatusConfig();
       } catch (error) {
         addToast("Failed to load config", "error");
@@ -884,6 +910,8 @@ var SettingsDashboard = () => {
   const [selectedServer, setSelectedServer] = useState("");
   const [checkInterval, setCheckInterval] = useState(60);
   const [hideStreamUsers, setHideStreamUsers] = useState("false");
+  const [defaultLibraryIds, setDefaultLibraryIds] = useState([]);
+  const [libraries, setLibraries] = useState([]);
   const [activeTab, setActiveTab] = useState(() => {
     const hash = window.location.hash.replace("#", "");
     return ["plex", "smtp", "newsletter", "cleanup", "mediastack", "branding", "navigation", "status", "invites", "tasks"].includes(hash) ? hash : "plex";
@@ -978,6 +1006,7 @@ var SettingsDashboard = () => {
       setAnnouncement(initialSettings.announcement || "");
       if (initialSettings.navOrder) setNavOrder(initialSettings.navOrder);
       setHideStreamUsers(initialSettings.hideStreamUsers === true ? "anonymous" : initialSettings.hideStreamUsers || "false");
+      if (initialSettings.defaultLibraryIds) setDefaultLibraryIds(initialSettings.defaultLibraryIds);
       setTestRecipient("");
       setServers([]);
     }
@@ -1061,7 +1090,8 @@ var SettingsDashboard = () => {
       referralRewardDays,
       announcement,
       navOrder,
-      hideStreamUsers
+      hideStreamUsers,
+      defaultLibraryIds
     });
     document.documentElement.style.setProperty("--color-plex", hexToRgb(primaryColor));
   };
@@ -1209,6 +1239,25 @@ var SettingsDashboard = () => {
             /* @__PURE__ */ jsx("label", { htmlFor: "checkInterval", children: "Check Interval (minutes)" }),
             /* @__PURE__ */ jsx("input", { className: "w-full p-3 rounded-lg border border-border bg-background text-text outline-none focus:border-plex focus:ring-1 focus:ring-plex transition-all", id: "checkInterval", type: "number", value: checkInterval, onChange: (e) => setCheckInterval(Number(e.target.value)), min: "1" }),
             /* @__PURE__ */ jsx("small", { children: "How often to check for expired users in the background." })
+          ] }),
+          libraries.length > 0 && /* @__PURE__ */ jsxs("div", { className: "mb-4 mt-4", children: [
+            /* @__PURE__ */ jsx("label", { className: "block mb-2 font-medium", children: "Default Trial/Automated Libraries" }),
+            /* @__PURE__ */ jsx("small", { className: "block mb-2 text-muted", children: "Libraries to share automatically when users request a trial or link their account. Leave empty to share ALL libraries." }),
+            /* @__PURE__ */ jsx("div", { className: "flex flex-wrap gap-3 p-4 bg-black/10 rounded-lg border border-border", children: libraries.map((lib) => /* @__PURE__ */ jsxs("label", { className: "flex items-center gap-2 cursor-pointer hover:text-plex transition-colors", children: [
+              /* @__PURE__ */ jsx(
+                "input",
+                {
+                  type: "checkbox",
+                  checked: defaultLibraryIds.includes(lib.id),
+                  onChange: (e) => {
+                    if (e.target.checked) setDefaultLibraryIds([...defaultLibraryIds, lib.id]);
+                    else setDefaultLibraryIds(defaultLibraryIds.filter((id) => id !== lib.id));
+                  },
+                  className: "accent-plex"
+                }
+              ),
+              /* @__PURE__ */ jsx("span", { className: "text-sm font-medium", children: lib.title })
+            ] }, lib.id)) })
           ] }),
           /* @__PURE__ */ jsx("div", { className: "mb-4", style: { marginTop: "1rem" }, children: /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between p-4 border border-border rounded-lg bg-background", children: [
             /* @__PURE__ */ jsxs("div", { children: [
@@ -3441,13 +3490,13 @@ var SetupWizard = ({ onComplete }) => {
 var Login = ({ onLoginSuccess, publicConfig }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
-  const [publicInfo, setPublicInfo] = useState({ thumb: null, serverName: "Plex Server", isConfigured: null });
+  const [publicInfo, setPublicInfo] = useState({ thumb: null, serverName: "Server Portal", isConfigured: null });
   const fetchPublicInfo = () => {
     apiFetch("/api/public/info").then((data) => {
       if (data) {
         setPublicInfo({
           thumb: data.thumb || null,
-          serverName: data.serverName || "Plex Server",
+          serverName: data.serverName || "Server Portal",
           isConfigured: data.isConfigured !== false
         });
         if (data.thumb) updateFavicon(data.thumb);
@@ -4957,7 +5006,7 @@ var MainApp = () => {
   };
   return /* @__PURE__ */ jsxs("div", { className: "flex w-full min-h-screen bg-background", children: [
     /* @__PURE__ */ jsx(ConfirmModal, { isOpen: confirmState.isOpen, message: confirmState.message, onConfirm: handleConfirm, onCancel: closeConfirm }),
-    !isPublicView && /* @__PURE__ */ jsx(Navigation, { currentRoute, onNavigate: setRoute, onLogout: handleLogout, isAdmin, serverName: sessionInfo?.serverName || "Plex Server", adminThumb: sessionInfo?.adminThumb, requestUrl: sessionInfo?.requestUrl || "https://yourdomain.com", navOrder: sessionInfo?.navOrder || ["home", "discover", "status", "logs", "analytics", "mediastack", "request", "settings", "logout"], appVersion: publicConfig.appVersion }),
+    !isPublicView && /* @__PURE__ */ jsx(Navigation, { currentRoute, onNavigate: setRoute, onLogout: handleLogout, isAdmin, serverName: sessionInfo?.serverName || "Server Portal", adminThumb: sessionInfo?.adminThumb, requestUrl: sessionInfo?.requestUrl || "https://yourdomain.com", navOrder: sessionInfo?.navOrder || ["home", "discover", "status", "logs", "analytics", "mediastack", "request", "settings", "logout"], appVersion: publicConfig.appVersion }),
     /* @__PURE__ */ jsx("div", { className: `flex-grow flex flex-col items-center p-4 md:p-8 pt-20 pb-[80px] md:pt-8 md:pb-8 w-full overflow-x-hidden ${isPublicView ? "!pt-8 !pb-8" : ""}`, children: renderView() })
   ] });
 };
