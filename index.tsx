@@ -2346,139 +2346,91 @@ const MediaStackDashboard: React.FC<{ isAdmin: boolean }> = ({ isAdmin }) => {
                                 No upcoming releases in the next {calendarDays} days
                             </div>
                         ) : (
-                            <div className="flex flex-col md:flex-row gap-6">
-                                {/* Left/Top Sticky Poster (Mobile & Desktop) */}
-                                <div className="w-full md:w-[320px] flex-shrink-0">
-                                    <div className="sticky top-6 flex flex-col gap-4">
-                                        <div className="relative aspect-[2/3] rounded-2xl overflow-hidden shadow-2xl border border-white/10 group bg-card">
+                            <div className="flex items-start gap-3 md:gap-8 w-full">
+                                {/* Left Sticky Poster */}
+                                <div className="sticky top-6 w-[100px] sm:w-[140px] md:w-[320px] flex-shrink-0">
+                                    <div className="flex flex-col gap-4">
+                                        <div className="relative aspect-[2/3] rounded-lg md:rounded-2xl overflow-hidden shadow-2xl border border-white/10 group bg-card">
                                             {activeCalendarItem?.imageUrl ? (
                                                 <img src={activeCalendarItem.imageUrl} alt={activeCalendarItem.title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
                                             ) : (
                                                 <div className="w-full h-full flex flex-col items-center justify-center opacity-30">
-                                                    {activeCalendarItem?.type === 'tv' ? <Tv className="w-20 h-20 mb-4" /> : <Film className="w-20 h-20 mb-4" />}
-                                                    <span className="font-bold uppercase tracking-widest text-sm">No Poster</span>
+                                                    {activeCalendarItem?.type === 'tv' ? <Tv className="w-10 h-10 md:w-20 md:h-20 mb-2 md:mb-4" /> : <Film className="w-10 h-10 md:w-20 md:h-20 mb-2 md:mb-4" />}
+                                                    <span className="font-bold uppercase tracking-widest text-[8px] md:text-sm">No Poster</span>
                                                 </div>
                                             )}
-                                            <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/40 to-transparent flex flex-col justify-end p-5 md:p-6">
-                                                <div className="flex items-center gap-2 mb-2">
+                                            <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/40 to-transparent flex flex-col justify-end p-2 md:p-6">
+                                                <div className="hidden md:flex items-center gap-2 mb-2">
                                                     <span className={`text-[10px] font-black tracking-widest uppercase px-2 py-1 rounded-md backdrop-blur-sm ${activeCalendarItem?.service === 'Sonarr' ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30' : 'bg-red-500/20 text-red-300 border border-red-500/30'}`}>
                                                         {activeCalendarItem?.service}
                                                     </span>
                                                     {activeCalendarItem?.hasFile && <span className="text-[10px] font-bold text-green-400 bg-green-500/20 px-2 py-1 rounded-md border border-green-500/30 backdrop-blur-sm">Downloaded</span>}
                                                 </div>
-                                                <h3 className="text-xl md:text-2xl font-black text-white leading-tight drop-shadow-lg mb-1">
+                                                <h3 className="text-xs sm:text-sm md:text-2xl font-black text-white leading-tight drop-shadow-lg mb-0.5 md:mb-1 line-clamp-2 md:line-clamp-none">
                                                     {activeCalendarItem?.title}
                                                 </h3>
-                                                <p className="text-sm md:text-base text-white/90 font-medium line-clamp-2 drop-shadow-md">
+                                                <p className="hidden md:block text-base text-white/90 font-medium line-clamp-2 drop-shadow-md">
                                                     {activeCalendarItem?.subtitle}
                                                 </p>
                                                 {activeCalendarItem?.network && (
-                                                    <span className="text-xs text-white/60 uppercase tracking-widest mt-3 font-bold">{activeCalendarItem.network}</span>
+                                                    <span className="hidden md:block text-xs text-white/60 uppercase tracking-widest mt-3 font-bold">{activeCalendarItem.network}</span>
                                                 )}
                                             </div>
                                         </div>
                                     </div>
                                 </div>
 
-                                {/* Right Side: Calendar Lists */}
-                                <div className="flex-1 min-w-0">
-                                    {/* Desktop: Horizontal Scroll */}
-                                    <div className="hidden md:flex overflow-x-auto snap-x snap-mandatory pb-6 gap-6 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
-                                        {Object.entries(groupedCalendar).map(([dateStr, items]) => (
-                                            <div key={dateStr} className="flex-shrink-0 w-[300px] snap-start flex flex-col gap-3">
-                                                <div className="sticky top-0 bg-card/95 backdrop-blur-md z-10 py-3 border-b border-white/10 mb-2">
-                                                    <h3 className="text-xl font-black text-text tracking-tight">{dateStr}</h3>
-                                                </div>
-                                                {items.map(item => (
-                                                    <div
-                                                        key={item.id}
-                                                        onMouseEnter={() => setActiveCalendarItem(item)}
-                                                        className={`bg-background/40 hover:bg-background/80 transition-all duration-300 rounded-xl p-4 flex flex-col gap-3 shadow-lg border-l-4 cursor-pointer group ${item.type === 'tv' ? 'border-l-blue-500/80' : 'border-l-red-500/80'} ${activeCalendarItem?.id === item.id ? 'bg-white/10 border border-white/30 scale-[1.02]' : 'border border-white/5 hover:border-white/20'}`}
-                                                    >
-                                                        <div className="flex justify-between items-start gap-3">
-                                                            <div className="min-w-0 flex-grow">
-                                                                <div className="flex items-center gap-2 mb-2">
-                                                                    <span className="text-[11px] text-plex flex items-center gap-1.5 font-bold tracking-wide">
-                                                                        <Clock className="w-3.5 h-3.5" />
-                                                                        {item.date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }).replace(/^0:/, '12:')}
-                                                                    </span>
-                                                                </div>
-                                                                <h4 className="font-bold text-sm text-text line-clamp-1 leading-tight group-hover:text-plex transition-colors">
-                                                                    {item.title}
-                                                                </h4>
-                                                                <p className="text-[12px] text-muted/80 line-clamp-1 mt-1 font-medium">
-                                                                    {item.subtitle}
-                                                                </p>
+                                {/* Right Side: Vertical List */}
+                                <div className="flex-1 min-w-0 flex flex-col gap-6 md:gap-8 pb-4">
+                                    {Object.entries(groupedCalendar).map(([dateStr, items]) => (
+                                        <div key={dateStr} className="flex flex-col gap-2 md:gap-3">
+                                            <div className="sticky top-0 bg-card/95 backdrop-blur-md z-10 py-1 md:py-3 border-b border-white/10 md:mb-2">
+                                                <h3 className="text-sm md:text-xl font-black text-plex md:text-text tracking-tight uppercase">{dateStr}</h3>
+                                            </div>
+                                            {items.map(item => (
+                                                <div
+                                                    key={item.id}
+                                                    onMouseEnter={() => setActiveCalendarItem(item)}
+                                                    onClick={() => setActiveCalendarItem(item)}
+                                                    className={`bg-background/40 hover:bg-background/80 transition-all duration-300 rounded-lg md:rounded-xl p-2.5 md:p-4 flex flex-col gap-2 md:gap-3 shadow-md border-l-4 cursor-pointer group ${item.type === 'tv' ? 'border-l-blue-500/80' : 'border-l-red-500/80'} ${activeCalendarItem?.id === item.id ? 'bg-white/10 border border-white/30 scale-[1.01] md:scale-[1.02]' : 'border border-white/5 hover:border-white/20'}`}
+                                                >
+                                                    <div className="flex justify-between items-start gap-2 md:gap-3">
+                                                        <div className="min-w-0 flex-grow">
+                                                            <div className="flex items-center gap-1.5 md:gap-2 mb-1 md:mb-2">
+                                                                <span className="text-[9px] md:text-[11px] text-plex flex items-center gap-1 md:gap-1.5 font-bold tracking-wide">
+                                                                    <Clock className="w-3 h-3 md:w-3.5 md:h-3.5" />
+                                                                    {item.date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }).replace(/^0:/, '12:')}
+                                                                </span>
+                                                                <span className={`md:hidden text-[8px] font-black tracking-widest uppercase px-1 rounded ${item.service === 'Sonarr' ? 'text-blue-400' : 'text-red-400'}`}>
+                                                                    {item.service}
+                                                                </span>
                                                             </div>
-                                                            <div className="flex flex-col items-end gap-2 flex-shrink-0">
-                                                                {item.hasFile ? (
-                                                                    <span className="text-[10px] font-bold text-green-500 bg-green-500/10 border border-green-500/20 rounded-md px-2 py-1 whitespace-nowrap">
-                                                                        ✓ Ready
+                                                            <h4 className="font-bold text-xs sm:text-sm text-text line-clamp-1 leading-tight group-hover:text-plex transition-colors">
+                                                                {item.title}
+                                                            </h4>
+                                                            <p className="text-[10px] md:text-[12px] text-muted/80 line-clamp-1 mt-0.5 md:mt-1 font-medium">
+                                                                {item.subtitle}
+                                                            </p>
+                                                        </div>
+                                                        <div className="flex flex-col items-end gap-1.5 md:gap-2 flex-shrink-0">
+                                                            {item.hasFile ? (
+                                                                <span className="text-[8px] md:text-[10px] font-bold text-green-500 bg-green-500/10 border border-green-500/20 rounded md:rounded-md px-1.5 py-0.5 md:px-2 md:py-1 whitespace-nowrap">
+                                                                    ✓ Ready
+                                                                </span>
+                                                            ) : (
+                                                                item.monitored && (
+                                                                    <span className="text-[8px] md:text-[10px] font-bold text-plex bg-plex/10 border border-plex/20 rounded md:rounded-md px-1.5 py-0.5 md:px-2 md:py-1 flex items-center gap-1 md:gap-1.5 whitespace-nowrap">
+                                                                        <span className="w-1 h-1 md:w-1.5 md:h-1.5 rounded-full bg-plex animate-pulse"></span>
+                                                                        Monitored
                                                                     </span>
-                                                                ) : (
-                                                                    item.monitored && (
-                                                                        <span className="text-[10px] font-bold text-plex bg-plex/10 border border-plex/20 rounded-md px-2 py-1 flex items-center gap-1.5 whitespace-nowrap">
-                                                                            <span className="w-1.5 h-1.5 rounded-full bg-plex animate-pulse"></span>
-                                                                            Monitored
-                                                                        </span>
-                                                                    )
-                                                                )}
-                                                            </div>
+                                                                )
+                                                            )}
                                                         </div>
                                                     </div>
-                                                ))}
-                                            </div>
-                                        ))}
-                                    </div>
-
-                                    {/* Mobile: Vertical List by Day */}
-                                    <div className="md:hidden flex flex-col gap-8 mt-2">
-                                        {Object.entries(groupedCalendar).map(([dateStr, items]) => (
-                                            <div key={dateStr} className="flex flex-col gap-3">
-                                                <div className="sticky top-0 bg-card/95 backdrop-blur-md z-10 py-2 border-b border-white/10">
-                                                    <h3 className="text-lg font-black text-plex tracking-tight">{dateStr}</h3>
                                                 </div>
-                                                {items.map(item => (
-                                                    <div
-                                                        key={item.id}
-                                                        onClick={() => setActiveCalendarItem(item)}
-                                                        className={`bg-background/40 transition-all duration-300 rounded-xl p-3.5 flex flex-col gap-2 shadow-md border-l-4 cursor-pointer ${item.type === 'tv' ? 'border-l-blue-500/80' : 'border-l-red-500/80'} ${activeCalendarItem?.id === item.id ? 'bg-white/10 border border-white/30 scale-[1.02]' : 'border border-white/5'}`}
-                                                    >
-                                                        <div className="flex justify-between items-start gap-3">
-                                                            <div className="min-w-0 flex-grow">
-                                                                <div className="flex items-center gap-2 mb-1.5">
-                                                                    <span className="text-[10px] text-plex flex items-center gap-1.5 font-bold tracking-wide">
-                                                                        <Clock className="w-3 h-3" />
-                                                                        {item.date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }).replace(/^0:/, '12:')}
-                                                                    </span>
-                                                                </div>
-                                                                <h4 className="font-bold text-sm text-text line-clamp-1 leading-tight">
-                                                                    {item.title}
-                                                                </h4>
-                                                                <p className="text-[11px] text-muted/80 line-clamp-1 mt-0.5 font-medium">
-                                                                    {item.subtitle}
-                                                                </p>
-                                                            </div>
-                                                            <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
-                                                                {item.hasFile ? (
-                                                                    <span className="text-[9px] font-bold text-green-500 bg-green-500/10 border border-green-500/20 rounded-md px-1.5 py-0.5 whitespace-nowrap">
-                                                                        ✓ Ready
-                                                                    </span>
-                                                                ) : (
-                                                                    item.monitored && (
-                                                                        <span className="text-[9px] font-bold text-plex bg-plex/10 border border-plex/20 rounded-md px-1.5 py-0.5 flex items-center gap-1 whitespace-nowrap">
-                                                                            <span className="w-1.5 h-1.5 rounded-full bg-plex animate-pulse"></span>
-                                                                            Monitored
-                                                                        </span>
-                                                                    )
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        ))}
-                                    </div>
+                                            ))}
+                                        </div>
+                                    ))}
                                 </div>
                             </div>
                         )}
