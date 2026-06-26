@@ -5255,6 +5255,11 @@ const Navigation: React.FC<NavigationProps> = ({ currentRoute, onNavigate, onLog
 
             {/* Mobile Bottom Nav */}
             <div className="md:hidden fixed bottom-0 left-0 right-0 w-full bg-[#161b22] border-t border-[#30363d] z-50 pb-[env(safe-area-inset-bottom)]">
+                {appVersion && (
+                    <div className="absolute -top-5 right-2 text-[9px] text-white/30 font-mono tracking-widest pointer-events-none">
+                        {appVersion}
+                    </div>
+                )}
                 <div className="flex justify-around items-center h-16">
                     {navOrder.map((key) => {
                         const item = navItemsConfig[key];

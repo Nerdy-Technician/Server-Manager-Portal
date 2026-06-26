@@ -4781,31 +4781,34 @@ var Navigation = ({ currentRoute, onNavigate, onLogout, isAdmin, serverName, adm
         ] })
       ] })
     ] }),
-    /* @__PURE__ */ jsx("div", { className: "md:hidden fixed bottom-0 left-0 right-0 w-full bg-[#161b22] border-t border-[#30363d] z-50 pb-[env(safe-area-inset-bottom)]", children: /* @__PURE__ */ jsx("div", { className: "flex justify-around items-center h-16", children: navOrder.map((key) => {
-      const item = navItemsConfig[key];
-      if (!item) return null;
-      if (item.adminOnly && !isAdmin) return null;
-      if (key === "logs" || key === "logout") return null;
-      const isCurrent = item.route ? ["admin", "user"].includes(currentRoute) && key === "home" ? true : currentRoute === item.route : false;
-      const labelOverride = key === "mediastack" ? "Media" : key === "request" ? "Request" : item.label;
-      if (item.href) {
-        return /* @__PURE__ */ jsxs("a", { href: item.href, target: "_blank", rel: "noreferrer", className: "relative flex flex-col items-center justify-center gap-1 h-full text-muted flex-1 text-center text-[0.65rem] transition-colors hover:text-text", children: [
+    /* @__PURE__ */ jsxs("div", { className: "md:hidden fixed bottom-0 left-0 right-0 w-full bg-[#161b22] border-t border-[#30363d] z-50 pb-[env(safe-area-inset-bottom)]", children: [
+      appVersion && /* @__PURE__ */ jsx("div", { className: "absolute -top-5 right-2 text-[9px] text-white/30 font-mono tracking-widest pointer-events-none", children: appVersion }),
+      /* @__PURE__ */ jsx("div", { className: "flex justify-around items-center h-16", children: navOrder.map((key) => {
+        const item = navItemsConfig[key];
+        if (!item) return null;
+        if (item.adminOnly && !isAdmin) return null;
+        if (key === "logs" || key === "logout") return null;
+        const isCurrent = item.route ? ["admin", "user"].includes(currentRoute) && key === "home" ? true : currentRoute === item.route : false;
+        const labelOverride = key === "mediastack" ? "Media" : key === "request" ? "Request" : item.label;
+        if (item.href) {
+          return /* @__PURE__ */ jsxs("a", { href: item.href, target: "_blank", rel: "noreferrer", className: "relative flex flex-col items-center justify-center gap-1 h-full text-muted flex-1 text-center text-[0.65rem] transition-colors hover:text-text", children: [
+            /* @__PURE__ */ jsx(item.icon, { className: "w-5 h-5 flex-shrink-0" }),
+            " ",
+            labelOverride
+          ] }, key);
+        }
+        return /* @__PURE__ */ jsxs("a", { href: "#", className: `relative flex flex-col items-center justify-center gap-1 h-full flex-1 text-center text-[0.65rem] transition-colors ${isCurrent ? "text-plex font-bold" : "text-muted hover:text-text"}`, onClick: (e) => {
+          e.preventDefault();
+          if (item.onClick) item.onClick(e);
+          else onNavigate(item.route);
+        }, children: [
           /* @__PURE__ */ jsx(item.icon, { className: "w-5 h-5 flex-shrink-0" }),
           " ",
-          labelOverride
+          labelOverride,
+          isCurrent && /* @__PURE__ */ jsx("div", { className: "absolute bottom-1 w-1.5 h-1.5 rounded-full bg-plex shadow-[0_0_5px_rgba(229,160,13,0.8)]" })
         ] }, key);
-      }
-      return /* @__PURE__ */ jsxs("a", { href: "#", className: `relative flex flex-col items-center justify-center gap-1 h-full flex-1 text-center text-[0.65rem] transition-colors ${isCurrent ? "text-plex font-bold" : "text-muted hover:text-text"}`, onClick: (e) => {
-        e.preventDefault();
-        if (item.onClick) item.onClick(e);
-        else onNavigate(item.route);
-      }, children: [
-        /* @__PURE__ */ jsx(item.icon, { className: "w-5 h-5 flex-shrink-0" }),
-        " ",
-        labelOverride,
-        isCurrent && /* @__PURE__ */ jsx("div", { className: "absolute bottom-1 w-1.5 h-1.5 rounded-full bg-plex shadow-[0_0_5px_rgba(229,160,13,0.8)]" })
-      ] }, key);
-    }) }) })
+      }) })
+    ] })
   ] });
 };
 var PublicInviteClaim = ({ code }) => {
