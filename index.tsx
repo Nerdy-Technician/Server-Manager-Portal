@@ -2347,21 +2347,9 @@ const MediaStackDashboard: React.FC<{ isAdmin: boolean }> = ({ isAdmin }) => {
                                                     <span className="font-bold uppercase tracking-widest text-[8px] md:text-sm">No Poster</span>
                                                 </div>
                                             )}
-                                            <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/40 to-transparent flex flex-col justify-end p-2 md:p-6">
-                                                <div className="hidden md:flex items-center gap-2 mb-2">
-                                                    <span className={`text-[10px] font-black tracking-widest uppercase px-2 py-1 rounded-md backdrop-blur-sm ${activeCalendarItem?.service === 'Sonarr' ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30' : 'bg-red-500/20 text-red-300 border border-red-500/30'}`}>
-                                                        {activeCalendarItem?.service}
-                                                    </span>
-                                                    {activeCalendarItem?.hasFile && <span className="text-[10px] font-bold text-green-400 bg-green-500/20 px-2 py-1 rounded-md border border-green-500/30 backdrop-blur-sm">Downloaded</span>}
-                                                </div>
-                                                <h3 className="text-xs sm:text-sm md:text-2xl font-black text-white leading-tight drop-shadow-lg mb-0.5 md:mb-1 line-clamp-2 md:line-clamp-none">
-                                                    {activeCalendarItem?.title}
-                                                </h3>
-                                                <p className="hidden md:block text-base text-white/90 font-medium line-clamp-2 drop-shadow-md">
-                                                    {activeCalendarItem?.subtitle}
-                                                </p>
+                                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex flex-col justify-end p-2 md:p-4">
                                                 {activeCalendarItem?.network && (
-                                                    <span className="hidden md:block text-xs text-white/60 uppercase tracking-widest mt-3 font-bold">{activeCalendarItem.network}</span>
+                                                    <span className="hidden md:block text-sm text-white/90 uppercase tracking-widest font-bold text-center drop-shadow-lg">{activeCalendarItem.network}</span>
                                                 )}
                                             </div>
                                         </div>
@@ -2393,10 +2381,10 @@ const MediaStackDashboard: React.FC<{ isAdmin: boolean }> = ({ isAdmin }) => {
                                                                     {item.service}
                                                                 </span>
                                                             </div>
-                                                            <h4 className="font-bold text-xs sm:text-sm text-text line-clamp-1 leading-tight group-hover:text-plex transition-colors">
+                                                            <h4 className="font-bold text-xs sm:text-sm text-text line-clamp-2 md:line-clamp-3 leading-tight group-hover:text-plex transition-colors">
                                                                 {item.title}
                                                             </h4>
-                                                            <p className="text-[10px] md:text-[12px] text-muted/80 line-clamp-1 mt-0.5 md:mt-1 font-medium">
+                                                            <p className="text-[10px] md:text-[12px] text-muted/80 line-clamp-2 mt-0.5 md:mt-1 font-medium">
                                                                 {item.subtitle}
                                                             </p>
                                                         </div>
