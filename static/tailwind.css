@@ -1603,8 +1603,8 @@ input[type="date"], input[type="time"], input[type="datetime-local"], input[type
   overflow-y: auto;
 }
 
-.overflow-x-hidden {
-  overflow-x: hidden;
+.overflow-x-clip {
+  overflow-x: clip;
 }
 
 .scroll-smooth {
