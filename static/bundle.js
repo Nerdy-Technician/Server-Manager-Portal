@@ -4594,8 +4594,9 @@ var StreamDetailsModal = ({ session, onClose, isAdmin, onKilled }) => {
     ] })
   ] }) });
 };
-var LibraryDashboard = ({ onBack, isAdmin }) => {
+var LibraryDashboard = ({ onBack, isAdmin, publicConfig }) => {
   const [dashboardData, setDashboardData] = useState(null);
+  const [trendingStats, setTrendingStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [recentLimit, setRecentLimit] = useState(25);
@@ -4605,6 +4606,10 @@ var LibraryDashboard = ({ onBack, isAdmin }) => {
       const res = await apiFetch(`/api/plex/dashboard?limit=${recentLimit}`);
       if (res.error) throw new Error(res.error);
       setDashboardData(res);
+      const statsRes = await apiFetch("/api/plex/stats/trending");
+      if (!statsRes.error) {
+        setTrendingStats(statsRes);
+      }
     } catch (err) {
       setError(err.message || "Failed to load dashboard data");
     } finally {
@@ -4755,6 +4760,67 @@ var LibraryDashboard = ({ onBack, isAdmin }) => {
             ] }, i)),
             (!dashboardData || dashboardData.recentMusic.length === 0) && /* @__PURE__ */ jsx("div", { className: "text-center text-muted p-8 border border-dashed border-border rounded-xl mt-4 w-full col-span-full", children: "No recent music" })
           ] })
+        ] })
+      ] }),
+      trendingStats && /* @__PURE__ */ jsxs("div", { className: "mt-16 w-full flex flex-col gap-12", children: [
+        /* @__PURE__ */ jsxs("div", { className: "flex flex-col gap-2 items-center text-center mb-4", children: [
+          /* @__PURE__ */ jsxs("h2", { className: "text-3xl md:text-4xl font-extrabold text-white tracking-tight", children: [
+            "Other things happening on ",
+            publicConfig?.serverIdentifier || "this server"
+          ] }),
+          /* @__PURE__ */ jsx("p", { className: "text-muted text-sm max-w-xl", children: "A look at what the community is currently watching across the entire server." })
+        ] }),
+        trendingStats.trending7Days?.length > 0 && /* @__PURE__ */ jsxs("div", { className: "flex flex-col", children: [
+          /* @__PURE__ */ jsx("h3", { className: "text-plex text-sm uppercase tracking-[2px] mb-6 font-bold border-b border-white/10 pb-2", children: "\u{1F525} Trending This Week" }),
+          /* @__PURE__ */ jsx("div", { className: "flex overflow-x-auto gap-4 pb-4 snap-x hide-scrollbar scroll-smooth", children: trendingStats.trending7Days.map((item, i) => /* @__PURE__ */ jsxs("div", { className: "snap-start shrink-0 w-32 md:w-40 flex flex-col gap-2 group", children: [
+            /* @__PURE__ */ jsxs("div", { className: "relative aspect-[2/3] w-full rounded-lg overflow-hidden border border-border group-hover:border-plex transition-colors shadow-md", children: [
+              /* @__PURE__ */ jsx("img", { src: `/api/plex/image?path=${encodeURIComponent(item.thumb)}&width=300&height=450`, alt: item.title, loading: "lazy", className: "w-full h-full object-cover" }),
+              /* @__PURE__ */ jsxs("div", { className: "absolute top-2 right-2 bg-black/80 text-plex text-xs font-bold px-2 py-1 rounded backdrop-blur-md border border-plex/30", children: [
+                item.views,
+                " Views"
+              ] })
+            ] }),
+            /* @__PURE__ */ jsx("div", { className: "text-white text-xs font-medium text-center mt-1 line-clamp-2 leading-tight", children: item.title })
+          ] }, i)) })
+        ] }),
+        trendingStats.movies30Days?.length > 0 && /* @__PURE__ */ jsxs("div", { className: "flex flex-col", children: [
+          /* @__PURE__ */ jsx("h3", { className: "text-plex text-sm uppercase tracking-[2px] mb-6 font-bold border-b border-white/10 pb-2", children: "\u{1F37F} Most Watched Movies (This Month)" }),
+          /* @__PURE__ */ jsx("div", { className: "flex overflow-x-auto gap-4 pb-4 snap-x hide-scrollbar scroll-smooth", children: trendingStats.movies30Days.map((item, i) => /* @__PURE__ */ jsxs("div", { className: "snap-start shrink-0 w-32 md:w-40 flex flex-col gap-2 group", children: [
+            /* @__PURE__ */ jsxs("div", { className: "relative aspect-[2/3] w-full rounded-lg overflow-hidden border border-border group-hover:border-plex transition-colors shadow-md", children: [
+              /* @__PURE__ */ jsx("img", { src: `/api/plex/image?path=${encodeURIComponent(item.thumb)}&width=300&height=450`, alt: item.title, loading: "lazy", className: "w-full h-full object-cover" }),
+              /* @__PURE__ */ jsxs("div", { className: "absolute top-2 right-2 bg-black/80 text-plex text-xs font-bold px-2 py-1 rounded backdrop-blur-md border border-plex/30", children: [
+                item.views,
+                " Views"
+              ] })
+            ] }),
+            /* @__PURE__ */ jsx("div", { className: "text-white text-xs font-medium text-center mt-1 line-clamp-2 leading-tight", children: item.title })
+          ] }, i)) })
+        ] }),
+        trendingStats.shows30Days?.length > 0 && /* @__PURE__ */ jsxs("div", { className: "flex flex-col", children: [
+          /* @__PURE__ */ jsx("h3", { className: "text-plex text-sm uppercase tracking-[2px] mb-6 font-bold border-b border-white/10 pb-2", children: "\u{1F4FA} Most Watched Shows (This Month)" }),
+          /* @__PURE__ */ jsx("div", { className: "flex overflow-x-auto gap-4 pb-4 snap-x hide-scrollbar scroll-smooth", children: trendingStats.shows30Days.map((item, i) => /* @__PURE__ */ jsxs("div", { className: "snap-start shrink-0 w-32 md:w-40 flex flex-col gap-2 group", children: [
+            /* @__PURE__ */ jsxs("div", { className: "relative aspect-[2/3] w-full rounded-lg overflow-hidden border border-border group-hover:border-plex transition-colors shadow-md", children: [
+              /* @__PURE__ */ jsx("img", { src: `/api/plex/image?path=${encodeURIComponent(item.thumb)}&width=300&height=450`, alt: item.title, loading: "lazy", className: "w-full h-full object-cover" }),
+              /* @__PURE__ */ jsxs("div", { className: "absolute top-2 right-2 bg-black/80 text-plex text-xs font-bold px-2 py-1 rounded backdrop-blur-md border border-plex/30", children: [
+                item.views,
+                " Views"
+              ] })
+            ] }),
+            /* @__PURE__ */ jsx("div", { className: "text-white text-xs font-medium text-center mt-1 line-clamp-2 leading-tight", children: item.title })
+          ] }, i)) })
+        ] }),
+        trendingStats.top365Days?.length > 0 && /* @__PURE__ */ jsxs("div", { className: "flex flex-col", children: [
+          /* @__PURE__ */ jsx("h3", { className: "text-plex text-sm uppercase tracking-[2px] mb-6 font-bold border-b border-white/10 pb-2", children: "\u{1F3C6} Top of the Year" }),
+          /* @__PURE__ */ jsx("div", { className: "flex overflow-x-auto gap-4 pb-4 snap-x hide-scrollbar scroll-smooth", children: trendingStats.top365Days.map((item, i) => /* @__PURE__ */ jsxs("div", { className: "snap-start shrink-0 w-32 md:w-40 flex flex-col gap-2 group", children: [
+            /* @__PURE__ */ jsxs("div", { className: "relative aspect-[2/3] w-full rounded-lg overflow-hidden border border-border group-hover:border-plex transition-colors shadow-md", children: [
+              /* @__PURE__ */ jsx("img", { src: `/api/plex/image?path=${encodeURIComponent(item.thumb)}&width=300&height=450`, alt: item.title, loading: "lazy", className: "w-full h-full object-cover" }),
+              /* @__PURE__ */ jsxs("div", { className: "absolute top-2 right-2 bg-black/80 text-plex text-xs font-bold px-2 py-1 rounded backdrop-blur-md border border-plex/30", children: [
+                item.views,
+                " Views"
+              ] })
+            ] }),
+            /* @__PURE__ */ jsx("div", { className: "text-white text-xs font-medium text-center mt-1 line-clamp-2 leading-tight", children: item.title })
+          ] }, i)) })
         ] })
       ] })
     ] }),

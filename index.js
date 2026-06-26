@@ -84,6 +84,7 @@ const AUDIT_LOG_PATH = path.join(process.cwd(), 'audit-log.json');
 const EMAIL_LOG_PATH = path.join(process.cwd(), 'email_log.json');
 const STATUS_CONFIG_PATH = path.join(process.cwd(), 'status.json');
 const HEALTH_PATH = path.join(process.cwd(), 'subzero-health.json');
+const TRENDING_CACHE_PATH = path.join(process.cwd(), 'trending-cache.json');
 const PLEX_API = 'https://plex.tv/api';
 
 // --- Status App Global State ---
@@ -2819,7 +2820,8 @@ app.post('/api/streams/kill', requireAdmin, async (req, res) => {
     const { sessionId, reason } = req.body;
     try {
         const config = await readConfig();
-        const uri = config.plexAddress;
+        const uri = await getPlexConnectionUri(config);
+        if (!uri) return res.status(503).json({ error: 'Cannot connect to Plex' });
         
         const response = await fetch(`${uri}/status/sessions/terminate?sessionId=${encodeURIComponent(sessionId)}&reason=${encodeURIComponent(reason || 'Admin terminated session')}&X-Plex-Token=${config.plexToken}`, { 
             method: 'GET', 
@@ -3710,7 +3712,107 @@ app.get('/api/media-stack/summary', requireAuth, async (req, res) => {
     }
 });
 
+app.get('/api/media-stack/trending', requireAuth, async (req, res) => {
+    const stats = await loadFile(TRENDING_CACHE_PATH, { movies: 0, series: 0 });
+    res.json(stats);
+});
+
 // (Endpoints moved up before wildcard route)
+
+async function calculateTrendingStats() {
+    try {
+        const config = await readConfig();
+        if (!config || !config.plexToken || !config.serverIdentifier) return;
+        
+        const uri = await getPlexConnectionUri(config);
+        if (!uri) return;
+
+        log('Starting background calculation of Plex Trending Stats...');
+        
+        // Fetch up to 10,000 history items
+        const response = await fetch(`${uri}/status/sessions/history/all?limit=10000&X-Plex-Token=${config.plexToken}`, { headers: { 'Accept': 'application/json' } }).catch(() => null);
+        if (!response) return;
+        const historyRes = await response.json().catch(() => null);
+        if (!historyRes || !historyRes.MediaContainer || !historyRes.MediaContainer.Metadata) {
+            log('No history found or failed to parse history JSON.');
+            return;
+        }
+        
+        const history = historyRes.MediaContainer.Metadata;
+        
+        const now = Date.now() / 1000;
+        const days7 = now - (7 * 24 * 60 * 60);
+        const days30 = now - (30 * 24 * 60 * 60);
+        const days365 = now - (365 * 24 * 60 * 60);
+        
+        const counts = {
+            trending7Days: {}, 
+            movies30Days: {}, 
+            shows30Days: {}, 
+            top365Days: {} 
+        };
+
+        history.forEach(item => {
+            const viewedAt = item.viewedAt;
+            const isMovie = item.type === 'movie';
+            const isEpisode = item.type === 'episode';
+            
+            if (!isMovie && !isEpisode) return;
+
+            const groupKey = isMovie ? item.ratingKey : item.grandparentKey;
+            
+            const baseItem = {
+                ratingKey: groupKey,
+                title: isMovie ? item.title : item.grandparentTitle,
+                thumb: isMovie ? item.thumb : (item.grandparentThumb || item.parentThumb || item.thumb),
+                type: isMovie ? 'movie' : 'show'
+            };
+
+            const increment = (obj) => {
+                if (!obj[groupKey]) obj[groupKey] = { ...baseItem, views: 0 };
+                obj[groupKey].views++;
+            };
+
+            if (viewedAt >= days7) increment(counts.trending7Days);
+            if (viewedAt >= days365) increment(counts.top365Days);
+            
+            if (viewedAt >= days30) {
+                if (isMovie) increment(counts.movies30Days);
+                else if (isEpisode) increment(counts.shows30Days);
+            }
+        });
+
+        // Sort and slice top 20
+        const getTop = (obj) => Object.values(obj).sort((a, b) => b.views - a.views).slice(0, 20);
+
+        const stats = {
+            trending7Days: getTop(counts.trending7Days),
+            movies30Days: getTop(counts.movies30Days),
+            shows30Days: getTop(counts.shows30Days),
+            top365Days: getTop(counts.top365Days),
+            lastUpdated: Date.now()
+        };
+
+        await saveFile(TRENDING_CACHE_PATH, stats);
+        log('Successfully calculated and cached Plex Trending Stats.');
+    } catch (e) {
+        log(`Error calculating trending stats: ${e.message}`);
+    }
+}
+
+app.get('/api/plex/stats/trending', requireAuth, async (req, res) => {
+    try {
+        const stats = await loadFile(TRENDING_CACHE_PATH, { 
+            trending7Days: [], 
+            movies30Days: [], 
+            shows30Days: [], 
+            top365Days: [] 
+        });
+        res.json(stats);
+    } catch (e) {
+        res.status(500).json({ error: 'Failed to load trending stats' });
+    }
+});
 
 app.listen(PORT, async () => {
     log(`--- Server Manager Portal Service starting on http://localhost:${PORT} ---`);
@@ -3730,4 +3832,8 @@ app.listen(PORT, async () => {
     setInterval(runMonitorCycle, 15000);
     startBackgroundService();
     startPlexStatsBackgroundTask(); // start 24-hour library size cache task
+    
+    // Setup Trending Stats Aggregator
+    setTimeout(calculateTrendingStats, 10000); // Run once shortly after startup
+    setInterval(calculateTrendingStats, 12 * 60 * 60 * 1000); // Every 12 hours
 });
