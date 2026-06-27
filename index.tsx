@@ -3181,10 +3181,10 @@ const AnalyticsDashboard: React.FC<{ isAdmin: boolean, sessionInfo: any }> = ({ 
                             </a>
                         ))}
                     </div>
-                        </div>
-                    </>
-                )}
+                </div>
             </div>
+            </>
+            )}
             {selectedUser && (
                 <UserAnalyticsModal
                     userId={selectedUser.id}
