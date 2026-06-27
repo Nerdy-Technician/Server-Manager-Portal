@@ -3904,6 +3904,7 @@ var WrapUpModal = ({ metric, analytics, onClose }) => {
   const renderContent = () => {
     switch (metric) {
       case "Server Rank":
+        const percentile = analytics.totalActiveUsers > 0 ? Math.max(1, Math.round(analytics.leaderboardRank / analytics.totalActiveUsers * 100)) : 100;
         return /* @__PURE__ */ jsxs("div", { className: "flex flex-col items-center justify-center text-center p-6", children: [
           /* @__PURE__ */ jsx(Trophy, { className: "w-16 h-16 text-plex mb-4 animate-bounce" }),
           /* @__PURE__ */ jsxs("h2", { className: "text-3xl font-black text-white mb-2", children: [
@@ -3914,6 +3915,15 @@ var WrapUpModal = ({ metric, analytics, onClose }) => {
             "Out of ",
             analytics.totalActiveUsers || 0,
             " active users on the server."
+          ] }),
+          /* @__PURE__ */ jsxs("div", { className: "w-full bg-white/5 border border-white/10 rounded-xl p-6 mb-6 relative overflow-hidden", children: [
+            /* @__PURE__ */ jsx("div", { className: "absolute top-0 right-0 w-32 h-32 bg-plex/20 blur-3xl -mr-10 -mt-10 rounded-full" }),
+            /* @__PURE__ */ jsxs("h3", { className: "text-4xl font-black text-white drop-shadow-md mb-1", children: [
+              "Top ",
+              percentile,
+              "%"
+            ] }),
+            /* @__PURE__ */ jsx("p", { className: "text-xs font-bold text-plex uppercase tracking-widest", children: "Of All Viewers" })
           ] }),
           /* @__PURE__ */ jsx("div", { className: "bg-plex/10 border border-plex/30 rounded-xl p-4 w-full shadow-inner", children: /* @__PURE__ */ jsx("p", { className: "text-sm text-plex font-medium", children: "Keep streaming to climb the leaderboard! Every movie, episode, and song counts towards your rank." }) })
         ] });
@@ -3942,27 +3952,60 @@ var WrapUpModal = ({ metric, analytics, onClose }) => {
         ] });
       case "Top Binge":
         return /* @__PURE__ */ jsxs("div", { className: "flex flex-col items-center justify-center text-center p-6 relative", children: [
-          analytics.topBinge?.thumbUrl ? /* @__PURE__ */ jsx("img", { src: analytics.topBinge.thumbUrl, className: "w-32 h-48 object-cover rounded-xl shadow-[0_0_30px_rgba(0,0,0,0.5)] mb-6 border border-white/10" }) : /* @__PURE__ */ jsx(Tv, { className: "w-16 h-16 text-plex mb-6 drop-shadow-lg" }),
-          /* @__PURE__ */ jsx("h2", { className: "text-2xl font-black text-white mb-1 line-clamp-2", children: analytics.topBinge?.title || "Nothing yet" }),
-          /* @__PURE__ */ jsxs("p", { className: "text-plex font-black text-lg mb-4", children: [
-            analytics.topBinge?.plays || 0,
-            " ",
-            /* @__PURE__ */ jsx("span", { className: "text-sm font-bold text-muted uppercase tracking-wider", children: "episodes" })
-          ] }),
-          /* @__PURE__ */ jsx("p", { className: "text-sm text-gray-400 bg-white/5 border border-white/10 rounded-lg px-4 py-2 w-full", children: "You couldn't get enough of this show!" })
+          analytics.topBinge?.artUrl || analytics.topBinge?.thumbUrl ? /* @__PURE__ */ jsxs("div", { className: "w-full h-40 bg-cover bg-center rounded-xl shadow-lg mb-6 border border-white/10 relative overflow-hidden", style: { backgroundImage: `url('${analytics.topBinge.artUrl || analytics.topBinge.thumbUrl}')` }, children: [
+            /* @__PURE__ */ jsx("div", { className: "absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" }),
+            /* @__PURE__ */ jsxs("div", { className: "absolute bottom-4 left-0 right-0 px-4 flex flex-col items-center", children: [
+              /* @__PURE__ */ jsx("h2", { className: "text-2xl font-black text-white mb-1 line-clamp-1 drop-shadow-md", children: analytics.topBinge?.title || "Nothing yet" }),
+              /* @__PURE__ */ jsxs("p", { className: "text-plex font-bold drop-shadow-md", children: [
+                analytics.topBinge?.plays || 0,
+                " episodes"
+              ] })
+            ] })
+          ] }) : /* @__PURE__ */ jsx(Tv, { className: "w-16 h-16 text-plex mb-6 drop-shadow-lg" }),
+          analytics.topShows && analytics.topShows.length > 1 && /* @__PURE__ */ jsxs("div", { className: "w-full mt-2", children: [
+            /* @__PURE__ */ jsx("p", { className: "text-left text-xs uppercase tracking-widest font-bold text-muted mb-3 border-b border-white/10 pb-2", children: "Runner Ups" }),
+            /* @__PURE__ */ jsx("div", { className: "flex flex-col gap-2", children: analytics.topShows.slice(1).map((show, i) => /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between bg-white/5 border border-white/5 rounded-lg p-2 hover:bg-white/10 transition-colors", children: [
+              /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-3", children: [
+                /* @__PURE__ */ jsx("span", { className: "text-gray-500 font-bold w-4 text-right", children: i + 2 }),
+                show.thumbUrl ? /* @__PURE__ */ jsx("img", { src: show.thumbUrl, className: "w-8 h-12 object-cover rounded shadow-sm" }) : /* @__PURE__ */ jsx("div", { className: "w-8 h-12 bg-white/10 rounded" }),
+                /* @__PURE__ */ jsx("span", { className: "font-bold text-sm text-gray-200 line-clamp-1 text-left", children: show.title })
+              ] }),
+              /* @__PURE__ */ jsxs("span", { className: "text-xs font-black text-plex whitespace-nowrap", children: [
+                show.plays,
+                " eps"
+              ] })
+            ] }, i)) })
+          ] })
         ] });
       case "Top Movie":
         return /* @__PURE__ */ jsxs("div", { className: "flex flex-col items-center justify-center text-center p-6 relative", children: [
-          analytics.topMovie?.thumbUrl ? /* @__PURE__ */ jsx("img", { src: analytics.topMovie.thumbUrl, className: "w-32 h-48 object-cover rounded-xl shadow-[0_0_30px_rgba(0,0,0,0.5)] mb-6 border border-white/10" }) : /* @__PURE__ */ jsx(Clapperboard, { className: "w-16 h-16 text-plex mb-6 drop-shadow-lg" }),
-          /* @__PURE__ */ jsx("h2", { className: "text-2xl font-black text-white mb-1 line-clamp-2", children: analytics.topMovie?.title || "Nothing yet" }),
-          /* @__PURE__ */ jsxs("p", { className: "text-plex font-black text-lg mb-4", children: [
-            analytics.topMovie?.plays || 0,
-            " ",
-            /* @__PURE__ */ jsx("span", { className: "text-sm font-bold text-muted uppercase tracking-wider", children: "plays" })
-          ] }),
-          /* @__PURE__ */ jsx("p", { className: "text-sm text-gray-400 bg-white/5 border border-white/10 rounded-lg px-4 py-2 w-full", children: "Your most watched cinematic masterpiece." })
+          analytics.topMovie?.artUrl || analytics.topMovie?.thumbUrl ? /* @__PURE__ */ jsxs("div", { className: "w-full h-40 bg-cover bg-center rounded-xl shadow-lg mb-6 border border-white/10 relative overflow-hidden", style: { backgroundImage: `url('${analytics.topMovie.artUrl || analytics.topMovie.thumbUrl}')` }, children: [
+            /* @__PURE__ */ jsx("div", { className: "absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" }),
+            /* @__PURE__ */ jsxs("div", { className: "absolute bottom-4 left-0 right-0 px-4 flex flex-col items-center", children: [
+              /* @__PURE__ */ jsx("h2", { className: "text-2xl font-black text-white mb-1 line-clamp-1 drop-shadow-md", children: analytics.topMovie?.title || "Nothing yet" }),
+              /* @__PURE__ */ jsxs("p", { className: "text-plex font-bold drop-shadow-md", children: [
+                analytics.topMovie?.plays || 0,
+                " plays"
+              ] })
+            ] })
+          ] }) : /* @__PURE__ */ jsx(Clapperboard, { className: "w-16 h-16 text-plex mb-6 drop-shadow-lg" }),
+          analytics.topMovies && analytics.topMovies.length > 1 && /* @__PURE__ */ jsxs("div", { className: "w-full mt-2", children: [
+            /* @__PURE__ */ jsx("p", { className: "text-left text-xs uppercase tracking-widest font-bold text-muted mb-3 border-b border-white/10 pb-2", children: "Runner Ups" }),
+            /* @__PURE__ */ jsx("div", { className: "flex flex-col gap-2", children: analytics.topMovies.slice(1).map((movie, i) => /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between bg-white/5 border border-white/5 rounded-lg p-2 hover:bg-white/10 transition-colors", children: [
+              /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-3", children: [
+                /* @__PURE__ */ jsx("span", { className: "text-gray-500 font-bold w-4 text-right", children: i + 2 }),
+                movie.thumbUrl ? /* @__PURE__ */ jsx("img", { src: movie.thumbUrl, className: "w-8 h-12 object-cover rounded shadow-sm" }) : /* @__PURE__ */ jsx("div", { className: "w-8 h-12 bg-white/10 rounded" }),
+                /* @__PURE__ */ jsx("span", { className: "font-bold text-sm text-gray-200 line-clamp-1 text-left", children: movie.title })
+              ] }),
+              /* @__PURE__ */ jsxs("span", { className: "text-xs font-black text-plex whitespace-nowrap", children: [
+                movie.plays,
+                " plays"
+              ] })
+            ] }, i)) })
+          ] })
         ] });
       case "Time of Day":
+        const maxHour = Math.max(...analytics.hourDistribution || [0]);
         return /* @__PURE__ */ jsxs("div", { className: "flex flex-col items-center justify-center text-center p-6", children: [
           /* @__PURE__ */ jsx(Clock, { className: "w-16 h-16 text-plex mb-4 drop-shadow-lg" }),
           /* @__PURE__ */ jsx("h2", { className: "text-3xl font-black text-white mb-2", children: analytics.timeOfDay || "Unknown" }),
@@ -3971,7 +4014,34 @@ var WrapUpModal = ({ metric, analytics, onClose }) => {
             analytics.avgHour ? Math.round(analytics.avgHour) + ":00" : "Unknown",
             "."
           ] }),
-          /* @__PURE__ */ jsx("div", { className: "w-full bg-gradient-to-r from-plex/5 via-plex/10 to-plex/5 border border-plex/20 rounded-xl p-4 shadow-inner", children: /* @__PURE__ */ jsx("p", { className: "text-sm text-plex font-medium", children: analytics.timeOfDay === "Early Bird" ? "Catching the worm with those morning streams!" : analytics.timeOfDay === "Afternoon Watcher" ? "Perfect way to spend the afternoon." : analytics.timeOfDay === "Evening Streamer" ? "Unwinding after a long day." : "Burning the midnight oil with some late night streaming!" }) })
+          /* @__PURE__ */ jsxs("div", { className: "w-full mt-2 mb-6", children: [
+            /* @__PURE__ */ jsx("p", { className: "text-left text-xs uppercase tracking-widest font-bold text-muted mb-3 border-b border-white/10 pb-2", children: "24-Hour Heat Map" }),
+            /* @__PURE__ */ jsx("div", { className: "w-full flex items-end justify-between h-24 gap-[2px] mt-4 px-1", children: analytics.hourDistribution?.map((count, hour) => {
+              const height = maxHour > 0 ? count / maxHour * 100 : 0;
+              const isTop = count === maxHour && count > 0;
+              return /* @__PURE__ */ jsxs("div", { className: "flex flex-col items-center w-full group relative", children: [
+                /* @__PURE__ */ jsx(
+                  "div",
+                  {
+                    className: `w-full rounded-t-sm transition-all duration-500 relative flex items-end justify-center overflow-hidden
+                                                ${isTop ? "bg-plex shadow-[0_0_10px_rgba(229,160,13,0.5)]" : "bg-white/10 group-hover:bg-white/30"}`,
+                    style: { height: `${Math.max(height, 2)}%` }
+                  }
+                ),
+                hour % 6 === 0 && /* @__PURE__ */ jsxs("span", { className: "text-[8px] mt-1 font-bold text-muted absolute top-full pointer-events-none", children: [
+                  hour,
+                  "h"
+                ] }),
+                /* @__PURE__ */ jsxs("div", { className: "absolute bottom-full mb-1 opacity-0 group-hover:opacity-100 bg-black/80 text-white text-[10px] px-1.5 py-0.5 rounded pointer-events-none whitespace-nowrap z-10 transition-opacity", children: [
+                  count,
+                  " plays at ",
+                  hour,
+                  ":00"
+                ] })
+              ] }, hour);
+            }) })
+          ] }),
+          /* @__PURE__ */ jsx("div", { className: "w-full bg-gradient-to-r from-plex/5 via-plex/10 to-plex/5 border border-plex/20 rounded-xl p-4 shadow-inner mt-4", children: /* @__PURE__ */ jsx("p", { className: "text-sm text-plex font-medium", children: analytics.timeOfDay === "Early Bird" ? "Catching the worm with those morning streams!" : analytics.timeOfDay === "Afternoon Watcher" ? "Perfect way to spend the afternoon." : analytics.timeOfDay === "Evening Streamer" ? "Unwinding after a long day." : "Burning the midnight oil with some late night streaming!" }) })
         ] });
       case "Top Day":
         const daysOfWeek = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -3984,63 +4054,73 @@ var WrapUpModal = ({ metric, analytics, onClose }) => {
             const count = analytics.dayOfWeekCounts ? analytics.dayOfWeekCounts[i] : 0;
             const height = maxCount > 0 ? count / maxCount * 100 : 0;
             const isTop = count === maxCount && count > 0;
-            return /* @__PURE__ */ jsxs("div", { className: "flex flex-col items-center w-full group", children: [
+            return /* @__PURE__ */ jsxs("div", { className: "flex flex-col items-center w-full group relative", children: [
               /* @__PURE__ */ jsx(
                 "div",
                 {
                   className: `w-full rounded-t-md transition-all duration-500 relative flex items-end justify-center pb-1 overflow-hidden
                                             ${isTop ? "bg-gradient-to-t from-plex/80 to-plex shadow-[0_0_15px_rgba(229,160,13,0.3)]" : "bg-gradient-to-t from-white/10 to-white/20 group-hover:from-white/20 group-hover:to-white/30"}`,
-                  style: { height: `${Math.max(height, 8)}%` },
-                  children: /* @__PURE__ */ jsx("span", { className: `text-[10px] font-black opacity-0 group-hover:opacity-100 transition-opacity ${isTop ? "text-black" : "text-white"}`, children: count })
+                  style: { height: `${Math.max(height, 8)}%` }
                 }
               ),
-              /* @__PURE__ */ jsx("span", { className: `text-[9px] mt-2 font-black uppercase tracking-wider ${isTop ? "text-plex" : "text-muted"}`, children: day })
+              /* @__PURE__ */ jsx("span", { className: `text-[9px] mt-2 font-black uppercase tracking-wider ${isTop ? "text-plex" : "text-muted"}`, children: day }),
+              /* @__PURE__ */ jsxs("div", { className: "absolute bottom-full mb-1 opacity-0 group-hover:opacity-100 bg-black/80 text-white text-[10px] px-1.5 py-0.5 rounded pointer-events-none whitespace-nowrap z-10 transition-opacity", children: [
+                count,
+                " plays"
+              ] })
             ] }, day);
           }) })
         ] });
       case "Top Library":
-        return /* @__PURE__ */ jsxs("div", { className: "flex flex-col items-center justify-center text-center p-6", children: [
-          /* @__PURE__ */ jsx(Layers, { className: "w-16 h-16 text-plex mb-4 drop-shadow-lg" }),
-          /* @__PURE__ */ jsx("h2", { className: "text-3xl font-black text-white mb-2 line-clamp-1", children: analytics.favoriteLibrary || "None" }),
-          /* @__PURE__ */ jsx("p", { className: "text-muted mb-6 uppercase tracking-widest text-xs font-bold", children: "Favorite Library" }),
-          /* @__PURE__ */ jsx("div", { className: "w-full flex flex-col gap-2", children: analytics.topLibraries?.slice(0, 3).map((lib, i) => /* @__PURE__ */ jsxs("div", { className: `flex items-center justify-between border rounded-xl p-3 transition-colors ${i === 0 ? "bg-plex/10 border-plex/30" : "bg-white/5 border-white/10"}`, children: [
-            /* @__PURE__ */ jsxs("span", { className: `font-bold text-sm truncate pr-2 ${i === 0 ? "text-plex" : "text-gray-300"}`, children: [
-              i + 1,
-              ". ",
-              lib.title
-            ] }),
-            /* @__PURE__ */ jsxs("span", { className: `font-black text-sm whitespace-nowrap ${i === 0 ? "text-plex" : "text-white"}`, children: [
-              lib.plays,
-              " plays"
-            ] })
-          ] }, i)) })
+        const maxLibPlays = analytics.allLibraries?.[0]?.plays || 1;
+        return /* @__PURE__ */ jsxs("div", { className: "flex flex-col items-center justify-center text-center p-6 max-h-[80vh] overflow-hidden flex-1", children: [
+          /* @__PURE__ */ jsx(Layers, { className: "w-16 h-16 text-plex mb-4 drop-shadow-lg shrink-0" }),
+          /* @__PURE__ */ jsx("h2", { className: "text-3xl font-black text-white mb-2 line-clamp-1 shrink-0", children: analytics.favoriteLibrary || "None" }),
+          /* @__PURE__ */ jsx("p", { className: "text-muted mb-6 uppercase tracking-widest text-xs font-bold shrink-0", children: "Library Breakdown" }),
+          /* @__PURE__ */ jsx("div", { className: "w-full flex flex-col gap-3 overflow-y-auto pr-2 pb-2 custom-scrollbar", children: analytics.allLibraries?.map((lib, i) => {
+            const percent = lib.plays / maxLibPlays * 100;
+            return /* @__PURE__ */ jsxs("div", { className: "flex flex-col gap-1 w-full text-left", children: [
+              /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-end", children: [
+                /* @__PURE__ */ jsxs("span", { className: `font-bold text-sm truncate pr-2 ${i === 0 ? "text-plex" : "text-gray-300"}`, children: [
+                  i + 1,
+                  ". ",
+                  lib.title
+                ] }),
+                /* @__PURE__ */ jsxs("span", { className: `font-black text-xs whitespace-nowrap ${i === 0 ? "text-plex" : "text-gray-400"}`, children: [
+                  lib.plays,
+                  " plays"
+                ] })
+              ] }),
+              /* @__PURE__ */ jsx("div", { className: "w-full bg-black/40 rounded-full h-1.5 overflow-hidden border border-white/5", children: /* @__PURE__ */ jsx("div", { className: `h-full rounded-full transition-all duration-1000 ${i === 0 ? "bg-plex shadow-[0_0_8px_rgba(229,160,13,0.8)]" : "bg-gray-400"}`, style: { width: `${percent}%` } }) })
+            ] }, i);
+          }) })
         ] });
       case "Media Profile":
         return /* @__PURE__ */ jsxs("div", { className: "flex flex-col items-center justify-center text-center p-6", children: [
           /* @__PURE__ */ jsx(ChartPie, { className: "w-16 h-16 text-plex mb-4 drop-shadow-lg" }),
           /* @__PURE__ */ jsx("h2", { className: "text-3xl font-black text-white mb-2", children: analytics.mediaPreference || "Mixed Bag" }),
           /* @__PURE__ */ jsx("p", { className: "text-muted mb-6 uppercase tracking-widest text-xs font-bold", children: "Content Breakdown" }),
-          /* @__PURE__ */ jsxs("div", { className: "w-full bg-white/5 border border-white/10 rounded-xl p-5 flex flex-col gap-4 shadow-lg", children: [
+          /* @__PURE__ */ jsxs("div", { className: "w-full bg-white/5 border border-white/10 rounded-xl p-5 flex flex-col gap-5 shadow-lg", children: [
             /* @__PURE__ */ jsxs("div", { children: [
               /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between text-xs font-bold uppercase tracking-wider text-gray-300 mb-1.5", children: [
                 /* @__PURE__ */ jsx("span", { className: "flex items-center gap-1.5", children: "\u{1F3AC} Movies" }),
                 /* @__PURE__ */ jsx("span", { children: analytics.moviesCount || 0 })
               ] }),
-              /* @__PURE__ */ jsx("div", { className: "w-full bg-black/60 rounded-full h-2 overflow-hidden shadow-inner", children: /* @__PURE__ */ jsx("div", { className: "bg-blue-500 h-2 rounded-full shadow-[0_0_10px_rgba(59,130,246,0.5)] transition-all duration-1000", style: { width: `${(analytics.moviesCount || 0) / Math.max(analytics.totalPlays || 1, 1) * 100}%` } }) })
+              /* @__PURE__ */ jsx("div", { className: "w-full bg-black/60 rounded-full h-2.5 overflow-hidden shadow-inner border border-white/5", children: /* @__PURE__ */ jsx("div", { className: "bg-blue-500 h-full rounded-full shadow-[0_0_10px_rgba(59,130,246,0.5)] transition-all duration-1000 relative overflow-hidden", style: { width: `${(analytics.moviesCount || 0) / Math.max(analytics.totalPlays || 1, 1) * 100}%` }, children: /* @__PURE__ */ jsx("div", { className: "absolute inset-0 bg-white/20 w-1/2 -skew-x-12 translate-x-full animate-[shimmer_2s_infinite]" }) }) })
             ] }),
             /* @__PURE__ */ jsxs("div", { children: [
               /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between text-xs font-bold uppercase tracking-wider text-gray-300 mb-1.5", children: [
                 /* @__PURE__ */ jsx("span", { className: "flex items-center gap-1.5", children: "\u{1F4FA} Shows" }),
                 /* @__PURE__ */ jsx("span", { children: analytics.showsCount || 0 })
               ] }),
-              /* @__PURE__ */ jsx("div", { className: "w-full bg-black/60 rounded-full h-2 overflow-hidden shadow-inner", children: /* @__PURE__ */ jsx("div", { className: "bg-green-500 h-2 rounded-full shadow-[0_0_10px_rgba(34,197,94,0.5)] transition-all duration-1000", style: { width: `${(analytics.showsCount || 0) / Math.max(analytics.totalPlays || 1, 1) * 100}%` } }) })
+              /* @__PURE__ */ jsx("div", { className: "w-full bg-black/60 rounded-full h-2.5 overflow-hidden shadow-inner border border-white/5", children: /* @__PURE__ */ jsx("div", { className: "bg-green-500 h-full rounded-full shadow-[0_0_10px_rgba(34,197,94,0.5)] transition-all duration-1000 relative overflow-hidden", style: { width: `${(analytics.showsCount || 0) / Math.max(analytics.totalPlays || 1, 1) * 100}%` }, children: /* @__PURE__ */ jsx("div", { className: "absolute inset-0 bg-white/20 w-1/2 -skew-x-12 translate-x-full animate-[shimmer_2s_infinite_0.5s]" }) }) })
             ] }),
             analytics.musicCount > 0 && /* @__PURE__ */ jsxs("div", { children: [
               /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between text-xs font-bold uppercase tracking-wider text-gray-300 mb-1.5", children: [
                 /* @__PURE__ */ jsx("span", { className: "flex items-center gap-1.5", children: "\u{1F3B5} Music" }),
                 /* @__PURE__ */ jsx("span", { children: analytics.musicCount || 0 })
               ] }),
-              /* @__PURE__ */ jsx("div", { className: "w-full bg-black/60 rounded-full h-2 overflow-hidden shadow-inner", children: /* @__PURE__ */ jsx("div", { className: "bg-purple-500 h-2 rounded-full shadow-[0_0_10px_rgba(168,85,247,0.5)] transition-all duration-1000", style: { width: `${(analytics.musicCount || 0) / Math.max(analytics.totalPlays || 1, 1) * 100}%` } }) })
+              /* @__PURE__ */ jsx("div", { className: "w-full bg-black/60 rounded-full h-2.5 overflow-hidden shadow-inner border border-white/5", children: /* @__PURE__ */ jsx("div", { className: "bg-purple-500 h-full rounded-full shadow-[0_0_10px_rgba(168,85,247,0.5)] transition-all duration-1000 relative overflow-hidden", style: { width: `${(analytics.musicCount || 0) / Math.max(analytics.totalPlays || 1, 1) * 100}%` }, children: /* @__PURE__ */ jsx("div", { className: "absolute inset-0 bg-white/20 w-1/2 -skew-x-12 translate-x-full animate-[shimmer_2s_infinite_1s]" }) }) })
             ] })
           ] })
         ] });
@@ -4054,7 +4134,8 @@ var WrapUpModal = ({ metric, analytics, onClose }) => {
               /* @__PURE__ */ jsx("span", { className: "text-3xl font-black text-white mb-1 drop-shadow", children: analytics.totalPlays || 0 }),
               /* @__PURE__ */ jsx("span", { className: "text-[9px] text-muted uppercase tracking-widest font-black", children: "Total Plays" })
             ] }),
-            /* @__PURE__ */ jsxs("div", { className: "bg-gradient-to-b from-plex/20 to-plex/5 border border-plex/30 rounded-xl p-4 flex flex-col items-center justify-center shadow-lg", children: [
+            /* @__PURE__ */ jsxs("div", { className: "bg-gradient-to-b from-plex/20 to-plex/5 border border-plex/30 rounded-xl p-4 flex flex-col items-center justify-center shadow-lg relative overflow-hidden", children: [
+              /* @__PURE__ */ jsx("div", { className: "absolute top-0 right-0 w-16 h-16 bg-plex/20 blur-xl -mr-5 -mt-5 rounded-full" }),
               /* @__PURE__ */ jsx("span", { className: "text-3xl font-black text-plex mb-1 drop-shadow-md", children: analytics.uniqueTitles || 0 }),
               /* @__PURE__ */ jsx("span", { className: "text-[9px] text-plex/80 uppercase tracking-widest font-black", children: "Unique Titles" })
             ] })
@@ -4062,22 +4143,40 @@ var WrapUpModal = ({ metric, analytics, onClose }) => {
           /* @__PURE__ */ jsx("p", { className: "text-sm text-gray-300 italic bg-white/5 border border-white/10 rounded-lg px-4 py-2 w-full", children: analytics.watchStyle === "Comfort Binger" ? "You love returning to your favorite comfort shows." : analytics.watchStyle === "Loyal Fan" ? "You stick around to finish what you start." : "You love exploring a wide variety of different content!" })
         ] });
       case "Streaming Habit":
+        const avgWd = (analytics.weekdayPlays || 0) / 5;
+        const avgWe = (analytics.weekendPlays || 0) / 2;
         return /* @__PURE__ */ jsxs("div", { className: "flex flex-col items-center justify-center text-center p-6", children: [
           /* @__PURE__ */ jsx(Coffee, { className: "w-16 h-16 text-plex mb-4 drop-shadow-lg" }),
           /* @__PURE__ */ jsx("h2", { className: "text-3xl font-black text-white mb-2", children: analytics.streamingHabit || "Unknown" }),
           /* @__PURE__ */ jsx("p", { className: "text-muted mb-8 uppercase tracking-widest text-xs font-bold", children: "Weekday vs Weekend" }),
           /* @__PURE__ */ jsxs("div", { className: "w-full relative h-16 rounded-2xl overflow-hidden flex shadow-inner bg-black/50 border border-white/10", children: [
-            /* @__PURE__ */ jsx("div", { className: "h-full bg-gradient-to-r from-blue-600 to-blue-400 flex items-center justify-center transition-all duration-1000 shadow-[inset_0_0_20px_rgba(0,0,0,0.3)]", style: { width: `${(analytics.weekdayPlays || 0) / Math.max(analytics.totalPlays || 1, 1) * 100}%` }, children: analytics.weekdayPlays > 0 && /* @__PURE__ */ jsx("span", { className: "text-white font-black drop-shadow-md z-10 text-sm", children: "WD" }) }),
-            /* @__PURE__ */ jsx("div", { className: "h-full bg-gradient-to-r from-plex to-orange-400 flex items-center justify-center transition-all duration-1000 shadow-[inset_0_0_20px_rgba(0,0,0,0.3)]", style: { width: `${(analytics.weekendPlays || 0) / Math.max(analytics.totalPlays || 1, 1) * 100}%` }, children: analytics.weekendPlays > 0 && /* @__PURE__ */ jsx("span", { className: "text-white font-black drop-shadow-md z-10 text-sm", children: "WE" }) })
+            /* @__PURE__ */ jsx("div", { className: "h-full bg-gradient-to-r from-blue-600 to-blue-400 flex items-center justify-center transition-all duration-1000 shadow-[inset_0_0_20px_rgba(0,0,0,0.3)] relative overflow-hidden group", style: { width: `${(analytics.weekdayPlays || 0) / Math.max(analytics.totalPlays || 1, 1) * 100}%` }, children: analytics.weekdayPlays > 0 && /* @__PURE__ */ jsx("span", { className: "text-white font-black drop-shadow-md z-10 text-sm", children: "WD" }) }),
+            /* @__PURE__ */ jsx("div", { className: "h-full bg-gradient-to-r from-plex to-orange-400 flex items-center justify-center transition-all duration-1000 shadow-[inset_0_0_20px_rgba(0,0,0,0.3)] relative overflow-hidden group", style: { width: `${(analytics.weekendPlays || 0) / Math.max(analytics.totalPlays || 1, 1) * 100}%` }, children: analytics.weekendPlays > 0 && /* @__PURE__ */ jsx("span", { className: "text-white font-black drop-shadow-md z-10 text-sm", children: "WE" }) })
           ] }),
           /* @__PURE__ */ jsxs("div", { className: "flex justify-between w-full mt-3 px-2", children: [
             /* @__PURE__ */ jsxs("div", { className: "flex flex-col items-start", children: [
-              /* @__PURE__ */ jsx("span", { className: "text-[10px] uppercase tracking-widest font-bold text-blue-400", children: "Weekdays" }),
-              /* @__PURE__ */ jsx("span", { className: "text-lg font-black text-white", children: analytics.weekdayPlays || 0 })
+              /* @__PURE__ */ jsx("span", { className: "text-[10px] uppercase tracking-widest font-bold text-blue-400", children: "Weekdays (5 days)" }),
+              /* @__PURE__ */ jsxs("span", { className: "text-lg font-black text-white", children: [
+                analytics.weekdayPlays || 0,
+                " ",
+                /* @__PURE__ */ jsxs("span", { className: "text-[10px] text-gray-500 font-normal", children: [
+                  "(",
+                  avgWd.toFixed(1),
+                  "/day)"
+                ] })
+              ] })
             ] }),
             /* @__PURE__ */ jsxs("div", { className: "flex flex-col items-end", children: [
-              /* @__PURE__ */ jsx("span", { className: "text-[10px] uppercase tracking-widest font-bold text-plex", children: "Weekends" }),
-              /* @__PURE__ */ jsx("span", { className: "text-lg font-black text-white", children: analytics.weekendPlays || 0 })
+              /* @__PURE__ */ jsx("span", { className: "text-[10px] uppercase tracking-widest font-bold text-plex", children: "Weekends (2 days)" }),
+              /* @__PURE__ */ jsxs("span", { className: "text-lg font-black text-white", children: [
+                analytics.weekendPlays || 0,
+                " ",
+                /* @__PURE__ */ jsxs("span", { className: "text-[10px] text-gray-500 font-normal", children: [
+                  "(",
+                  avgWe.toFixed(1),
+                  "/day)"
+                ] })
+              ] })
             ] })
           ] })
         ] });
@@ -4087,7 +4186,7 @@ var WrapUpModal = ({ metric, analytics, onClose }) => {
   };
   return /* @__PURE__ */ jsxs("div", { className: "fixed inset-0 z-50 flex items-center justify-center p-4", children: [
     /* @__PURE__ */ jsx("div", { className: "absolute inset-0 bg-black/80 backdrop-blur-sm transition-opacity", onClick: onClose }),
-    /* @__PURE__ */ jsxs("div", { className: "relative bg-gradient-to-b from-card to-background border border-border/80 shadow-[0_0_50px_rgba(0,0,0,0.5)] rounded-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200", children: [
+    /* @__PURE__ */ jsxs("div", { className: "relative bg-gradient-to-b from-card to-background border border-border/80 shadow-[0_0_50px_rgba(0,0,0,0.5)] rounded-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-200", children: [
       /* @__PURE__ */ jsx("div", { className: "absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-plex/0 via-plex to-plex/0 opacity-50" }),
       /* @__PURE__ */ jsx("button", { onClick: onClose, className: "absolute top-4 right-4 text-muted hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 rounded-full p-2 transition-all z-20 group", children: /* @__PURE__ */ jsx(X, { className: "w-4 h-4 group-hover:rotate-90 transition-transform duration-300" }) }),
       renderContent()

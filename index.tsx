@@ -4014,11 +4014,19 @@ const WrapUpModal: React.FC<{ metric: string; analytics: any; onClose: () => voi
     const renderContent = () => {
         switch (metric) {
             case 'Server Rank':
+                const percentile = analytics.totalActiveUsers > 0 ? Math.max(1, Math.round((analytics.leaderboardRank / analytics.totalActiveUsers) * 100)) : 100;
                 return (
                     <div className="flex flex-col items-center justify-center text-center p-6">
                         <Trophy className="w-16 h-16 text-plex mb-4 animate-bounce" />
                         <h2 className="text-3xl font-black text-white mb-2">You are Rank #{analytics.leaderboardRank || 'Unranked'}</h2>
                         <p className="text-muted mb-6">Out of {analytics.totalActiveUsers || 0} active users on the server.</p>
+                        
+                        <div className="w-full bg-white/5 border border-white/10 rounded-xl p-6 mb-6 relative overflow-hidden">
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-plex/20 blur-3xl -mr-10 -mt-10 rounded-full"></div>
+                            <h3 className="text-4xl font-black text-white drop-shadow-md mb-1">Top {percentile}%</h3>
+                            <p className="text-xs font-bold text-plex uppercase tracking-widest">Of All Viewers</p>
+                        </div>
+
                         <div className="bg-plex/10 border border-plex/30 rounded-xl p-4 w-full shadow-inner">
                             <p className="text-sm text-plex font-medium">Keep streaming to climb the leaderboard! Every movie, episode, and song counts towards your rank.</p>
                         </div>
@@ -4052,36 +4060,103 @@ const WrapUpModal: React.FC<{ metric: string; analytics: any; onClose: () => voi
             case 'Top Binge':
                 return (
                     <div className="flex flex-col items-center justify-center text-center p-6 relative">
-                        {analytics.topBinge?.thumbUrl ? (
-                            <img src={analytics.topBinge.thumbUrl} className="w-32 h-48 object-cover rounded-xl shadow-[0_0_30px_rgba(0,0,0,0.5)] mb-6 border border-white/10" />
+                        {analytics.topBinge?.artUrl || analytics.topBinge?.thumbUrl ? (
+                            <div className="w-full h-40 bg-cover bg-center rounded-xl shadow-lg mb-6 border border-white/10 relative overflow-hidden" style={{ backgroundImage: `url('${analytics.topBinge.artUrl || analytics.topBinge.thumbUrl}')` }}>
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
+                                <div className="absolute bottom-4 left-0 right-0 px-4 flex flex-col items-center">
+                                    <h2 className="text-2xl font-black text-white mb-1 line-clamp-1 drop-shadow-md">{analytics.topBinge?.title || 'Nothing yet'}</h2>
+                                    <p className="text-plex font-bold drop-shadow-md">{analytics.topBinge?.plays || 0} episodes</p>
+                                </div>
+                            </div>
                         ) : (
                             <Tv className="w-16 h-16 text-plex mb-6 drop-shadow-lg" />
                         )}
-                        <h2 className="text-2xl font-black text-white mb-1 line-clamp-2">{analytics.topBinge?.title || 'Nothing yet'}</h2>
-                        <p className="text-plex font-black text-lg mb-4">{analytics.topBinge?.plays || 0} <span className="text-sm font-bold text-muted uppercase tracking-wider">episodes</span></p>
-                        <p className="text-sm text-gray-400 bg-white/5 border border-white/10 rounded-lg px-4 py-2 w-full">You couldn't get enough of this show!</p>
+                        
+                        {analytics.topShows && analytics.topShows.length > 1 && (
+                            <div className="w-full mt-2">
+                                <p className="text-left text-xs uppercase tracking-widest font-bold text-muted mb-3 border-b border-white/10 pb-2">Runner Ups</p>
+                                <div className="flex flex-col gap-2">
+                                    {analytics.topShows.slice(1).map((show: any, i: number) => (
+                                        <div key={i} className="flex items-center justify-between bg-white/5 border border-white/5 rounded-lg p-2 hover:bg-white/10 transition-colors">
+                                            <div className="flex items-center gap-3">
+                                                <span className="text-gray-500 font-bold w-4 text-right">{i + 2}</span>
+                                                {show.thumbUrl ? <img src={show.thumbUrl} className="w-8 h-12 object-cover rounded shadow-sm" /> : <div className="w-8 h-12 bg-white/10 rounded"></div>}
+                                                <span className="font-bold text-sm text-gray-200 line-clamp-1 text-left">{show.title}</span>
+                                            </div>
+                                            <span className="text-xs font-black text-plex whitespace-nowrap">{show.plays} eps</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                     </div>
                 );
             case 'Top Movie':
                 return (
                     <div className="flex flex-col items-center justify-center text-center p-6 relative">
-                        {analytics.topMovie?.thumbUrl ? (
-                            <img src={analytics.topMovie.thumbUrl} className="w-32 h-48 object-cover rounded-xl shadow-[0_0_30px_rgba(0,0,0,0.5)] mb-6 border border-white/10" />
+                        {analytics.topMovie?.artUrl || analytics.topMovie?.thumbUrl ? (
+                            <div className="w-full h-40 bg-cover bg-center rounded-xl shadow-lg mb-6 border border-white/10 relative overflow-hidden" style={{ backgroundImage: `url('${analytics.topMovie.artUrl || analytics.topMovie.thumbUrl}')` }}>
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
+                                <div className="absolute bottom-4 left-0 right-0 px-4 flex flex-col items-center">
+                                    <h2 className="text-2xl font-black text-white mb-1 line-clamp-1 drop-shadow-md">{analytics.topMovie?.title || 'Nothing yet'}</h2>
+                                    <p className="text-plex font-bold drop-shadow-md">{analytics.topMovie?.plays || 0} plays</p>
+                                </div>
+                            </div>
                         ) : (
                             <Clapperboard className="w-16 h-16 text-plex mb-6 drop-shadow-lg" />
                         )}
-                        <h2 className="text-2xl font-black text-white mb-1 line-clamp-2">{analytics.topMovie?.title || 'Nothing yet'}</h2>
-                        <p className="text-plex font-black text-lg mb-4">{analytics.topMovie?.plays || 0} <span className="text-sm font-bold text-muted uppercase tracking-wider">plays</span></p>
-                        <p className="text-sm text-gray-400 bg-white/5 border border-white/10 rounded-lg px-4 py-2 w-full">Your most watched cinematic masterpiece.</p>
+                        
+                        {analytics.topMovies && analytics.topMovies.length > 1 && (
+                            <div className="w-full mt-2">
+                                <p className="text-left text-xs uppercase tracking-widest font-bold text-muted mb-3 border-b border-white/10 pb-2">Runner Ups</p>
+                                <div className="flex flex-col gap-2">
+                                    {analytics.topMovies.slice(1).map((movie: any, i: number) => (
+                                        <div key={i} className="flex items-center justify-between bg-white/5 border border-white/5 rounded-lg p-2 hover:bg-white/10 transition-colors">
+                                            <div className="flex items-center gap-3">
+                                                <span className="text-gray-500 font-bold w-4 text-right">{i + 2}</span>
+                                                {movie.thumbUrl ? <img src={movie.thumbUrl} className="w-8 h-12 object-cover rounded shadow-sm" /> : <div className="w-8 h-12 bg-white/10 rounded"></div>}
+                                                <span className="font-bold text-sm text-gray-200 line-clamp-1 text-left">{movie.title}</span>
+                                            </div>
+                                            <span className="text-xs font-black text-plex whitespace-nowrap">{movie.plays} plays</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                     </div>
                 );
             case 'Time of Day':
+                const maxHour = Math.max(...(analytics.hourDistribution || [0]));
                 return (
                     <div className="flex flex-col items-center justify-center text-center p-6">
                         <Clock className="w-16 h-16 text-plex mb-4 drop-shadow-lg" />
                         <h2 className="text-3xl font-black text-white mb-2">{analytics.timeOfDay || 'Unknown'}</h2>
                         <p className="text-muted mb-6">You typically stream around {analytics.avgHour ? Math.round(analytics.avgHour) + ':00' : 'Unknown'}.</p>
-                        <div className="w-full bg-gradient-to-r from-plex/5 via-plex/10 to-plex/5 border border-plex/20 rounded-xl p-4 shadow-inner">
+                        
+                        <div className="w-full mt-2 mb-6">
+                            <p className="text-left text-xs uppercase tracking-widest font-bold text-muted mb-3 border-b border-white/10 pb-2">24-Hour Heat Map</p>
+                            <div className="w-full flex items-end justify-between h-24 gap-[2px] mt-4 px-1">
+                                {analytics.hourDistribution?.map((count: number, hour: number) => {
+                                    const height = maxHour > 0 ? (count / maxHour) * 100 : 0;
+                                    const isTop = count === maxHour && count > 0;
+                                    return (
+                                        <div key={hour} className="flex flex-col items-center w-full group relative">
+                                            <div className={`w-full rounded-t-sm transition-all duration-500 relative flex items-end justify-center overflow-hidden
+                                                ${isTop ? 'bg-plex shadow-[0_0_10px_rgba(229,160,13,0.5)]' : 'bg-white/10 group-hover:bg-white/30'}`} 
+                                                style={{ height: `${Math.max(height, 2)}%` }}>
+                                            </div>
+                                            {hour % 6 === 0 && <span className="text-[8px] mt-1 font-bold text-muted absolute top-full pointer-events-none">{hour}h</span>}
+                                            
+                                            <div className="absolute bottom-full mb-1 opacity-0 group-hover:opacity-100 bg-black/80 text-white text-[10px] px-1.5 py-0.5 rounded pointer-events-none whitespace-nowrap z-10 transition-opacity">
+                                                {count} plays at {hour}:00
+                                            </div>
+                                        </div>
+                                    )
+                                })}
+                            </div>
+                        </div>
+
+                        <div className="w-full bg-gradient-to-r from-plex/5 via-plex/10 to-plex/5 border border-plex/20 rounded-xl p-4 shadow-inner mt-4">
                             <p className="text-sm text-plex font-medium">
                                 {analytics.timeOfDay === 'Early Bird' ? 'Catching the worm with those morning streams!' :
                                     analytics.timeOfDay === 'Afternoon Watcher' ? 'Perfect way to spend the afternoon.' :
@@ -4105,13 +4180,15 @@ const WrapUpModal: React.FC<{ metric: string; analytics: any; onClose: () => voi
                                 const height = maxCount > 0 ? (count / maxCount) * 100 : 0;
                                 const isTop = count === maxCount && count > 0;
                                 return (
-                                    <div key={day} className="flex flex-col items-center w-full group">
+                                    <div key={day} className="flex flex-col items-center w-full group relative">
                                         <div className={`w-full rounded-t-md transition-all duration-500 relative flex items-end justify-center pb-1 overflow-hidden
                                             ${isTop ? 'bg-gradient-to-t from-plex/80 to-plex shadow-[0_0_15px_rgba(229,160,13,0.3)]' : 'bg-gradient-to-t from-white/10 to-white/20 group-hover:from-white/20 group-hover:to-white/30'}`} 
                                             style={{ height: `${Math.max(height, 8)}%` }}>
-                                            <span className={`text-[10px] font-black opacity-0 group-hover:opacity-100 transition-opacity ${isTop ? 'text-black' : 'text-white'}`}>{count}</span>
                                         </div>
                                         <span className={`text-[9px] mt-2 font-black uppercase tracking-wider ${isTop ? 'text-plex' : 'text-muted'}`}>{day}</span>
+                                        <div className="absolute bottom-full mb-1 opacity-0 group-hover:opacity-100 bg-black/80 text-white text-[10px] px-1.5 py-0.5 rounded pointer-events-none whitespace-nowrap z-10 transition-opacity">
+                                            {count} plays
+                                        </div>
                                     </div>
                                 )
                             })}
@@ -4119,18 +4196,28 @@ const WrapUpModal: React.FC<{ metric: string; analytics: any; onClose: () => voi
                     </div>
                 );
             case 'Top Library':
+                const maxLibPlays = analytics.allLibraries?.[0]?.plays || 1;
                 return (
-                    <div className="flex flex-col items-center justify-center text-center p-6">
-                        <Layers className="w-16 h-16 text-plex mb-4 drop-shadow-lg" />
-                        <h2 className="text-3xl font-black text-white mb-2 line-clamp-1">{analytics.favoriteLibrary || 'None'}</h2>
-                        <p className="text-muted mb-6 uppercase tracking-widest text-xs font-bold">Favorite Library</p>
-                        <div className="w-full flex flex-col gap-2">
-                            {analytics.topLibraries?.slice(0, 3).map((lib: any, i: number) => (
-                                <div key={i} className={`flex items-center justify-between border rounded-xl p-3 transition-colors ${i === 0 ? 'bg-plex/10 border-plex/30' : 'bg-white/5 border-white/10'}`}>
-                                    <span className={`font-bold text-sm truncate pr-2 ${i === 0 ? 'text-plex' : 'text-gray-300'}`}>{i + 1}. {lib.title}</span>
-                                    <span className={`font-black text-sm whitespace-nowrap ${i === 0 ? 'text-plex' : 'text-white'}`}>{lib.plays} plays</span>
-                                </div>
-                            ))}
+                    <div className="flex flex-col items-center justify-center text-center p-6 max-h-[80vh] overflow-hidden flex-1">
+                        <Layers className="w-16 h-16 text-plex mb-4 drop-shadow-lg shrink-0" />
+                        <h2 className="text-3xl font-black text-white mb-2 line-clamp-1 shrink-0">{analytics.favoriteLibrary || 'None'}</h2>
+                        <p className="text-muted mb-6 uppercase tracking-widest text-xs font-bold shrink-0">Library Breakdown</p>
+                        
+                        <div className="w-full flex flex-col gap-3 overflow-y-auto pr-2 pb-2 custom-scrollbar">
+                            {analytics.allLibraries?.map((lib: any, i: number) => {
+                                const percent = (lib.plays / maxLibPlays) * 100;
+                                return (
+                                    <div key={i} className="flex flex-col gap-1 w-full text-left">
+                                        <div className="flex justify-between items-end">
+                                            <span className={`font-bold text-sm truncate pr-2 ${i === 0 ? 'text-plex' : 'text-gray-300'}`}>{i + 1}. {lib.title}</span>
+                                            <span className={`font-black text-xs whitespace-nowrap ${i === 0 ? 'text-plex' : 'text-gray-400'}`}>{lib.plays} plays</span>
+                                        </div>
+                                        <div className="w-full bg-black/40 rounded-full h-1.5 overflow-hidden border border-white/5">
+                                            <div className={`h-full rounded-full transition-all duration-1000 ${i === 0 ? 'bg-plex shadow-[0_0_8px_rgba(229,160,13,0.8)]' : 'bg-gray-400'}`} style={{ width: `${percent}%` }}></div>
+                                        </div>
+                                    </div>
+                                )
+                            })}
                         </div>
                     </div>
                 );
@@ -4140,14 +4227,16 @@ const WrapUpModal: React.FC<{ metric: string; analytics: any; onClose: () => voi
                         <PieChart className="w-16 h-16 text-plex mb-4 drop-shadow-lg" />
                         <h2 className="text-3xl font-black text-white mb-2">{analytics.mediaPreference || 'Mixed Bag'}</h2>
                         <p className="text-muted mb-6 uppercase tracking-widest text-xs font-bold">Content Breakdown</p>
-                        <div className="w-full bg-white/5 border border-white/10 rounded-xl p-5 flex flex-col gap-4 shadow-lg">
+                        <div className="w-full bg-white/5 border border-white/10 rounded-xl p-5 flex flex-col gap-5 shadow-lg">
                             <div>
                                 <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-gray-300 mb-1.5">
                                     <span className="flex items-center gap-1.5">🎬 Movies</span>
                                     <span>{analytics.moviesCount || 0}</span>
                                 </div>
-                                <div className="w-full bg-black/60 rounded-full h-2 overflow-hidden shadow-inner">
-                                    <div className="bg-blue-500 h-2 rounded-full shadow-[0_0_10px_rgba(59,130,246,0.5)] transition-all duration-1000" style={{ width: `${((analytics.moviesCount || 0) / Math.max(analytics.totalPlays || 1, 1)) * 100}%` }}></div>
+                                <div className="w-full bg-black/60 rounded-full h-2.5 overflow-hidden shadow-inner border border-white/5">
+                                    <div className="bg-blue-500 h-full rounded-full shadow-[0_0_10px_rgba(59,130,246,0.5)] transition-all duration-1000 relative overflow-hidden" style={{ width: `${((analytics.moviesCount || 0) / Math.max(analytics.totalPlays || 1, 1)) * 100}%` }}>
+                                        <div className="absolute inset-0 bg-white/20 w-1/2 -skew-x-12 translate-x-full animate-[shimmer_2s_infinite]"></div>
+                                    </div>
                                 </div>
                             </div>
                             
@@ -4156,8 +4245,10 @@ const WrapUpModal: React.FC<{ metric: string; analytics: any; onClose: () => voi
                                     <span className="flex items-center gap-1.5">📺 Shows</span>
                                     <span>{analytics.showsCount || 0}</span>
                                 </div>
-                                <div className="w-full bg-black/60 rounded-full h-2 overflow-hidden shadow-inner">
-                                    <div className="bg-green-500 h-2 rounded-full shadow-[0_0_10px_rgba(34,197,94,0.5)] transition-all duration-1000" style={{ width: `${((analytics.showsCount || 0) / Math.max(analytics.totalPlays || 1, 1)) * 100}%` }}></div>
+                                <div className="w-full bg-black/60 rounded-full h-2.5 overflow-hidden shadow-inner border border-white/5">
+                                    <div className="bg-green-500 h-full rounded-full shadow-[0_0_10px_rgba(34,197,94,0.5)] transition-all duration-1000 relative overflow-hidden" style={{ width: `${((analytics.showsCount || 0) / Math.max(analytics.totalPlays || 1, 1)) * 100}%` }}>
+                                        <div className="absolute inset-0 bg-white/20 w-1/2 -skew-x-12 translate-x-full animate-[shimmer_2s_infinite_0.5s]"></div>
+                                    </div>
                                 </div>
                             </div>
                             
@@ -4167,8 +4258,10 @@ const WrapUpModal: React.FC<{ metric: string; analytics: any; onClose: () => voi
                                         <span className="flex items-center gap-1.5">🎵 Music</span>
                                         <span>{analytics.musicCount || 0}</span>
                                     </div>
-                                    <div className="w-full bg-black/60 rounded-full h-2 overflow-hidden shadow-inner">
-                                        <div className="bg-purple-500 h-2 rounded-full shadow-[0_0_10px_rgba(168,85,247,0.5)] transition-all duration-1000" style={{ width: `${((analytics.musicCount || 0) / Math.max(analytics.totalPlays || 1, 1)) * 100}%` }}></div>
+                                    <div className="w-full bg-black/60 rounded-full h-2.5 overflow-hidden shadow-inner border border-white/5">
+                                        <div className="bg-purple-500 h-full rounded-full shadow-[0_0_10px_rgba(168,85,247,0.5)] transition-all duration-1000 relative overflow-hidden" style={{ width: `${((analytics.musicCount || 0) / Math.max(analytics.totalPlays || 1, 1)) * 100}%` }}>
+                                            <div className="absolute inset-0 bg-white/20 w-1/2 -skew-x-12 translate-x-full animate-[shimmer_2s_infinite_1s]"></div>
+                                        </div>
                                     </div>
                                 </div>
                             )}
@@ -4186,7 +4279,8 @@ const WrapUpModal: React.FC<{ metric: string; analytics: any; onClose: () => voi
                                 <span className="text-3xl font-black text-white mb-1 drop-shadow">{analytics.totalPlays || 0}</span>
                                 <span className="text-[9px] text-muted uppercase tracking-widest font-black">Total Plays</span>
                             </div>
-                            <div className="bg-gradient-to-b from-plex/20 to-plex/5 border border-plex/30 rounded-xl p-4 flex flex-col items-center justify-center shadow-lg">
+                            <div className="bg-gradient-to-b from-plex/20 to-plex/5 border border-plex/30 rounded-xl p-4 flex flex-col items-center justify-center shadow-lg relative overflow-hidden">
+                                <div className="absolute top-0 right-0 w-16 h-16 bg-plex/20 blur-xl -mr-5 -mt-5 rounded-full"></div>
                                 <span className="text-3xl font-black text-plex mb-1 drop-shadow-md">{analytics.uniqueTitles || 0}</span>
                                 <span className="text-[9px] text-plex/80 uppercase tracking-widest font-black">Unique Titles</span>
                             </div>
@@ -4199,6 +4293,8 @@ const WrapUpModal: React.FC<{ metric: string; analytics: any; onClose: () => voi
                     </div>
                 );
             case 'Streaming Habit':
+                const avgWd = (analytics.weekdayPlays || 0) / 5;
+                const avgWe = (analytics.weekendPlays || 0) / 2;
                 return (
                     <div className="flex flex-col items-center justify-center text-center p-6">
                         <Coffee className="w-16 h-16 text-plex mb-4 drop-shadow-lg" />
@@ -4206,21 +4302,21 @@ const WrapUpModal: React.FC<{ metric: string; analytics: any; onClose: () => voi
                         <p className="text-muted mb-8 uppercase tracking-widest text-xs font-bold">Weekday vs Weekend</p>
                         
                         <div className="w-full relative h-16 rounded-2xl overflow-hidden flex shadow-inner bg-black/50 border border-white/10">
-                            <div className="h-full bg-gradient-to-r from-blue-600 to-blue-400 flex items-center justify-center transition-all duration-1000 shadow-[inset_0_0_20px_rgba(0,0,0,0.3)]" style={{ width: `${((analytics.weekdayPlays || 0) / Math.max(analytics.totalPlays || 1, 1)) * 100}%` }}>
+                            <div className="h-full bg-gradient-to-r from-blue-600 to-blue-400 flex items-center justify-center transition-all duration-1000 shadow-[inset_0_0_20px_rgba(0,0,0,0.3)] relative overflow-hidden group" style={{ width: `${((analytics.weekdayPlays || 0) / Math.max(analytics.totalPlays || 1, 1)) * 100}%` }}>
                                 {analytics.weekdayPlays > 0 && <span className="text-white font-black drop-shadow-md z-10 text-sm">WD</span>}
                             </div>
-                            <div className="h-full bg-gradient-to-r from-plex to-orange-400 flex items-center justify-center transition-all duration-1000 shadow-[inset_0_0_20px_rgba(0,0,0,0.3)]" style={{ width: `${((analytics.weekendPlays || 0) / Math.max(analytics.totalPlays || 1, 1)) * 100}%` }}>
+                            <div className="h-full bg-gradient-to-r from-plex to-orange-400 flex items-center justify-center transition-all duration-1000 shadow-[inset_0_0_20px_rgba(0,0,0,0.3)] relative overflow-hidden group" style={{ width: `${((analytics.weekendPlays || 0) / Math.max(analytics.totalPlays || 1, 1)) * 100}%` }}>
                                 {analytics.weekendPlays > 0 && <span className="text-white font-black drop-shadow-md z-10 text-sm">WE</span>}
                             </div>
                         </div>
                         <div className="flex justify-between w-full mt-3 px-2">
                             <div className="flex flex-col items-start">
-                                <span className="text-[10px] uppercase tracking-widest font-bold text-blue-400">Weekdays</span>
-                                <span className="text-lg font-black text-white">{analytics.weekdayPlays || 0}</span>
+                                <span className="text-[10px] uppercase tracking-widest font-bold text-blue-400">Weekdays (5 days)</span>
+                                <span className="text-lg font-black text-white">{analytics.weekdayPlays || 0} <span className="text-[10px] text-gray-500 font-normal">({avgWd.toFixed(1)}/day)</span></span>
                             </div>
                             <div className="flex flex-col items-end">
-                                <span className="text-[10px] uppercase tracking-widest font-bold text-plex">Weekends</span>
-                                <span className="text-lg font-black text-white">{analytics.weekendPlays || 0}</span>
+                                <span className="text-[10px] uppercase tracking-widest font-bold text-plex">Weekends (2 days)</span>
+                                <span className="text-lg font-black text-white">{analytics.weekendPlays || 0} <span className="text-[10px] text-gray-500 font-normal">({avgWe.toFixed(1)}/day)</span></span>
                             </div>
                         </div>
                     </div>
@@ -4233,7 +4329,7 @@ const WrapUpModal: React.FC<{ metric: string; analytics: any; onClose: () => voi
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div className="absolute inset-0 bg-black/80 backdrop-blur-sm transition-opacity" onClick={onClose} />
-            <div className="relative bg-gradient-to-b from-card to-background border border-border/80 shadow-[0_0_50px_rgba(0,0,0,0.5)] rounded-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="relative bg-gradient-to-b from-card to-background border border-border/80 shadow-[0_0_50px_rgba(0,0,0,0.5)] rounded-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-200">
                 <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-plex/0 via-plex to-plex/0 opacity-50"></div>
                 <button onClick={onClose} className="absolute top-4 right-4 text-muted hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 rounded-full p-2 transition-all z-20 group">
                     <X className="w-4 h-4 group-hover:rotate-90 transition-transform duration-300" />

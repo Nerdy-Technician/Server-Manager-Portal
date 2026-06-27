@@ -3105,6 +3105,7 @@ app.get('/api/plex/analytics/me', requireAuth, async (req, res) => {
         
         let totalHourOfDay = 0;
         let hourCount = 0;
+        const hourDistribution = new Array(24).fill(0);
 
         const dayOfWeekCounts = { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 };
         let moviesCount = 0;
@@ -3116,8 +3117,10 @@ app.get('/api/plex/analytics/me', requireAuth, async (req, res) => {
             totalPlays++;
             
             const viewDate = new Date(item.viewedAt * 1000);
-            totalHourOfDay += viewDate.getHours();
+            const hour = viewDate.getHours();
+            totalHourOfDay += hour;
             hourCount++;
+            hourDistribution[hour]++;
             dayOfWeekCounts[viewDate.getDay()]++;
 
             if (item.type === 'movie') moviesCount++;
@@ -3161,7 +3164,8 @@ app.get('/api/plex/analytics/me', requireAuth, async (req, res) => {
             }
         });
 
-        const topLibraries = Object.values(libraryCounts).sort((a, b) => b.plays - a.plays).slice(0, 5);
+        const allLibraries = Object.values(libraryCounts).sort((a, b) => b.plays - a.plays);
+        const topLibraries = allLibraries.slice(0, 5);
         const topContent = Object.values(contentCounts).sort((a, b) => b.plays - a.plays).slice(0, 60).map(c => {
             if (c.thumb) c.thumbUrl = `/api/plex/image?path=${encodeURIComponent(c.thumb)}`;
             return c;
@@ -3173,8 +3177,9 @@ app.get('/api/plex/analytics/me', requireAuth, async (req, res) => {
         else if (avgHour >= 12 && avgHour < 18) timeOfDay = 'Afternoon Watcher';
         else if (avgHour >= 18) timeOfDay = 'Evening Streamer';
 
-        const topShows = Object.values(contentCounts).filter(c => c.type === 'show').sort((a, b) => b.plays - a.plays);
-        const topBinge = topShows.length > 0 ? { ...topShows[0], artUrl: topShows[0].art ? `/api/plex/image?path=${encodeURIComponent(topShows[0].art)}` : null, thumbUrl: topShows[0].thumb ? `/api/plex/image?path=${encodeURIComponent(topShows[0].thumb)}` : null } : null;
+        const allShowsList = Object.values(contentCounts).filter(c => c.type === 'show').sort((a, b) => b.plays - a.plays);
+        const topShows = allShowsList.slice(0, 5).map(s => ({ ...s, artUrl: s.art ? `/api/plex/image?path=${encodeURIComponent(s.art)}` : null, thumbUrl: s.thumb ? `/api/plex/image?path=${encodeURIComponent(s.thumb)}` : null }));
+        const topBinge = topShows.length > 0 ? topShows[0] : null;
 
         const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
         let maxDayIndex = 0;
@@ -3197,8 +3202,9 @@ app.get('/api/plex/analytics/me', requireAuth, async (req, res) => {
             else if (musicCount / totalPrefCount >= 0.6) mediaPreference = 'Music Lover';
         }
 
-        const topMoviesList = Object.values(contentCounts).filter(c => c.type === 'movie').sort((a, b) => b.plays - a.plays);
-        const topMovie = topMoviesList.length > 0 ? { ...topMoviesList[0], artUrl: topMoviesList[0].art ? `/api/plex/image?path=${encodeURIComponent(topMoviesList[0].art)}` : null, thumbUrl: topMoviesList[0].thumb ? `/api/plex/image?path=${encodeURIComponent(topMoviesList[0].thumb)}` : null } : null;
+        const allMoviesList = Object.values(contentCounts).filter(c => c.type === 'movie').sort((a, b) => b.plays - a.plays);
+        const topMovies = allMoviesList.slice(0, 5).map(m => ({ ...m, artUrl: m.art ? `/api/plex/image?path=${encodeURIComponent(m.art)}` : null, thumbUrl: m.thumb ? `/api/plex/image?path=${encodeURIComponent(m.thumb)}` : null }));
+        const topMovie = topMovies.length > 0 ? topMovies[0] : null;
 
         let watchStyle = 'Explorer';
         const uniqueTitles = Object.keys(contentCounts).length;
@@ -3250,6 +3256,10 @@ app.get('/api/plex/analytics/me', requireAuth, async (req, res) => {
             uniqueTitles,
             avgHour,
             dayOfWeekCounts,
+            hourDistribution,
+            allLibraries,
+            topShows,
+            topMovies,
             recentHistory: recentHistory.map(h => {
                 if (h.thumb) h.thumbUrl = `/api/plex/image?path=${encodeURIComponent(h.thumb)}`;
                 return h;
