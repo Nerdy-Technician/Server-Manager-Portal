@@ -6415,7 +6415,7 @@ const LibraryDashboard: React.FC<{ onBack: () => void, isAdmin?: boolean, public
                                                 
                                                 {/* Text visible on black background (white text) */}
                                                 <div 
-                                                    className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-white z-20 pointer-events-none whitespace-nowrap"
+                                                    className="absolute inset-0 flex items-center justify-center text-[11px] font-bold text-white z-20 pointer-events-none whitespace-nowrap"
                                                     style={{ clipPath: `inset(0 0 0 ${session.progress}%)` }}
                                                 >
                                                     {progressBarText}
@@ -6423,7 +6423,7 @@ const LibraryDashboard: React.FC<{ onBack: () => void, isAdmin?: boolean, public
                                                 
                                                 {/* Text visible on yellow progress bar (black text) */}
                                                 <div 
-                                                    className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-black z-30 pointer-events-none whitespace-nowrap"
+                                                    className="absolute inset-0 flex items-center justify-center text-[11px] font-bold text-black z-30 pointer-events-none whitespace-nowrap"
                                                     style={{ clipPath: `inset(0 ${100 - session.progress}% 0 0)` }}
                                                 >
                                                     {progressBarText}

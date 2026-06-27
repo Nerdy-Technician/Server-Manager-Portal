@@ -54332,7 +54332,7 @@ var LibraryDashboard = ({ onBack, isAdmin, publicConfig }) => {
               /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
                 "div",
                 {
-                  className: "absolute inset-0 flex items-center justify-center text-[10px] font-bold text-white z-20 pointer-events-none whitespace-nowrap",
+                  className: "absolute inset-0 flex items-center justify-center text-[11px] font-bold text-white z-20 pointer-events-none whitespace-nowrap",
                   style: { clipPath: `inset(0 0 0 ${session.progress}%)` },
                   children: progressBarText
                 }
@@ -54340,7 +54340,7 @@ var LibraryDashboard = ({ onBack, isAdmin, publicConfig }) => {
               /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
                 "div",
                 {
-                  className: "absolute inset-0 flex items-center justify-center text-[10px] font-bold text-black z-30 pointer-events-none whitespace-nowrap",
+                  className: "absolute inset-0 flex items-center justify-center text-[11px] font-bold text-black z-30 pointer-events-none whitespace-nowrap",
                   style: { clipPath: `inset(0 ${100 - session.progress}% 0 0)` },
                   children: progressBarText
                 }
