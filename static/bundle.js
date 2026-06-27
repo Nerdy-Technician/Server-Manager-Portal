@@ -3976,7 +3976,7 @@ var UserDashboard = ({ sessionInfo, publicConfig, onLogout, refreshSession, onVi
         ] })
       ] })
     ] }),
-    /* @__PURE__ */ jsxs("div", { className: "grid grid-cols-1 lg:grid-cols-3 gap-6 items-start", children: [
+    /* @__PURE__ */ jsxs("div", { className: "grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch", children: [
       /* @__PURE__ */ jsxs("div", { className: "lg:col-span-1 flex flex-col gap-6", children: [
         sessionInfo.session.isAdmin ? /* @__PURE__ */ jsxs("div", { className: "flex flex-col gap-6", children: [
           /* @__PURE__ */ jsxs("div", { className: "bg-card border border-border rounded-2xl p-6 shadow-xl flex flex-col items-center justify-center text-center md:h-[240px]", children: [
@@ -4050,7 +4050,7 @@ var UserDashboard = ({ sessionInfo, publicConfig, onLogout, refreshSession, onVi
             }, className: "w-full py-2.5 bg-plex text-background rounded-lg font-bold hover:bg-plex-hover transition-colors shadow-md", children: "Copy Link" })
           ] })
         ] }),
-        /* @__PURE__ */ jsxs("div", { className: "flex flex-col gap-6", children: [
+        /* @__PURE__ */ jsxs("div", { className: "flex flex-col gap-6 flex-1", children: [
           user && !sessionInfo.session.isAdmin && /* @__PURE__ */ jsxs("div", { className: "bg-card border border-border rounded-2xl p-6 shadow-lg flex flex-col", children: [
             /* @__PURE__ */ jsx("p", { className: "text-muted text-xs uppercase tracking-widest font-semibold mb-4 flex-shrink-0", children: "Preferences" }),
             /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between gap-4", children: [
@@ -4111,7 +4111,7 @@ var UserDashboard = ({ sessionInfo, publicConfig, onLogout, refreshSession, onVi
               )
             ] })
           ] }),
-          (sessionInfo.session.isAdmin || user) && !analyticsLoading && analytics?.recentHistory && analytics.recentHistory.length > 0 && /* @__PURE__ */ jsxs("div", { className: "bg-card border border-border rounded-2xl p-6 shadow-xl flex flex-col", children: [
+          (sessionInfo.session.isAdmin || user) && !analyticsLoading && analytics?.recentHistory && analytics.recentHistory.length > 0 && /* @__PURE__ */ jsxs("div", { className: "bg-card border border-border rounded-2xl p-6 shadow-xl flex-1 flex flex-col", children: [
             /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between mb-6", children: [
               /* @__PURE__ */ jsx("h3", { className: "text-xl font-bold text-text", children: "Recently Watched" }),
               analytics.recentHistory.length > RECENT_HISTORY_PAGE_SIZE && /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2", children: [
@@ -4265,7 +4265,7 @@ var UserDashboard = ({ sessionInfo, publicConfig, onLogout, refreshSession, onVi
           analyticsLoading ? /* @__PURE__ */ jsx("div", { className: "flex items-center justify-center p-8 bg-card border border-border rounded-2xl shadow-lg", children: /* @__PURE__ */ jsxs("div", { className: "flex flex-col items-center gap-3", children: [
             /* @__PURE__ */ jsx("div", { className: "w-6 h-6 rounded-full border-2 border-plex border-t-transparent animate-spin" }),
             /* @__PURE__ */ jsx("span", { className: "text-muted text-sm font-medium", children: "Loading your stats..." })
-          ] }) }) : analytics && analytics.totalPlays > 0 ? /* @__PURE__ */ jsx("div", { className: "flex flex-col gap-6", children: analytics.topContent && analytics.topContent.length > 0 && /* @__PURE__ */ jsxs("div", { className: "bg-card border border-border rounded-2xl p-6 shadow-xl", children: [
+          ] }) }) : analytics && analytics.totalPlays > 0 ? /* @__PURE__ */ jsx("div", { className: "flex flex-col gap-6 flex-1", children: analytics.topContent && analytics.topContent.length > 0 && /* @__PURE__ */ jsxs("div", { className: "bg-card border border-border rounded-2xl p-6 shadow-xl flex-1 flex flex-col", children: [
             /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between mb-6", children: [
               /* @__PURE__ */ jsxs("div", { children: [
                 /* @__PURE__ */ jsx("h3", { className: "text-xl font-bold text-text mb-1", children: "Your Most Watched" }),
