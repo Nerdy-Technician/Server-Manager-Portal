@@ -3172,7 +3172,7 @@ app.get('/api/plex/analytics/me', requireAuth, async (req, res) => {
         else if (avgHour >= 18) timeOfDay = 'Evening Streamer';
 
         const topShows = Object.values(contentCounts).filter(c => c.type === 'show').sort((a, b) => b.plays - a.plays);
-        const topBinge = topShows.length > 0 ? topShows[0] : null;
+        const topBinge = topShows.length > 0 ? { ...topShows[0], thumbUrl: topShows[0].thumb ? `/api/plex/image?path=${encodeURIComponent(topShows[0].thumb)}` : null } : null;
 
         const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
         let maxDayIndex = 0;
@@ -3196,7 +3196,7 @@ app.get('/api/plex/analytics/me', requireAuth, async (req, res) => {
         }
 
         const topMoviesList = Object.values(contentCounts).filter(c => c.type === 'movie').sort((a, b) => b.plays - a.plays);
-        const topMovie = topMoviesList.length > 0 ? topMoviesList[0] : null;
+        const topMovie = topMoviesList.length > 0 ? { ...topMoviesList[0], thumbUrl: topMoviesList[0].thumb ? `/api/plex/image?path=${encodeURIComponent(topMoviesList[0].thumb)}` : null } : null;
 
         let watchStyle = 'Explorer';
         if (totalPlays > 0) {

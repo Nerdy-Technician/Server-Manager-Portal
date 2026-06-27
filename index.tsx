@@ -4260,56 +4260,105 @@ const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onLogout: 
                         </div>
                     </div>
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                        <div className="bg-background rounded-xl p-4 border border-border/50 flex flex-col items-center justify-center text-center">
-                            <Trophy className="w-6 h-6 text-plex mb-2" />
-                            <p className="text-muted text-[10px] uppercase tracking-widest font-bold mb-1">Server Rank</p>
-                            <p className="text-2xl font-black text-text">{analytics.leaderboardRank ? <><span className="text-plex text-xl mr-0.5">#</span><CountUp end={analytics.leaderboardRank} /></> : 'Unranked'}</p>
-                            {analytics.totalActiveUsers > 0 && <p className="text-[10px] text-muted mt-1">out of {analytics.totalActiveUsers} users</p>}
+                        <div className="rounded-xl overflow-hidden relative border border-border/50 group flex flex-col" style={{ minHeight: '130px' }}>
+                            <div className="absolute inset-0 bg-cover bg-center z-0 transition-transform duration-700 group-hover:scale-110 opacity-60" style={{ backgroundImage: `url('https://images.unsplash.com/photo-1579546929518-9e396f3cc809?auto=format&fit=crop&q=80&w=600')` }} />
+                            <div className="absolute inset-0 bg-black/60 z-10" />
+                            <div className="relative z-20 p-4 flex-1 flex flex-col items-center justify-center text-center">
+                                <Trophy className="w-6 h-6 text-plex mb-2 drop-shadow-md" />
+                                <p className="text-gray-300 text-[10px] uppercase tracking-widest font-bold mb-1 drop-shadow-md">Server Rank</p>
+                                <p className="text-2xl font-black text-white drop-shadow-lg">{analytics.leaderboardRank ? <><span className="text-plex text-xl mr-0.5">#</span><CountUp end={analytics.leaderboardRank} /></> : 'Unranked'}</p>
+                                {analytics.totalActiveUsers > 0 && <p className="text-[10px] text-gray-400 mt-1">out of {analytics.totalActiveUsers} users</p>}
+                            </div>
                         </div>
-                        <div className="bg-background rounded-xl p-4 border border-border/50 flex flex-col items-center justify-center text-center">
-                            <PlayCircle className="w-6 h-6 text-plex mb-2" />
-                            <p className="text-muted text-[10px] uppercase tracking-widest font-bold mb-1">Total Streams</p>
-                            <p className="text-2xl font-black text-text"><CountUp end={analytics.totalPlays || 0} /></p>
+
+                        <div className="rounded-xl overflow-hidden relative border border-border/50 group flex flex-col" style={{ minHeight: '130px' }}>
+                            <div className="absolute inset-0 bg-cover bg-center z-0 transition-transform duration-700 group-hover:scale-110 opacity-60" style={{ backgroundImage: `url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&q=80&w=600')` }} />
+                            <div className="absolute inset-0 bg-black/60 z-10" />
+                            <div className="relative z-20 p-4 flex-1 flex flex-col items-center justify-center text-center">
+                                <PlayCircle className="w-6 h-6 text-plex mb-2 drop-shadow-md" />
+                                <p className="text-gray-300 text-[10px] uppercase tracking-widest font-bold mb-1 drop-shadow-md">Total Streams</p>
+                                <p className="text-2xl font-black text-white drop-shadow-lg"><CountUp end={analytics.totalPlays || 0} /></p>
+                            </div>
                         </div>
-                        <div className="bg-background rounded-xl p-4 border border-border/50 flex flex-col items-center justify-center text-center">
-                            <Tv className="w-6 h-6 text-plex mb-2" />
-                            <p className="text-muted text-[10px] uppercase tracking-widest font-bold mb-1">Top Binge</p>
-                            <p className="text-sm font-bold text-text line-clamp-2">{analytics.topBinge?.title || 'Nothing yet'}</p>
+
+                        <div className="rounded-xl overflow-hidden relative border border-border/50 group flex flex-col" style={{ minHeight: '130px' }}>
+                            <div className="absolute inset-0 bg-cover bg-center z-0 transition-transform duration-700 group-hover:scale-110 opacity-60" style={{ backgroundImage: `url('${analytics.topBinge?.thumbUrl || 'https://images.unsplash.com/photo-1594909122845-11baa439b7bf?auto=format&fit=crop&q=80&w=600'}')` }} />
+                            <div className="absolute inset-0 bg-black/60 z-10" />
+                            <div className="relative z-20 p-4 flex-1 flex flex-col items-center justify-center text-center">
+                                <Tv className="w-6 h-6 text-plex mb-2 drop-shadow-md" />
+                                <p className="text-gray-300 text-[10px] uppercase tracking-widest font-bold mb-1 drop-shadow-md">Top Binge</p>
+                                <p className="text-sm font-bold text-white drop-shadow-lg line-clamp-2">{analytics.topBinge?.title || 'Nothing yet'}</p>
+                            </div>
                         </div>
-                        <div className="bg-background rounded-xl p-4 border border-border/50 flex flex-col items-center justify-center text-center">
-                            <Clapperboard className="w-6 h-6 text-plex mb-2" />
-                            <p className="text-muted text-[10px] uppercase tracking-widest font-bold mb-1">Top Movie</p>
-                            <p className="text-sm font-bold text-text line-clamp-2">{analytics.topMovie?.title || 'Nothing yet'}</p>
+
+                        <div className="rounded-xl overflow-hidden relative border border-border/50 group flex flex-col" style={{ minHeight: '130px' }}>
+                            <div className="absolute inset-0 bg-cover bg-center z-0 transition-transform duration-700 group-hover:scale-110 opacity-60" style={{ backgroundImage: `url('${analytics.topMovie?.thumbUrl || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&q=80&w=600'}')` }} />
+                            <div className="absolute inset-0 bg-black/60 z-10" />
+                            <div className="relative z-20 p-4 flex-1 flex flex-col items-center justify-center text-center">
+                                <Clapperboard className="w-6 h-6 text-plex mb-2 drop-shadow-md" />
+                                <p className="text-gray-300 text-[10px] uppercase tracking-widest font-bold mb-1 drop-shadow-md">Top Movie</p>
+                                <p className="text-sm font-bold text-white drop-shadow-lg line-clamp-2">{analytics.topMovie?.title || 'Nothing yet'}</p>
+                            </div>
                         </div>
-                        <div className="bg-background rounded-xl p-4 border border-border/50 flex flex-col items-center justify-center text-center">
-                            <Clock className="w-6 h-6 text-plex mb-2" />
-                            <p className="text-muted text-[10px] uppercase tracking-widest font-bold mb-1">Time of Day</p>
-                            <p className="text-sm font-bold text-text">{analytics.timeOfDay || 'Unknown'}</p>
+
+                        <div className="rounded-xl overflow-hidden relative border border-border/50 group flex flex-col" style={{ minHeight: '130px' }}>
+                            <div className="absolute inset-0 bg-cover bg-center z-0 transition-transform duration-700 group-hover:scale-110 opacity-60" style={{ backgroundImage: `url('https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&q=80&w=600')` }} />
+                            <div className="absolute inset-0 bg-black/60 z-10" />
+                            <div className="relative z-20 p-4 flex-1 flex flex-col items-center justify-center text-center">
+                                <Clock className="w-6 h-6 text-plex mb-2 drop-shadow-md" />
+                                <p className="text-gray-300 text-[10px] uppercase tracking-widest font-bold mb-1 drop-shadow-md">Time of Day</p>
+                                <p className="text-sm font-bold text-white drop-shadow-lg">{analytics.timeOfDay || 'Unknown'}</p>
+                            </div>
                         </div>
-                        <div className="bg-background rounded-xl p-4 border border-border/50 flex flex-col items-center justify-center text-center">
-                            <Calendar className="w-6 h-6 text-plex mb-2" />
-                            <p className="text-muted text-[10px] uppercase tracking-widest font-bold mb-1">Top Day</p>
-                            <p className="text-sm font-bold text-text">{analytics.popularDay || 'Unknown'}</p>
+
+                        <div className="rounded-xl overflow-hidden relative border border-border/50 group flex flex-col" style={{ minHeight: '130px' }}>
+                            <div className="absolute inset-0 bg-cover bg-center z-0 transition-transform duration-700 group-hover:scale-110 opacity-60" style={{ backgroundImage: `url('https://images.unsplash.com/photo-1506784983877-45594efa4cbe?auto=format&fit=crop&q=80&w=600')` }} />
+                            <div className="absolute inset-0 bg-black/60 z-10" />
+                            <div className="relative z-20 p-4 flex-1 flex flex-col items-center justify-center text-center">
+                                <Calendar className="w-6 h-6 text-plex mb-2 drop-shadow-md" />
+                                <p className="text-gray-300 text-[10px] uppercase tracking-widest font-bold mb-1 drop-shadow-md">Top Day</p>
+                                <p className="text-sm font-bold text-white drop-shadow-lg">{analytics.popularDay || 'Unknown'}</p>
+                            </div>
                         </div>
-                        <div className="bg-background rounded-xl p-4 border border-border/50 flex flex-col items-center justify-center text-center">
-                            <Layers className="w-6 h-6 text-plex mb-2" />
-                            <p className="text-muted text-[10px] uppercase tracking-widest font-bold mb-1">Top Library</p>
-                            <p className="text-sm font-bold text-text line-clamp-2">{analytics.favoriteLibrary || 'None'}</p>
+
+                        <div className="rounded-xl overflow-hidden relative border border-border/50 group flex flex-col" style={{ minHeight: '130px' }}>
+                            <div className="absolute inset-0 bg-cover bg-center z-0 transition-transform duration-700 group-hover:scale-110 opacity-60" style={{ backgroundImage: `url('https://images.unsplash.com/photo-1550684848-fac1c5b4e853?auto=format&fit=crop&q=80&w=600')` }} />
+                            <div className="absolute inset-0 bg-black/60 z-10" />
+                            <div className="relative z-20 p-4 flex-1 flex flex-col items-center justify-center text-center">
+                                <Layers className="w-6 h-6 text-plex mb-2 drop-shadow-md" />
+                                <p className="text-gray-300 text-[10px] uppercase tracking-widest font-bold mb-1 drop-shadow-md">Top Library</p>
+                                <p className="text-sm font-bold text-white drop-shadow-lg line-clamp-2">{analytics.favoriteLibrary || 'None'}</p>
+                            </div>
                         </div>
-                        <div className="bg-background rounded-xl p-4 border border-border/50 flex flex-col items-center justify-center text-center">
-                            <PieChart className="w-6 h-6 text-plex mb-2" />
-                            <p className="text-muted text-[10px] uppercase tracking-widest font-bold mb-1">Media Profile</p>
-                            <p className="text-sm font-bold text-text">{analytics.mediaPreference || 'Mixed Bag'}</p>
+
+                        <div className="rounded-xl overflow-hidden relative border border-border/50 group flex flex-col" style={{ minHeight: '130px' }}>
+                            <div className="absolute inset-0 bg-cover bg-center z-0 transition-transform duration-700 group-hover:scale-110 opacity-60" style={{ backgroundImage: `url('https://images.unsplash.com/photo-1518818419601-1296c00cb0bd?auto=format&fit=crop&q=80&w=600')` }} />
+                            <div className="absolute inset-0 bg-black/60 z-10" />
+                            <div className="relative z-20 p-4 flex-1 flex flex-col items-center justify-center text-center">
+                                <PieChart className="w-6 h-6 text-plex mb-2 drop-shadow-md" />
+                                <p className="text-gray-300 text-[10px] uppercase tracking-widest font-bold mb-1 drop-shadow-md">Media Profile</p>
+                                <p className="text-sm font-bold text-white drop-shadow-lg">{analytics.mediaPreference || 'Mixed Bag'}</p>
+                            </div>
                         </div>
-                        <div className="bg-background rounded-xl p-4 border border-border/50 flex flex-col items-center justify-center text-center">
-                            <Compass className="w-6 h-6 text-plex mb-2" />
-                            <p className="text-muted text-[10px] uppercase tracking-widest font-bold mb-1">Watch Style</p>
-                            <p className="text-sm font-bold text-text">{analytics.watchStyle || 'Unknown'}</p>
+
+                        <div className="rounded-xl overflow-hidden relative border border-border/50 group flex flex-col" style={{ minHeight: '130px' }}>
+                            <div className="absolute inset-0 bg-cover bg-center z-0 transition-transform duration-700 group-hover:scale-110 opacity-60" style={{ backgroundImage: `url('https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&q=80&w=600')` }} />
+                            <div className="absolute inset-0 bg-black/60 z-10" />
+                            <div className="relative z-20 p-4 flex-1 flex flex-col items-center justify-center text-center">
+                                <Compass className="w-6 h-6 text-plex mb-2 drop-shadow-md" />
+                                <p className="text-gray-300 text-[10px] uppercase tracking-widest font-bold mb-1 drop-shadow-md">Watch Style</p>
+                                <p className="text-sm font-bold text-white drop-shadow-lg">{analytics.watchStyle || 'Unknown'}</p>
+                            </div>
                         </div>
-                        <div className="bg-background rounded-xl p-4 border border-border/50 flex flex-col items-center justify-center text-center">
-                            <Coffee className="w-6 h-6 text-plex mb-2" />
-                            <p className="text-muted text-[10px] uppercase tracking-widest font-bold mb-1">Habit</p>
-                            <p className="text-sm font-bold text-text">{analytics.streamingHabit || 'Unknown'}</p>
+
+                        <div className="rounded-xl overflow-hidden relative border border-border/50 group flex flex-col" style={{ minHeight: '130px' }}>
+                            <div className="absolute inset-0 bg-cover bg-center z-0 transition-transform duration-700 group-hover:scale-110 opacity-60" style={{ backgroundImage: `url('https://images.unsplash.com/photo-1614850523459-c2f4c699c52e?auto=format&fit=crop&q=80&w=600')` }} />
+                            <div className="absolute inset-0 bg-black/60 z-10" />
+                            <div className="relative z-20 p-4 flex-1 flex flex-col items-center justify-center text-center">
+                                <Coffee className="w-6 h-6 text-plex mb-2 drop-shadow-md" />
+                                <p className="text-gray-300 text-[10px] uppercase tracking-widest font-bold mb-1 drop-shadow-md">Habit</p>
+                                <p className="text-sm font-bold text-white drop-shadow-lg">{analytics.streamingHabit || 'Unknown'}</p>
+                            </div>
                         </div>
                     </div>
                 </div>

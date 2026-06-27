@@ -4096,63 +4096,103 @@ var UserDashboard = ({ sessionInfo, publicConfig, onLogout, refreshSession, onVi
         ] })
       ] }),
       /* @__PURE__ */ jsxs("div", { className: "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4", children: [
-        /* @__PURE__ */ jsxs("div", { className: "bg-background rounded-xl p-4 border border-border/50 flex flex-col items-center justify-center text-center", children: [
-          /* @__PURE__ */ jsx(Trophy, { className: "w-6 h-6 text-plex mb-2" }),
-          /* @__PURE__ */ jsx("p", { className: "text-muted text-[10px] uppercase tracking-widest font-bold mb-1", children: "Server Rank" }),
-          /* @__PURE__ */ jsx("p", { className: "text-2xl font-black text-text", children: analytics.leaderboardRank ? /* @__PURE__ */ jsxs(Fragment, { children: [
-            /* @__PURE__ */ jsx("span", { className: "text-plex text-xl mr-0.5", children: "#" }),
-            /* @__PURE__ */ jsx(CountUp, { end: analytics.leaderboardRank })
-          ] }) : "Unranked" }),
-          analytics.totalActiveUsers > 0 && /* @__PURE__ */ jsxs("p", { className: "text-[10px] text-muted mt-1", children: [
-            "out of ",
-            analytics.totalActiveUsers,
-            " users"
+        /* @__PURE__ */ jsxs("div", { className: "rounded-xl overflow-hidden relative border border-border/50 group flex flex-col", style: { minHeight: "130px" }, children: [
+          /* @__PURE__ */ jsx("div", { className: "absolute inset-0 bg-cover bg-center z-0 transition-transform duration-700 group-hover:scale-110 opacity-60", style: { backgroundImage: `url('https://images.unsplash.com/photo-1579546929518-9e396f3cc809?auto=format&fit=crop&q=80&w=600')` } }),
+          /* @__PURE__ */ jsx("div", { className: "absolute inset-0 bg-black/60 z-10" }),
+          /* @__PURE__ */ jsxs("div", { className: "relative z-20 p-4 flex-1 flex flex-col items-center justify-center text-center", children: [
+            /* @__PURE__ */ jsx(Trophy, { className: "w-6 h-6 text-plex mb-2 drop-shadow-md" }),
+            /* @__PURE__ */ jsx("p", { className: "text-gray-300 text-[10px] uppercase tracking-widest font-bold mb-1 drop-shadow-md", children: "Server Rank" }),
+            /* @__PURE__ */ jsx("p", { className: "text-2xl font-black text-white drop-shadow-lg", children: analytics.leaderboardRank ? /* @__PURE__ */ jsxs(Fragment, { children: [
+              /* @__PURE__ */ jsx("span", { className: "text-plex text-xl mr-0.5", children: "#" }),
+              /* @__PURE__ */ jsx(CountUp, { end: analytics.leaderboardRank })
+            ] }) : "Unranked" }),
+            analytics.totalActiveUsers > 0 && /* @__PURE__ */ jsxs("p", { className: "text-[10px] text-gray-400 mt-1", children: [
+              "out of ",
+              analytics.totalActiveUsers,
+              " users"
+            ] })
           ] })
         ] }),
-        /* @__PURE__ */ jsxs("div", { className: "bg-background rounded-xl p-4 border border-border/50 flex flex-col items-center justify-center text-center", children: [
-          /* @__PURE__ */ jsx(CirclePlay, { className: "w-6 h-6 text-plex mb-2" }),
-          /* @__PURE__ */ jsx("p", { className: "text-muted text-[10px] uppercase tracking-widest font-bold mb-1", children: "Total Streams" }),
-          /* @__PURE__ */ jsx("p", { className: "text-2xl font-black text-text", children: /* @__PURE__ */ jsx(CountUp, { end: analytics.totalPlays || 0 }) })
+        /* @__PURE__ */ jsxs("div", { className: "rounded-xl overflow-hidden relative border border-border/50 group flex flex-col", style: { minHeight: "130px" }, children: [
+          /* @__PURE__ */ jsx("div", { className: "absolute inset-0 bg-cover bg-center z-0 transition-transform duration-700 group-hover:scale-110 opacity-60", style: { backgroundImage: `url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&q=80&w=600')` } }),
+          /* @__PURE__ */ jsx("div", { className: "absolute inset-0 bg-black/60 z-10" }),
+          /* @__PURE__ */ jsxs("div", { className: "relative z-20 p-4 flex-1 flex flex-col items-center justify-center text-center", children: [
+            /* @__PURE__ */ jsx(CirclePlay, { className: "w-6 h-6 text-plex mb-2 drop-shadow-md" }),
+            /* @__PURE__ */ jsx("p", { className: "text-gray-300 text-[10px] uppercase tracking-widest font-bold mb-1 drop-shadow-md", children: "Total Streams" }),
+            /* @__PURE__ */ jsx("p", { className: "text-2xl font-black text-white drop-shadow-lg", children: /* @__PURE__ */ jsx(CountUp, { end: analytics.totalPlays || 0 }) })
+          ] })
         ] }),
-        /* @__PURE__ */ jsxs("div", { className: "bg-background rounded-xl p-4 border border-border/50 flex flex-col items-center justify-center text-center", children: [
-          /* @__PURE__ */ jsx(Tv, { className: "w-6 h-6 text-plex mb-2" }),
-          /* @__PURE__ */ jsx("p", { className: "text-muted text-[10px] uppercase tracking-widest font-bold mb-1", children: "Top Binge" }),
-          /* @__PURE__ */ jsx("p", { className: "text-sm font-bold text-text line-clamp-2", children: analytics.topBinge?.title || "Nothing yet" })
+        /* @__PURE__ */ jsxs("div", { className: "rounded-xl overflow-hidden relative border border-border/50 group flex flex-col", style: { minHeight: "130px" }, children: [
+          /* @__PURE__ */ jsx("div", { className: "absolute inset-0 bg-cover bg-center z-0 transition-transform duration-700 group-hover:scale-110 opacity-60", style: { backgroundImage: `url('${analytics.topBinge?.thumbUrl || "https://images.unsplash.com/photo-1594909122845-11baa439b7bf?auto=format&fit=crop&q=80&w=600"}')` } }),
+          /* @__PURE__ */ jsx("div", { className: "absolute inset-0 bg-black/60 z-10" }),
+          /* @__PURE__ */ jsxs("div", { className: "relative z-20 p-4 flex-1 flex flex-col items-center justify-center text-center", children: [
+            /* @__PURE__ */ jsx(Tv, { className: "w-6 h-6 text-plex mb-2 drop-shadow-md" }),
+            /* @__PURE__ */ jsx("p", { className: "text-gray-300 text-[10px] uppercase tracking-widest font-bold mb-1 drop-shadow-md", children: "Top Binge" }),
+            /* @__PURE__ */ jsx("p", { className: "text-sm font-bold text-white drop-shadow-lg line-clamp-2", children: analytics.topBinge?.title || "Nothing yet" })
+          ] })
         ] }),
-        /* @__PURE__ */ jsxs("div", { className: "bg-background rounded-xl p-4 border border-border/50 flex flex-col items-center justify-center text-center", children: [
-          /* @__PURE__ */ jsx(Clapperboard, { className: "w-6 h-6 text-plex mb-2" }),
-          /* @__PURE__ */ jsx("p", { className: "text-muted text-[10px] uppercase tracking-widest font-bold mb-1", children: "Top Movie" }),
-          /* @__PURE__ */ jsx("p", { className: "text-sm font-bold text-text line-clamp-2", children: analytics.topMovie?.title || "Nothing yet" })
+        /* @__PURE__ */ jsxs("div", { className: "rounded-xl overflow-hidden relative border border-border/50 group flex flex-col", style: { minHeight: "130px" }, children: [
+          /* @__PURE__ */ jsx("div", { className: "absolute inset-0 bg-cover bg-center z-0 transition-transform duration-700 group-hover:scale-110 opacity-60", style: { backgroundImage: `url('${analytics.topMovie?.thumbUrl || "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&q=80&w=600"}')` } }),
+          /* @__PURE__ */ jsx("div", { className: "absolute inset-0 bg-black/60 z-10" }),
+          /* @__PURE__ */ jsxs("div", { className: "relative z-20 p-4 flex-1 flex flex-col items-center justify-center text-center", children: [
+            /* @__PURE__ */ jsx(Clapperboard, { className: "w-6 h-6 text-plex mb-2 drop-shadow-md" }),
+            /* @__PURE__ */ jsx("p", { className: "text-gray-300 text-[10px] uppercase tracking-widest font-bold mb-1 drop-shadow-md", children: "Top Movie" }),
+            /* @__PURE__ */ jsx("p", { className: "text-sm font-bold text-white drop-shadow-lg line-clamp-2", children: analytics.topMovie?.title || "Nothing yet" })
+          ] })
         ] }),
-        /* @__PURE__ */ jsxs("div", { className: "bg-background rounded-xl p-4 border border-border/50 flex flex-col items-center justify-center text-center", children: [
-          /* @__PURE__ */ jsx(Clock, { className: "w-6 h-6 text-plex mb-2" }),
-          /* @__PURE__ */ jsx("p", { className: "text-muted text-[10px] uppercase tracking-widest font-bold mb-1", children: "Time of Day" }),
-          /* @__PURE__ */ jsx("p", { className: "text-sm font-bold text-text", children: analytics.timeOfDay || "Unknown" })
+        /* @__PURE__ */ jsxs("div", { className: "rounded-xl overflow-hidden relative border border-border/50 group flex flex-col", style: { minHeight: "130px" }, children: [
+          /* @__PURE__ */ jsx("div", { className: "absolute inset-0 bg-cover bg-center z-0 transition-transform duration-700 group-hover:scale-110 opacity-60", style: { backgroundImage: `url('https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&q=80&w=600')` } }),
+          /* @__PURE__ */ jsx("div", { className: "absolute inset-0 bg-black/60 z-10" }),
+          /* @__PURE__ */ jsxs("div", { className: "relative z-20 p-4 flex-1 flex flex-col items-center justify-center text-center", children: [
+            /* @__PURE__ */ jsx(Clock, { className: "w-6 h-6 text-plex mb-2 drop-shadow-md" }),
+            /* @__PURE__ */ jsx("p", { className: "text-gray-300 text-[10px] uppercase tracking-widest font-bold mb-1 drop-shadow-md", children: "Time of Day" }),
+            /* @__PURE__ */ jsx("p", { className: "text-sm font-bold text-white drop-shadow-lg", children: analytics.timeOfDay || "Unknown" })
+          ] })
         ] }),
-        /* @__PURE__ */ jsxs("div", { className: "bg-background rounded-xl p-4 border border-border/50 flex flex-col items-center justify-center text-center", children: [
-          /* @__PURE__ */ jsx(Calendar, { className: "w-6 h-6 text-plex mb-2" }),
-          /* @__PURE__ */ jsx("p", { className: "text-muted text-[10px] uppercase tracking-widest font-bold mb-1", children: "Top Day" }),
-          /* @__PURE__ */ jsx("p", { className: "text-sm font-bold text-text", children: analytics.popularDay || "Unknown" })
+        /* @__PURE__ */ jsxs("div", { className: "rounded-xl overflow-hidden relative border border-border/50 group flex flex-col", style: { minHeight: "130px" }, children: [
+          /* @__PURE__ */ jsx("div", { className: "absolute inset-0 bg-cover bg-center z-0 transition-transform duration-700 group-hover:scale-110 opacity-60", style: { backgroundImage: `url('https://images.unsplash.com/photo-1506784983877-45594efa4cbe?auto=format&fit=crop&q=80&w=600')` } }),
+          /* @__PURE__ */ jsx("div", { className: "absolute inset-0 bg-black/60 z-10" }),
+          /* @__PURE__ */ jsxs("div", { className: "relative z-20 p-4 flex-1 flex flex-col items-center justify-center text-center", children: [
+            /* @__PURE__ */ jsx(Calendar, { className: "w-6 h-6 text-plex mb-2 drop-shadow-md" }),
+            /* @__PURE__ */ jsx("p", { className: "text-gray-300 text-[10px] uppercase tracking-widest font-bold mb-1 drop-shadow-md", children: "Top Day" }),
+            /* @__PURE__ */ jsx("p", { className: "text-sm font-bold text-white drop-shadow-lg", children: analytics.popularDay || "Unknown" })
+          ] })
         ] }),
-        /* @__PURE__ */ jsxs("div", { className: "bg-background rounded-xl p-4 border border-border/50 flex flex-col items-center justify-center text-center", children: [
-          /* @__PURE__ */ jsx(Layers, { className: "w-6 h-6 text-plex mb-2" }),
-          /* @__PURE__ */ jsx("p", { className: "text-muted text-[10px] uppercase tracking-widest font-bold mb-1", children: "Top Library" }),
-          /* @__PURE__ */ jsx("p", { className: "text-sm font-bold text-text line-clamp-2", children: analytics.favoriteLibrary || "None" })
+        /* @__PURE__ */ jsxs("div", { className: "rounded-xl overflow-hidden relative border border-border/50 group flex flex-col", style: { minHeight: "130px" }, children: [
+          /* @__PURE__ */ jsx("div", { className: "absolute inset-0 bg-cover bg-center z-0 transition-transform duration-700 group-hover:scale-110 opacity-60", style: { backgroundImage: `url('https://images.unsplash.com/photo-1550684848-fac1c5b4e853?auto=format&fit=crop&q=80&w=600')` } }),
+          /* @__PURE__ */ jsx("div", { className: "absolute inset-0 bg-black/60 z-10" }),
+          /* @__PURE__ */ jsxs("div", { className: "relative z-20 p-4 flex-1 flex flex-col items-center justify-center text-center", children: [
+            /* @__PURE__ */ jsx(Layers, { className: "w-6 h-6 text-plex mb-2 drop-shadow-md" }),
+            /* @__PURE__ */ jsx("p", { className: "text-gray-300 text-[10px] uppercase tracking-widest font-bold mb-1 drop-shadow-md", children: "Top Library" }),
+            /* @__PURE__ */ jsx("p", { className: "text-sm font-bold text-white drop-shadow-lg line-clamp-2", children: analytics.favoriteLibrary || "None" })
+          ] })
         ] }),
-        /* @__PURE__ */ jsxs("div", { className: "bg-background rounded-xl p-4 border border-border/50 flex flex-col items-center justify-center text-center", children: [
-          /* @__PURE__ */ jsx(ChartPie, { className: "w-6 h-6 text-plex mb-2" }),
-          /* @__PURE__ */ jsx("p", { className: "text-muted text-[10px] uppercase tracking-widest font-bold mb-1", children: "Media Profile" }),
-          /* @__PURE__ */ jsx("p", { className: "text-sm font-bold text-text", children: analytics.mediaPreference || "Mixed Bag" })
+        /* @__PURE__ */ jsxs("div", { className: "rounded-xl overflow-hidden relative border border-border/50 group flex flex-col", style: { minHeight: "130px" }, children: [
+          /* @__PURE__ */ jsx("div", { className: "absolute inset-0 bg-cover bg-center z-0 transition-transform duration-700 group-hover:scale-110 opacity-60", style: { backgroundImage: `url('https://images.unsplash.com/photo-1518818419601-1296c00cb0bd?auto=format&fit=crop&q=80&w=600')` } }),
+          /* @__PURE__ */ jsx("div", { className: "absolute inset-0 bg-black/60 z-10" }),
+          /* @__PURE__ */ jsxs("div", { className: "relative z-20 p-4 flex-1 flex flex-col items-center justify-center text-center", children: [
+            /* @__PURE__ */ jsx(ChartPie, { className: "w-6 h-6 text-plex mb-2 drop-shadow-md" }),
+            /* @__PURE__ */ jsx("p", { className: "text-gray-300 text-[10px] uppercase tracking-widest font-bold mb-1 drop-shadow-md", children: "Media Profile" }),
+            /* @__PURE__ */ jsx("p", { className: "text-sm font-bold text-white drop-shadow-lg", children: analytics.mediaPreference || "Mixed Bag" })
+          ] })
         ] }),
-        /* @__PURE__ */ jsxs("div", { className: "bg-background rounded-xl p-4 border border-border/50 flex flex-col items-center justify-center text-center", children: [
-          /* @__PURE__ */ jsx(Compass, { className: "w-6 h-6 text-plex mb-2" }),
-          /* @__PURE__ */ jsx("p", { className: "text-muted text-[10px] uppercase tracking-widest font-bold mb-1", children: "Watch Style" }),
-          /* @__PURE__ */ jsx("p", { className: "text-sm font-bold text-text", children: analytics.watchStyle || "Unknown" })
+        /* @__PURE__ */ jsxs("div", { className: "rounded-xl overflow-hidden relative border border-border/50 group flex flex-col", style: { minHeight: "130px" }, children: [
+          /* @__PURE__ */ jsx("div", { className: "absolute inset-0 bg-cover bg-center z-0 transition-transform duration-700 group-hover:scale-110 opacity-60", style: { backgroundImage: `url('https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&q=80&w=600')` } }),
+          /* @__PURE__ */ jsx("div", { className: "absolute inset-0 bg-black/60 z-10" }),
+          /* @__PURE__ */ jsxs("div", { className: "relative z-20 p-4 flex-1 flex flex-col items-center justify-center text-center", children: [
+            /* @__PURE__ */ jsx(Compass, { className: "w-6 h-6 text-plex mb-2 drop-shadow-md" }),
+            /* @__PURE__ */ jsx("p", { className: "text-gray-300 text-[10px] uppercase tracking-widest font-bold mb-1 drop-shadow-md", children: "Watch Style" }),
+            /* @__PURE__ */ jsx("p", { className: "text-sm font-bold text-white drop-shadow-lg", children: analytics.watchStyle || "Unknown" })
+          ] })
         ] }),
-        /* @__PURE__ */ jsxs("div", { className: "bg-background rounded-xl p-4 border border-border/50 flex flex-col items-center justify-center text-center", children: [
-          /* @__PURE__ */ jsx(Coffee, { className: "w-6 h-6 text-plex mb-2" }),
-          /* @__PURE__ */ jsx("p", { className: "text-muted text-[10px] uppercase tracking-widest font-bold mb-1", children: "Habit" }),
-          /* @__PURE__ */ jsx("p", { className: "text-sm font-bold text-text", children: analytics.streamingHabit || "Unknown" })
+        /* @__PURE__ */ jsxs("div", { className: "rounded-xl overflow-hidden relative border border-border/50 group flex flex-col", style: { minHeight: "130px" }, children: [
+          /* @__PURE__ */ jsx("div", { className: "absolute inset-0 bg-cover bg-center z-0 transition-transform duration-700 group-hover:scale-110 opacity-60", style: { backgroundImage: `url('https://images.unsplash.com/photo-1614850523459-c2f4c699c52e?auto=format&fit=crop&q=80&w=600')` } }),
+          /* @__PURE__ */ jsx("div", { className: "absolute inset-0 bg-black/60 z-10" }),
+          /* @__PURE__ */ jsxs("div", { className: "relative z-20 p-4 flex-1 flex flex-col items-center justify-center text-center", children: [
+            /* @__PURE__ */ jsx(Coffee, { className: "w-6 h-6 text-plex mb-2 drop-shadow-md" }),
+            /* @__PURE__ */ jsx("p", { className: "text-gray-300 text-[10px] uppercase tracking-widest font-bold mb-1 drop-shadow-md", children: "Habit" }),
+            /* @__PURE__ */ jsx("p", { className: "text-sm font-bold text-white drop-shadow-lg", children: analytics.streamingHabit || "Unknown" })
+          ] })
         ] })
       ] })
     ] }),
