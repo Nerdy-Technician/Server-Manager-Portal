@@ -2679,7 +2679,7 @@ const AnalyticsDashboard: React.FC<{ isAdmin: boolean, sessionInfo: any }> = ({ 
         return <PersonalAnalyticsDashboard username={sessionInfo?.session?.username || 'User'} thumb={null} />;
     }
     const [analyticsData, setAnalyticsData] = useState<{ topUsers: any[], topLibraries: any[], topMovies: any[], topShows: any[], topMusic: any[], topDevices: any[], peakHours: number[], totalPlaybacks: number } | null>(null);
-    const [tautulliData, setTautulliData] = useState<{ streamsRecord: number, totalPlays: number, totalTimeStr: string } | null>(null);
+    const [tautulliData, setTautulliData] = useState<{ streamsRecord: number, totalPlays: number, tvPlays: number, moviePlays: number, musicPlays: number, totalTimeStr: string } | null>(null);
     const [isLoading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [days, setDays] = useState<string>('30');
@@ -2911,31 +2911,39 @@ const AnalyticsDashboard: React.FC<{ isAdmin: boolean, sessionInfo: any }> = ({ 
                             </div>
                         </div>
                     )}
+                </div>
 
-                    {/* Tautulli Insights Card */}
-                    {tautulliData && (
-                        <div className="bg-card/50 backdrop-blur-md rounded-xl p-4 md:p-6 shadow-xl border border-border mt-6 relative overflow-hidden">
-                            <div className="absolute top-0 right-0 p-3 opacity-20 pointer-events-none">
-                                <Activity className="w-16 h-16" />
+                {/* Tautulli Insights Card */}
+                {tautulliData && (
+                    <div className="bg-card/50 backdrop-blur-md rounded-xl p-4 md:p-6 shadow-xl border border-border col-span-full relative overflow-hidden">
+                        <div className="absolute top-0 right-0 p-3 opacity-10 pointer-events-none">
+                            <Activity className="w-32 h-32 text-[#3b82f6]" />
+                        </div>
+                        <h2 className="text-xl font-bold text-text mb-6 uppercase tracking-wider flex items-center gap-2 relative z-10"><Activity className="text-[#3b82f6] w-5 h-5" /> Tautulli All-Time Insights</h2>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 relative z-10">
+                            <div className="flex flex-col p-4 bg-black/20 rounded-lg border border-white/5 shadow-inner">
+                                <span className="font-bold text-muted text-xs uppercase tracking-wider mb-2 flex items-center gap-2"><Users className="w-4 h-4 text-[#3b82f6]" /> Peak Streams</span>
+                                <span className="font-mono font-black text-[#3b82f6] text-3xl">{tautulliData.streamsRecord || 0}</span>
                             </div>
-                            <h2 className="text-xl font-bold text-text mb-4 uppercase tracking-wider flex items-center gap-2"><Activity className="text-[#3b82f6] w-5 h-5" /> Tautulli Insights</h2>
-                            <div className="flex flex-col gap-4 relative z-10">
-                                <div className="flex items-center justify-between p-3 bg-black/20 rounded-lg hover:bg-black/40 transition-colors border border-white/5">
-                                    <span className="font-bold text-text flex items-center gap-2"><Users className="w-4 h-4 text-[#3b82f6]" /> Max Concurrent Streams</span>
-                                    <span className="font-mono font-black text-[#3b82f6] text-lg">{tautulliData.streamsRecord || 0}</span>
-                                </div>
-                                <div className="flex items-center justify-between p-3 bg-black/20 rounded-lg hover:bg-black/40 transition-colors border border-white/5">
-                                    <span className="font-bold text-text flex items-center gap-2"><Play className="w-4 h-4 text-[#e5a00d]" /> Total Play Counts</span>
-                                    <span className="font-mono font-black text-[#e5a00d] text-lg">{tautulliData.totalPlays ? tautulliData.totalPlays.toLocaleString() : 0}</span>
-                                </div>
-                                <div className="flex items-center justify-between p-3 bg-black/20 rounded-lg hover:bg-black/40 transition-colors border border-white/5">
-                                    <span className="font-bold text-text flex items-center gap-2"><Clock className="w-4 h-4 text-green-400" /> Watch Time</span>
-                                    <span className="font-mono font-black text-green-400 text-sm whitespace-nowrap ml-2 text-right">{tautulliData.totalTimeStr || '0 hrs'}</span>
-                                </div>
+                            <div className="flex flex-col p-4 bg-black/20 rounded-lg border border-white/5 shadow-inner">
+                                <span className="font-bold text-muted text-xs uppercase tracking-wider mb-2 flex items-center gap-2"><Clock className="w-4 h-4 text-green-400" /> Watch Time</span>
+                                <span className="font-mono font-black text-green-400 text-sm xl:text-lg leading-tight mt-auto">{tautulliData.totalTimeStr || '0 hrs'}</span>
+                            </div>
+                            <div className="flex flex-col p-4 bg-black/20 rounded-lg border border-white/5 shadow-inner">
+                                <span className="font-bold text-muted text-xs uppercase tracking-wider mb-2 flex items-center gap-2"><PlaySquare className="w-4 h-4 text-purple-400" /> TV Shows Played</span>
+                                <span className="font-mono font-black text-purple-400 text-3xl">{tautulliData.tvPlays ? tautulliData.tvPlays.toLocaleString() : 0}</span>
+                            </div>
+                            <div className="flex flex-col p-4 bg-black/20 rounded-lg border border-white/5 shadow-inner">
+                                <span className="font-bold text-muted text-xs uppercase tracking-wider mb-2 flex items-center gap-2"><Film className="w-4 h-4 text-red-400" /> Movies Played</span>
+                                <span className="font-mono font-black text-red-400 text-3xl">{tautulliData.moviePlays ? tautulliData.moviePlays.toLocaleString() : 0}</span>
+                            </div>
+                            <div className="flex flex-col p-4 bg-black/20 rounded-lg border border-white/5 shadow-inner">
+                                <span className="font-bold text-muted text-xs uppercase tracking-wider mb-2 flex items-center gap-2"><Music className="w-4 h-4 text-yellow-400" /> Music Played</span>
+                                <span className="font-mono font-black text-yellow-400 text-3xl">{tautulliData.musicPlays ? tautulliData.musicPlays.toLocaleString() : 0}</span>
                             </div>
                         </div>
-                    )}
-                </div>
+                    </div>
+                )}
 
                 {/* Trending Content Card */}
                 <div className="bg-card/50 backdrop-blur-md rounded-xl p-4 md:p-6 shadow-xl border border-border col-span-full">

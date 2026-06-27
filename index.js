@@ -2919,16 +2919,25 @@ app.get('/api/tautulli/stats', requireAdmin, async (req, res) => {
             let totalPlays = 0;
             let totalTimeStr = '';
 
+            let tvPlays = 0;
+            let moviePlays = 0;
+            let musicPlays = 0;
+
             const concurrent = stats.find(s => s.stat_id === 'most_concurrent_streams');
             if (concurrent && concurrent.rows && concurrent.rows[0]) streamsRecord = concurrent.rows[0].count;
 
             const plays = stats.find(s => s.stat_id === 'total_plays');
-            if (plays && plays.rows && plays.rows[0]) totalPlays = plays.rows[0].total_plays;
+            if (plays && plays.rows && plays.rows[0]) {
+                totalPlays = plays.rows[0].total_plays || 0;
+                tvPlays = plays.rows[0].tv_shows || 0;
+                moviePlays = plays.rows[0].movies || 0;
+                musicPlays = plays.rows[0].music || 0;
+            }
 
             const duration = stats.find(s => s.stat_id === 'total_time');
             if (duration && duration.rows && duration.rows[0]) totalTimeStr = duration.rows[0].total_time;
 
-            return res.json({ streamsRecord, totalPlays, totalTimeStr });
+            return res.json({ streamsRecord, totalPlays, tvPlays, moviePlays, musicPlays, totalTimeStr });
         }
         res.status(500).json({ error: 'Invalid response from Tautulli' });
     } catch (e) {
