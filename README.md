@@ -106,7 +106,7 @@ Beautiful, responsive HTML emails sent automatically:
 
 ---
 
-### Media Stack Integration
+### Media Stack Integration (coming soon)
 
 Embed your Arr stack directly into the portal for seamless browsing and requesting:
 
