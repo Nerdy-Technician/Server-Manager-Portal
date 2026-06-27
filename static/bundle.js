@@ -3893,6 +3893,207 @@ var RebuildLibraryCacheButton = () => {
     ] })
   ] });
 };
+var WrapUpModal = ({ metric, analytics, onClose }) => {
+  useEffect(() => {
+    const handleEsc = (e) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handleEsc);
+    return () => window.removeEventListener("keydown", handleEsc);
+  }, [onClose]);
+  const renderContent = () => {
+    switch (metric) {
+      case "Server Rank":
+        return /* @__PURE__ */ jsxs("div", { className: "flex flex-col items-center justify-center text-center p-6", children: [
+          /* @__PURE__ */ jsx(Trophy, { className: "w-16 h-16 text-plex mb-4 animate-bounce" }),
+          /* @__PURE__ */ jsxs("h2", { className: "text-3xl font-black text-white mb-2", children: [
+            "You are Rank #",
+            analytics.leaderboardRank || "Unranked"
+          ] }),
+          /* @__PURE__ */ jsxs("p", { className: "text-muted mb-6", children: [
+            "Out of ",
+            analytics.totalActiveUsers || 0,
+            " active users on the server."
+          ] }),
+          /* @__PURE__ */ jsx("div", { className: "bg-plex/10 border border-plex/30 rounded-xl p-4 w-full shadow-inner", children: /* @__PURE__ */ jsx("p", { className: "text-sm text-plex font-medium", children: "Keep streaming to climb the leaderboard! Every movie, episode, and song counts towards your rank." }) })
+        ] });
+      case "Total Streams":
+        return /* @__PURE__ */ jsxs("div", { className: "flex flex-col items-center justify-center text-center p-6", children: [
+          /* @__PURE__ */ jsx(CirclePlay, { className: "w-16 h-16 text-plex mb-4 drop-shadow-lg" }),
+          /* @__PURE__ */ jsx("h2", { className: "text-4xl font-black text-white mb-2", children: analytics.totalPlays || 0 }),
+          /* @__PURE__ */ jsx("p", { className: "text-muted uppercase tracking-widest text-xs font-bold mb-6", children: "Total Streams" }),
+          /* @__PURE__ */ jsxs("div", { className: "grid grid-cols-3 gap-4 w-full", children: [
+            /* @__PURE__ */ jsxs("div", { className: "bg-gradient-to-b from-white/10 to-white/5 border border-white/10 rounded-xl p-3 flex flex-col items-center justify-center shadow-lg", children: [
+              /* @__PURE__ */ jsx("span", { className: "text-2xl mb-1 drop-shadow", children: "\u{1F3AC}" }),
+              /* @__PURE__ */ jsx("span", { className: "text-white font-bold text-lg", children: analytics.moviesCount || 0 }),
+              /* @__PURE__ */ jsx("span", { className: "text-[9px] text-muted uppercase tracking-widest font-bold", children: "Movies" })
+            ] }),
+            /* @__PURE__ */ jsxs("div", { className: "bg-gradient-to-b from-white/10 to-white/5 border border-white/10 rounded-xl p-3 flex flex-col items-center justify-center shadow-lg", children: [
+              /* @__PURE__ */ jsx("span", { className: "text-2xl mb-1 drop-shadow", children: "\u{1F4FA}" }),
+              /* @__PURE__ */ jsx("span", { className: "text-white font-bold text-lg", children: analytics.showsCount || 0 }),
+              /* @__PURE__ */ jsx("span", { className: "text-[9px] text-muted uppercase tracking-widest font-bold", children: "Episodes" })
+            ] }),
+            /* @__PURE__ */ jsxs("div", { className: "bg-gradient-to-b from-white/10 to-white/5 border border-white/10 rounded-xl p-3 flex flex-col items-center justify-center shadow-lg", children: [
+              /* @__PURE__ */ jsx("span", { className: "text-2xl mb-1 drop-shadow", children: "\u{1F3B5}" }),
+              /* @__PURE__ */ jsx("span", { className: "text-white font-bold text-lg", children: analytics.musicCount || 0 }),
+              /* @__PURE__ */ jsx("span", { className: "text-[9px] text-muted uppercase tracking-widest font-bold", children: "Tracks" })
+            ] })
+          ] })
+        ] });
+      case "Top Binge":
+        return /* @__PURE__ */ jsxs("div", { className: "flex flex-col items-center justify-center text-center p-6 relative", children: [
+          analytics.topBinge?.thumbUrl ? /* @__PURE__ */ jsx("img", { src: analytics.topBinge.thumbUrl, className: "w-32 h-48 object-cover rounded-xl shadow-[0_0_30px_rgba(0,0,0,0.5)] mb-6 border border-white/10" }) : /* @__PURE__ */ jsx(Tv, { className: "w-16 h-16 text-plex mb-6 drop-shadow-lg" }),
+          /* @__PURE__ */ jsx("h2", { className: "text-2xl font-black text-white mb-1 line-clamp-2", children: analytics.topBinge?.title || "Nothing yet" }),
+          /* @__PURE__ */ jsxs("p", { className: "text-plex font-black text-lg mb-4", children: [
+            analytics.topBinge?.plays || 0,
+            " ",
+            /* @__PURE__ */ jsx("span", { className: "text-sm font-bold text-muted uppercase tracking-wider", children: "episodes" })
+          ] }),
+          /* @__PURE__ */ jsx("p", { className: "text-sm text-gray-400 bg-white/5 border border-white/10 rounded-lg px-4 py-2 w-full", children: "You couldn't get enough of this show!" })
+        ] });
+      case "Top Movie":
+        return /* @__PURE__ */ jsxs("div", { className: "flex flex-col items-center justify-center text-center p-6 relative", children: [
+          analytics.topMovie?.thumbUrl ? /* @__PURE__ */ jsx("img", { src: analytics.topMovie.thumbUrl, className: "w-32 h-48 object-cover rounded-xl shadow-[0_0_30px_rgba(0,0,0,0.5)] mb-6 border border-white/10" }) : /* @__PURE__ */ jsx(Clapperboard, { className: "w-16 h-16 text-plex mb-6 drop-shadow-lg" }),
+          /* @__PURE__ */ jsx("h2", { className: "text-2xl font-black text-white mb-1 line-clamp-2", children: analytics.topMovie?.title || "Nothing yet" }),
+          /* @__PURE__ */ jsxs("p", { className: "text-plex font-black text-lg mb-4", children: [
+            analytics.topMovie?.plays || 0,
+            " ",
+            /* @__PURE__ */ jsx("span", { className: "text-sm font-bold text-muted uppercase tracking-wider", children: "plays" })
+          ] }),
+          /* @__PURE__ */ jsx("p", { className: "text-sm text-gray-400 bg-white/5 border border-white/10 rounded-lg px-4 py-2 w-full", children: "Your most watched cinematic masterpiece." })
+        ] });
+      case "Time of Day":
+        return /* @__PURE__ */ jsxs("div", { className: "flex flex-col items-center justify-center text-center p-6", children: [
+          /* @__PURE__ */ jsx(Clock, { className: "w-16 h-16 text-plex mb-4 drop-shadow-lg" }),
+          /* @__PURE__ */ jsx("h2", { className: "text-3xl font-black text-white mb-2", children: analytics.timeOfDay || "Unknown" }),
+          /* @__PURE__ */ jsxs("p", { className: "text-muted mb-6", children: [
+            "You typically stream around ",
+            analytics.avgHour ? Math.round(analytics.avgHour) + ":00" : "Unknown",
+            "."
+          ] }),
+          /* @__PURE__ */ jsx("div", { className: "w-full bg-gradient-to-r from-plex/5 via-plex/10 to-plex/5 border border-plex/20 rounded-xl p-4 shadow-inner", children: /* @__PURE__ */ jsx("p", { className: "text-sm text-plex font-medium", children: analytics.timeOfDay === "Early Bird" ? "Catching the worm with those morning streams!" : analytics.timeOfDay === "Afternoon Watcher" ? "Perfect way to spend the afternoon." : analytics.timeOfDay === "Evening Streamer" ? "Unwinding after a long day." : "Burning the midnight oil with some late night streaming!" }) })
+        ] });
+      case "Top Day":
+        const daysOfWeek = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+        const maxCount = Math.max(...analytics.dayOfWeekCounts ? Object.values(analytics.dayOfWeekCounts) : [0]);
+        return /* @__PURE__ */ jsxs("div", { className: "flex flex-col items-center justify-center text-center p-6", children: [
+          /* @__PURE__ */ jsx(Calendar, { className: "w-16 h-16 text-plex mb-4 drop-shadow-lg" }),
+          /* @__PURE__ */ jsx("h2", { className: "text-3xl font-black text-white mb-2", children: analytics.popularDay || "Unknown" }),
+          /* @__PURE__ */ jsx("p", { className: "text-muted mb-6 uppercase tracking-widest text-xs font-bold", children: "Most Active Day" }),
+          /* @__PURE__ */ jsx("div", { className: "w-full flex items-end justify-between h-32 gap-1.5 mt-4 px-2", children: daysOfWeek.map((day, i) => {
+            const count = analytics.dayOfWeekCounts ? analytics.dayOfWeekCounts[i] : 0;
+            const height = maxCount > 0 ? count / maxCount * 100 : 0;
+            const isTop = count === maxCount && count > 0;
+            return /* @__PURE__ */ jsxs("div", { className: "flex flex-col items-center w-full group", children: [
+              /* @__PURE__ */ jsx(
+                "div",
+                {
+                  className: `w-full rounded-t-md transition-all duration-500 relative flex items-end justify-center pb-1 overflow-hidden
+                                            ${isTop ? "bg-gradient-to-t from-plex/80 to-plex shadow-[0_0_15px_rgba(229,160,13,0.3)]" : "bg-gradient-to-t from-white/10 to-white/20 group-hover:from-white/20 group-hover:to-white/30"}`,
+                  style: { height: `${Math.max(height, 8)}%` },
+                  children: /* @__PURE__ */ jsx("span", { className: `text-[10px] font-black opacity-0 group-hover:opacity-100 transition-opacity ${isTop ? "text-black" : "text-white"}`, children: count })
+                }
+              ),
+              /* @__PURE__ */ jsx("span", { className: `text-[9px] mt-2 font-black uppercase tracking-wider ${isTop ? "text-plex" : "text-muted"}`, children: day })
+            ] }, day);
+          }) })
+        ] });
+      case "Top Library":
+        return /* @__PURE__ */ jsxs("div", { className: "flex flex-col items-center justify-center text-center p-6", children: [
+          /* @__PURE__ */ jsx(Layers, { className: "w-16 h-16 text-plex mb-4 drop-shadow-lg" }),
+          /* @__PURE__ */ jsx("h2", { className: "text-3xl font-black text-white mb-2 line-clamp-1", children: analytics.favoriteLibrary || "None" }),
+          /* @__PURE__ */ jsx("p", { className: "text-muted mb-6 uppercase tracking-widest text-xs font-bold", children: "Favorite Library" }),
+          /* @__PURE__ */ jsx("div", { className: "w-full flex flex-col gap-2", children: analytics.topLibraries?.slice(0, 3).map((lib, i) => /* @__PURE__ */ jsxs("div", { className: `flex items-center justify-between border rounded-xl p-3 transition-colors ${i === 0 ? "bg-plex/10 border-plex/30" : "bg-white/5 border-white/10"}`, children: [
+            /* @__PURE__ */ jsxs("span", { className: `font-bold text-sm truncate pr-2 ${i === 0 ? "text-plex" : "text-gray-300"}`, children: [
+              i + 1,
+              ". ",
+              lib.title
+            ] }),
+            /* @__PURE__ */ jsxs("span", { className: `font-black text-sm whitespace-nowrap ${i === 0 ? "text-plex" : "text-white"}`, children: [
+              lib.plays,
+              " plays"
+            ] })
+          ] }, i)) })
+        ] });
+      case "Media Profile":
+        return /* @__PURE__ */ jsxs("div", { className: "flex flex-col items-center justify-center text-center p-6", children: [
+          /* @__PURE__ */ jsx(ChartPie, { className: "w-16 h-16 text-plex mb-4 drop-shadow-lg" }),
+          /* @__PURE__ */ jsx("h2", { className: "text-3xl font-black text-white mb-2", children: analytics.mediaPreference || "Mixed Bag" }),
+          /* @__PURE__ */ jsx("p", { className: "text-muted mb-6 uppercase tracking-widest text-xs font-bold", children: "Content Breakdown" }),
+          /* @__PURE__ */ jsxs("div", { className: "w-full bg-white/5 border border-white/10 rounded-xl p-5 flex flex-col gap-4 shadow-lg", children: [
+            /* @__PURE__ */ jsxs("div", { children: [
+              /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between text-xs font-bold uppercase tracking-wider text-gray-300 mb-1.5", children: [
+                /* @__PURE__ */ jsx("span", { className: "flex items-center gap-1.5", children: "\u{1F3AC} Movies" }),
+                /* @__PURE__ */ jsx("span", { children: analytics.moviesCount || 0 })
+              ] }),
+              /* @__PURE__ */ jsx("div", { className: "w-full bg-black/60 rounded-full h-2 overflow-hidden shadow-inner", children: /* @__PURE__ */ jsx("div", { className: "bg-blue-500 h-2 rounded-full shadow-[0_0_10px_rgba(59,130,246,0.5)] transition-all duration-1000", style: { width: `${(analytics.moviesCount || 0) / Math.max(analytics.totalPlays || 1, 1) * 100}%` } }) })
+            ] }),
+            /* @__PURE__ */ jsxs("div", { children: [
+              /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between text-xs font-bold uppercase tracking-wider text-gray-300 mb-1.5", children: [
+                /* @__PURE__ */ jsx("span", { className: "flex items-center gap-1.5", children: "\u{1F4FA} Shows" }),
+                /* @__PURE__ */ jsx("span", { children: analytics.showsCount || 0 })
+              ] }),
+              /* @__PURE__ */ jsx("div", { className: "w-full bg-black/60 rounded-full h-2 overflow-hidden shadow-inner", children: /* @__PURE__ */ jsx("div", { className: "bg-green-500 h-2 rounded-full shadow-[0_0_10px_rgba(34,197,94,0.5)] transition-all duration-1000", style: { width: `${(analytics.showsCount || 0) / Math.max(analytics.totalPlays || 1, 1) * 100}%` } }) })
+            ] }),
+            analytics.musicCount > 0 && /* @__PURE__ */ jsxs("div", { children: [
+              /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between text-xs font-bold uppercase tracking-wider text-gray-300 mb-1.5", children: [
+                /* @__PURE__ */ jsx("span", { className: "flex items-center gap-1.5", children: "\u{1F3B5} Music" }),
+                /* @__PURE__ */ jsx("span", { children: analytics.musicCount || 0 })
+              ] }),
+              /* @__PURE__ */ jsx("div", { className: "w-full bg-black/60 rounded-full h-2 overflow-hidden shadow-inner", children: /* @__PURE__ */ jsx("div", { className: "bg-purple-500 h-2 rounded-full shadow-[0_0_10px_rgba(168,85,247,0.5)] transition-all duration-1000", style: { width: `${(analytics.musicCount || 0) / Math.max(analytics.totalPlays || 1, 1) * 100}%` } }) })
+            ] })
+          ] })
+        ] });
+      case "Watch Style":
+        return /* @__PURE__ */ jsxs("div", { className: "flex flex-col items-center justify-center text-center p-6", children: [
+          /* @__PURE__ */ jsx(Compass, { className: "w-16 h-16 text-plex mb-4 drop-shadow-lg" }),
+          /* @__PURE__ */ jsx("h2", { className: "text-3xl font-black text-white mb-2", children: analytics.watchStyle || "Unknown" }),
+          /* @__PURE__ */ jsx("p", { className: "text-muted mb-6 uppercase tracking-widest text-xs font-bold", children: "Discovery vs Rewatch" }),
+          /* @__PURE__ */ jsxs("div", { className: "grid grid-cols-2 gap-4 w-full mb-4", children: [
+            /* @__PURE__ */ jsxs("div", { className: "bg-gradient-to-b from-white/10 to-white/5 border border-white/10 rounded-xl p-4 flex flex-col items-center justify-center shadow-lg", children: [
+              /* @__PURE__ */ jsx("span", { className: "text-3xl font-black text-white mb-1 drop-shadow", children: analytics.totalPlays || 0 }),
+              /* @__PURE__ */ jsx("span", { className: "text-[9px] text-muted uppercase tracking-widest font-black", children: "Total Plays" })
+            ] }),
+            /* @__PURE__ */ jsxs("div", { className: "bg-gradient-to-b from-plex/20 to-plex/5 border border-plex/30 rounded-xl p-4 flex flex-col items-center justify-center shadow-lg", children: [
+              /* @__PURE__ */ jsx("span", { className: "text-3xl font-black text-plex mb-1 drop-shadow-md", children: analytics.uniqueTitles || 0 }),
+              /* @__PURE__ */ jsx("span", { className: "text-[9px] text-plex/80 uppercase tracking-widest font-black", children: "Unique Titles" })
+            ] })
+          ] }),
+          /* @__PURE__ */ jsx("p", { className: "text-sm text-gray-300 italic bg-white/5 border border-white/10 rounded-lg px-4 py-2 w-full", children: analytics.watchStyle === "Comfort Binger" ? "You love returning to your favorite comfort shows." : analytics.watchStyle === "Loyal Fan" ? "You stick around to finish what you start." : "You love exploring a wide variety of different content!" })
+        ] });
+      case "Streaming Habit":
+        return /* @__PURE__ */ jsxs("div", { className: "flex flex-col items-center justify-center text-center p-6", children: [
+          /* @__PURE__ */ jsx(Coffee, { className: "w-16 h-16 text-plex mb-4 drop-shadow-lg" }),
+          /* @__PURE__ */ jsx("h2", { className: "text-3xl font-black text-white mb-2", children: analytics.streamingHabit || "Unknown" }),
+          /* @__PURE__ */ jsx("p", { className: "text-muted mb-8 uppercase tracking-widest text-xs font-bold", children: "Weekday vs Weekend" }),
+          /* @__PURE__ */ jsxs("div", { className: "w-full relative h-16 rounded-2xl overflow-hidden flex shadow-inner bg-black/50 border border-white/10", children: [
+            /* @__PURE__ */ jsx("div", { className: "h-full bg-gradient-to-r from-blue-600 to-blue-400 flex items-center justify-center transition-all duration-1000 shadow-[inset_0_0_20px_rgba(0,0,0,0.3)]", style: { width: `${(analytics.weekdayPlays || 0) / Math.max(analytics.totalPlays || 1, 1) * 100}%` }, children: analytics.weekdayPlays > 0 && /* @__PURE__ */ jsx("span", { className: "text-white font-black drop-shadow-md z-10 text-sm", children: "WD" }) }),
+            /* @__PURE__ */ jsx("div", { className: "h-full bg-gradient-to-r from-plex to-orange-400 flex items-center justify-center transition-all duration-1000 shadow-[inset_0_0_20px_rgba(0,0,0,0.3)]", style: { width: `${(analytics.weekendPlays || 0) / Math.max(analytics.totalPlays || 1, 1) * 100}%` }, children: analytics.weekendPlays > 0 && /* @__PURE__ */ jsx("span", { className: "text-white font-black drop-shadow-md z-10 text-sm", children: "WE" }) })
+          ] }),
+          /* @__PURE__ */ jsxs("div", { className: "flex justify-between w-full mt-3 px-2", children: [
+            /* @__PURE__ */ jsxs("div", { className: "flex flex-col items-start", children: [
+              /* @__PURE__ */ jsx("span", { className: "text-[10px] uppercase tracking-widest font-bold text-blue-400", children: "Weekdays" }),
+              /* @__PURE__ */ jsx("span", { className: "text-lg font-black text-white", children: analytics.weekdayPlays || 0 })
+            ] }),
+            /* @__PURE__ */ jsxs("div", { className: "flex flex-col items-end", children: [
+              /* @__PURE__ */ jsx("span", { className: "text-[10px] uppercase tracking-widest font-bold text-plex", children: "Weekends" }),
+              /* @__PURE__ */ jsx("span", { className: "text-lg font-black text-white", children: analytics.weekendPlays || 0 })
+            ] })
+          ] })
+        ] });
+      default:
+        return null;
+    }
+  };
+  return /* @__PURE__ */ jsxs("div", { className: "fixed inset-0 z-50 flex items-center justify-center p-4", children: [
+    /* @__PURE__ */ jsx("div", { className: "absolute inset-0 bg-black/80 backdrop-blur-sm transition-opacity", onClick: onClose }),
+    /* @__PURE__ */ jsxs("div", { className: "relative bg-gradient-to-b from-card to-background border border-border/80 shadow-[0_0_50px_rgba(0,0,0,0.5)] rounded-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200", children: [
+      /* @__PURE__ */ jsx("div", { className: "absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-plex/0 via-plex to-plex/0 opacity-50" }),
+      /* @__PURE__ */ jsx("button", { onClick: onClose, className: "absolute top-4 right-4 text-muted hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 rounded-full p-2 transition-all z-20 group", children: /* @__PURE__ */ jsx(X, { className: "w-4 h-4 group-hover:rotate-90 transition-transform duration-300" }) }),
+      renderContent()
+    ] })
+  ] });
+};
 var UserDashboard = ({ sessionInfo, publicConfig, onLogout, refreshSession, onViewAdmin, onViewStatus, onViewDashboard }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [toast, setToast] = useState(null);
@@ -3909,6 +4110,7 @@ var UserDashboard = ({ sessionInfo, publicConfig, onLogout, refreshSession, onVi
   const [analyticsDaysOpen, setAnalyticsDaysOpen] = useState(false);
   const [wrapUpDaysOpen, setWrapUpDaysOpen] = useState(false);
   const [reportItem, setReportItem] = useState(null);
+  const [selectedMetric, setSelectedMetric] = useState(null);
   const user = sessionInfo.account;
   const [optOutNewsletter, setOptOutNewsletter] = useState(user?.optOutNewsletter || false);
   const handleToggleNewsletter = async () => {
@@ -4056,6 +4258,7 @@ var UserDashboard = ({ sessionInfo, publicConfig, onLogout, refreshSession, onVi
         ] })
       ] }) })
     ] }),
+    selectedMetric && analytics && /* @__PURE__ */ jsx(WrapUpModal, { metric: selectedMetric, analytics, onClose: () => setSelectedMetric(null) }),
     (sessionInfo.session.isAdmin || user) && !analyticsLoading && analytics && /* @__PURE__ */ jsxs("div", { className: "bg-card border border-border rounded-2xl p-6 shadow-xl mb-2", children: [
       /* @__PURE__ */ jsxs("div", { className: "flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6", children: [
         /* @__PURE__ */ jsx("h3", { className: "text-xl font-bold text-text", children: "Your Personal Wrap-Up" }),
@@ -4096,7 +4299,7 @@ var UserDashboard = ({ sessionInfo, publicConfig, onLogout, refreshSession, onVi
         ] })
       ] }),
       /* @__PURE__ */ jsxs("div", { className: "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4", children: [
-        /* @__PURE__ */ jsxs("div", { className: "rounded-xl overflow-hidden relative border border-border/50 group flex flex-col", style: { minHeight: "130px" }, children: [
+        /* @__PURE__ */ jsxs("div", { onClick: () => setSelectedMetric("Server Rank"), className: "rounded-xl overflow-hidden relative border border-border/50 group flex flex-col cursor-pointer hover:ring-2 hover:ring-plex/50 transition-all", style: { minHeight: "130px" }, children: [
           /* @__PURE__ */ jsx("div", { className: "absolute inset-0 bg-cover bg-center z-0 transition-transform duration-700 group-hover:scale-110 opacity-60", style: { backgroundImage: `url('https://images.unsplash.com/photo-1579546929518-9e396f3cc809?auto=format&fit=crop&q=80&w=600')` } }),
           /* @__PURE__ */ jsx("div", { className: "absolute inset-0 bg-black/60 z-10" }),
           /* @__PURE__ */ jsxs("div", { className: "relative z-20 p-4 flex-1 flex flex-col items-center justify-center text-center", children: [
@@ -4113,7 +4316,7 @@ var UserDashboard = ({ sessionInfo, publicConfig, onLogout, refreshSession, onVi
             ] })
           ] })
         ] }),
-        /* @__PURE__ */ jsxs("div", { className: "rounded-xl overflow-hidden relative border border-border/50 group flex flex-col", style: { minHeight: "130px" }, children: [
+        /* @__PURE__ */ jsxs("div", { onClick: () => setSelectedMetric("Total Streams"), className: "rounded-xl overflow-hidden relative border border-border/50 group flex flex-col cursor-pointer hover:ring-2 hover:ring-plex/50 transition-all", style: { minHeight: "130px" }, children: [
           /* @__PURE__ */ jsx("div", { className: "absolute inset-0 bg-cover bg-center z-0 transition-transform duration-700 group-hover:scale-110 opacity-60", style: { backgroundImage: `url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&q=80&w=600')` } }),
           /* @__PURE__ */ jsx("div", { className: "absolute inset-0 bg-black/60 z-10" }),
           /* @__PURE__ */ jsxs("div", { className: "relative z-20 p-4 flex-1 flex flex-col items-center justify-center text-center", children: [
@@ -4122,7 +4325,7 @@ var UserDashboard = ({ sessionInfo, publicConfig, onLogout, refreshSession, onVi
             /* @__PURE__ */ jsx("p", { className: "text-2xl font-black text-white drop-shadow-lg", children: /* @__PURE__ */ jsx(CountUp, { end: analytics.totalPlays || 0 }) })
           ] })
         ] }),
-        /* @__PURE__ */ jsxs("div", { className: "rounded-xl overflow-hidden relative border border-border/50 group flex flex-col", style: { minHeight: "130px" }, children: [
+        /* @__PURE__ */ jsxs("div", { onClick: () => setSelectedMetric("Top Binge"), className: "rounded-xl overflow-hidden relative border border-border/50 group flex flex-col cursor-pointer hover:ring-2 hover:ring-plex/50 transition-all", style: { minHeight: "130px" }, children: [
           /* @__PURE__ */ jsx("div", { className: "absolute inset-0 bg-cover bg-center z-0 transition-transform duration-700 group-hover:scale-110 opacity-60", style: { backgroundImage: `url('${analytics.topBinge?.artUrl || analytics.topBinge?.thumbUrl || "https://images.unsplash.com/photo-1594909122845-11baa439b7bf?auto=format&fit=crop&q=80&w=600"}')` } }),
           /* @__PURE__ */ jsx("div", { className: "absolute inset-0 bg-black/60 z-10" }),
           /* @__PURE__ */ jsxs("div", { className: "relative z-20 p-4 flex-1 flex flex-col items-center justify-center text-center", children: [
@@ -4131,7 +4334,7 @@ var UserDashboard = ({ sessionInfo, publicConfig, onLogout, refreshSession, onVi
             /* @__PURE__ */ jsx("p", { className: "text-sm font-bold text-white drop-shadow-lg line-clamp-2", children: analytics.topBinge?.title || "Nothing yet" })
           ] })
         ] }),
-        /* @__PURE__ */ jsxs("div", { className: "rounded-xl overflow-hidden relative border border-border/50 group flex flex-col", style: { minHeight: "130px" }, children: [
+        /* @__PURE__ */ jsxs("div", { onClick: () => setSelectedMetric("Top Movie"), className: "rounded-xl overflow-hidden relative border border-border/50 group flex flex-col cursor-pointer hover:ring-2 hover:ring-plex/50 transition-all", style: { minHeight: "130px" }, children: [
           /* @__PURE__ */ jsx("div", { className: "absolute inset-0 bg-cover bg-center z-0 transition-transform duration-700 group-hover:scale-110 opacity-60", style: { backgroundImage: `url('${analytics.topMovie?.artUrl || analytics.topMovie?.thumbUrl || "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&q=80&w=600"}')` } }),
           /* @__PURE__ */ jsx("div", { className: "absolute inset-0 bg-black/60 z-10" }),
           /* @__PURE__ */ jsxs("div", { className: "relative z-20 p-4 flex-1 flex flex-col items-center justify-center text-center", children: [
@@ -4140,7 +4343,7 @@ var UserDashboard = ({ sessionInfo, publicConfig, onLogout, refreshSession, onVi
             /* @__PURE__ */ jsx("p", { className: "text-sm font-bold text-white drop-shadow-lg line-clamp-2", children: analytics.topMovie?.title || "Nothing yet" })
           ] })
         ] }),
-        /* @__PURE__ */ jsxs("div", { className: "rounded-xl overflow-hidden relative border border-border/50 group flex flex-col", style: { minHeight: "130px" }, children: [
+        /* @__PURE__ */ jsxs("div", { onClick: () => setSelectedMetric("Time of Day"), className: "rounded-xl overflow-hidden relative border border-border/50 group flex flex-col cursor-pointer hover:ring-2 hover:ring-plex/50 transition-all", style: { minHeight: "130px" }, children: [
           /* @__PURE__ */ jsx("div", { className: "absolute inset-0 bg-cover bg-center z-0 transition-transform duration-700 group-hover:scale-110 opacity-60", style: { backgroundImage: `url('https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&q=80&w=600')` } }),
           /* @__PURE__ */ jsx("div", { className: "absolute inset-0 bg-black/60 z-10" }),
           /* @__PURE__ */ jsxs("div", { className: "relative z-20 p-4 flex-1 flex flex-col items-center justify-center text-center", children: [
@@ -4149,7 +4352,7 @@ var UserDashboard = ({ sessionInfo, publicConfig, onLogout, refreshSession, onVi
             /* @__PURE__ */ jsx("p", { className: "text-sm font-bold text-white drop-shadow-lg", children: analytics.timeOfDay || "Unknown" })
           ] })
         ] }),
-        /* @__PURE__ */ jsxs("div", { className: "rounded-xl overflow-hidden relative border border-border/50 group flex flex-col", style: { minHeight: "130px" }, children: [
+        /* @__PURE__ */ jsxs("div", { onClick: () => setSelectedMetric("Top Day"), className: "rounded-xl overflow-hidden relative border border-border/50 group flex flex-col cursor-pointer hover:ring-2 hover:ring-plex/50 transition-all", style: { minHeight: "130px" }, children: [
           /* @__PURE__ */ jsx("div", { className: "absolute inset-0 bg-cover bg-center z-0 transition-transform duration-700 group-hover:scale-110 opacity-60", style: { backgroundImage: `url('https://images.unsplash.com/photo-1506784983877-45594efa4cbe?auto=format&fit=crop&q=80&w=600')` } }),
           /* @__PURE__ */ jsx("div", { className: "absolute inset-0 bg-black/60 z-10" }),
           /* @__PURE__ */ jsxs("div", { className: "relative z-20 p-4 flex-1 flex flex-col items-center justify-center text-center", children: [
@@ -4158,7 +4361,7 @@ var UserDashboard = ({ sessionInfo, publicConfig, onLogout, refreshSession, onVi
             /* @__PURE__ */ jsx("p", { className: "text-sm font-bold text-white drop-shadow-lg", children: analytics.popularDay || "Unknown" })
           ] })
         ] }),
-        /* @__PURE__ */ jsxs("div", { className: "rounded-xl overflow-hidden relative border border-border/50 group flex flex-col", style: { minHeight: "130px" }, children: [
+        /* @__PURE__ */ jsxs("div", { onClick: () => setSelectedMetric("Media Profile"), className: "rounded-xl overflow-hidden relative border border-border/50 group flex flex-col cursor-pointer hover:ring-2 hover:ring-plex/50 transition-all", style: { minHeight: "130px" }, children: [
           /* @__PURE__ */ jsx("div", { className: "absolute inset-0 bg-cover bg-center z-0 transition-transform duration-700 group-hover:scale-110 opacity-60", style: { backgroundImage: `url('https://images.unsplash.com/photo-1550684848-fac1c5b4e853?auto=format&fit=crop&q=80&w=600')` } }),
           /* @__PURE__ */ jsx("div", { className: "absolute inset-0 bg-black/60 z-10" }),
           /* @__PURE__ */ jsxs("div", { className: "relative z-20 p-4 flex-1 flex flex-col items-center justify-center text-center", children: [
@@ -4167,7 +4370,7 @@ var UserDashboard = ({ sessionInfo, publicConfig, onLogout, refreshSession, onVi
             /* @__PURE__ */ jsx("p", { className: "text-sm font-bold text-white drop-shadow-lg line-clamp-2", children: analytics.favoriteLibrary || "None" })
           ] })
         ] }),
-        /* @__PURE__ */ jsxs("div", { className: "rounded-xl overflow-hidden relative border border-border/50 group flex flex-col", style: { minHeight: "130px" }, children: [
+        /* @__PURE__ */ jsxs("div", { onClick: () => setSelectedMetric("Top Library"), className: "rounded-xl overflow-hidden relative border border-border/50 group flex flex-col cursor-pointer hover:ring-2 hover:ring-plex/50 transition-all", style: { minHeight: "130px" }, children: [
           /* @__PURE__ */ jsx("div", { className: "absolute inset-0 bg-cover bg-center z-0 transition-transform duration-700 group-hover:scale-110 opacity-60", style: { backgroundImage: `url('https://images.unsplash.com/photo-1485846234645-a62644f84728?auto=format&fit=crop&q=80&w=600')` } }),
           /* @__PURE__ */ jsx("div", { className: "absolute inset-0 bg-black/60 z-10" }),
           /* @__PURE__ */ jsxs("div", { className: "relative z-20 p-4 flex-1 flex flex-col items-center justify-center text-center", children: [
@@ -4176,7 +4379,7 @@ var UserDashboard = ({ sessionInfo, publicConfig, onLogout, refreshSession, onVi
             /* @__PURE__ */ jsx("p", { className: "text-sm font-bold text-white drop-shadow-lg", children: analytics.mediaPreference || "Mixed Bag" })
           ] })
         ] }),
-        /* @__PURE__ */ jsxs("div", { className: "rounded-xl overflow-hidden relative border border-border/50 group flex flex-col", style: { minHeight: "130px" }, children: [
+        /* @__PURE__ */ jsxs("div", { onClick: () => setSelectedMetric("Watch Style"), className: "rounded-xl overflow-hidden relative border border-border/50 group flex flex-col cursor-pointer hover:ring-2 hover:ring-plex/50 transition-all", style: { minHeight: "130px" }, children: [
           /* @__PURE__ */ jsx("div", { className: "absolute inset-0 bg-cover bg-center z-0 transition-transform duration-700 group-hover:scale-110 opacity-60", style: { backgroundImage: `url('https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&q=80&w=600')` } }),
           /* @__PURE__ */ jsx("div", { className: "absolute inset-0 bg-black/60 z-10" }),
           /* @__PURE__ */ jsxs("div", { className: "relative z-20 p-4 flex-1 flex flex-col items-center justify-center text-center", children: [
@@ -4185,12 +4388,12 @@ var UserDashboard = ({ sessionInfo, publicConfig, onLogout, refreshSession, onVi
             /* @__PURE__ */ jsx("p", { className: "text-sm font-bold text-white drop-shadow-lg", children: analytics.watchStyle || "Unknown" })
           ] })
         ] }),
-        /* @__PURE__ */ jsxs("div", { className: "rounded-xl overflow-hidden relative border border-border/50 group flex flex-col", style: { minHeight: "130px" }, children: [
+        /* @__PURE__ */ jsxs("div", { onClick: () => setSelectedMetric("Streaming Habit"), className: "rounded-xl overflow-hidden relative border border-border/50 group flex flex-col cursor-pointer hover:ring-2 hover:ring-plex/50 transition-all", style: { minHeight: "130px" }, children: [
           /* @__PURE__ */ jsx("div", { className: "absolute inset-0 bg-cover bg-center z-0 transition-transform duration-700 group-hover:scale-110 opacity-60", style: { backgroundImage: `url('https://images.unsplash.com/photo-1614850523459-c2f4c699c52e?auto=format&fit=crop&q=80&w=600')` } }),
           /* @__PURE__ */ jsx("div", { className: "absolute inset-0 bg-black/60 z-10" }),
           /* @__PURE__ */ jsxs("div", { className: "relative z-20 p-4 flex-1 flex flex-col items-center justify-center text-center", children: [
             /* @__PURE__ */ jsx(Coffee, { className: "w-6 h-6 text-plex mb-2 drop-shadow-md" }),
-            /* @__PURE__ */ jsx("p", { className: "text-gray-300 text-[10px] uppercase tracking-widest font-bold mb-1 drop-shadow-md", children: "Habit" }),
+            /* @__PURE__ */ jsx("p", { className: "text-gray-300 text-[10px] uppercase tracking-widest font-bold mb-1 drop-shadow-md", children: "Streaming Habit" }),
             /* @__PURE__ */ jsx("p", { className: "text-sm font-bold text-white drop-shadow-lg", children: analytics.streamingHabit || "Unknown" })
           ] })
         ] })

@@ -3201,8 +3201,8 @@ app.get('/api/plex/analytics/me', requireAuth, async (req, res) => {
         const topMovie = topMoviesList.length > 0 ? { ...topMoviesList[0], artUrl: topMoviesList[0].art ? `/api/plex/image?path=${encodeURIComponent(topMoviesList[0].art)}` : null, thumbUrl: topMoviesList[0].thumb ? `/api/plex/image?path=${encodeURIComponent(topMoviesList[0].thumb)}` : null } : null;
 
         let watchStyle = 'Explorer';
+        const uniqueTitles = Object.keys(contentCounts).length;
         if (totalPlays > 0) {
-            const uniqueTitles = Object.keys(contentCounts).length;
             if (totalPlays / uniqueTitles > 3) watchStyle = 'Comfort Binger';
             else if (totalPlays / uniqueTitles > 1.5) watchStyle = 'Loyal Fan';
         }
@@ -3242,6 +3242,14 @@ app.get('/api/plex/analytics/me', requireAuth, async (req, res) => {
             streamingHabit,
             leaderboardRank,
             totalActiveUsers,
+            moviesCount,
+            showsCount,
+            musicCount,
+            weekendPlays,
+            weekdayPlays,
+            uniqueTitles,
+            avgHour,
+            dayOfWeekCounts,
             recentHistory: recentHistory.map(h => {
                 if (h.thumb) h.thumbUrl = `/api/plex/image?path=${encodeURIComponent(h.thumb)}`;
                 return h;

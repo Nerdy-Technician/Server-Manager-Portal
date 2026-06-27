@@ -596,16 +596,16 @@ const InvitesSettings: React.FC<{ addToast: (msg: string, type: 'success' | 'err
                     </div>
                     <button className="w-full md:w-auto px-6 py-2.5 bg-plex text-background font-bold rounded-lg hover:bg-plex-hover transition-colors shadow-lg" onClick={handleCreate}>Generate Link</button>
                 </div>
-                
+
                 {libraries.length > 0 && (
                     <div className="mb-6">
                         <label className="block text-sm mb-2 font-medium">Libraries to Share (Leave unselected to share ALL libraries)</label>
                         <div className="flex flex-wrap gap-2">
                             {libraries.map(lib => (
                                 <label key={lib.id} className="flex items-center gap-2 bg-background border border-border px-3 py-2 rounded-lg cursor-pointer hover:border-plex transition-colors">
-                                    <input 
-                                        type="checkbox" 
-                                        checked={selectedLibraries.includes(lib.id)} 
+                                    <input
+                                        type="checkbox"
+                                        checked={selectedLibraries.includes(lib.id)}
                                         onChange={(e) => {
                                             if (e.target.checked) setSelectedLibraries([...selectedLibraries, lib.id]);
                                             else setSelectedLibraries(selectedLibraries.filter(id => id !== lib.id));
@@ -673,7 +673,7 @@ const InvitesSettings: React.FC<{ addToast: (msg: string, type: 'success' | 'err
                                     )}
                                 </td>
                                 <td className="p-3 text-sm">
-                                    {inv.libraryIds && inv.libraryIds.length > 0 
+                                    {inv.libraryIds && inv.libraryIds.length > 0
                                         ? libraries.filter(l => inv.libraryIds.includes(l.id)).map(l => l.title).join(', ') || `${inv.libraryIds.length} selected`
                                         : <span className="text-plex opacity-80">All Libraries</span>}
                                 </td>
@@ -1095,8 +1095,8 @@ const SettingsDashboard: React.FC = () => {
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id)}
                             className={`px-5 py-2.5 rounded-lg font-bold text-sm transition-all duration-200 cursor-pointer border-none outline-none ${activeTab === tab.id
-                                    ? 'bg-plex text-background shadow-md'
-                                    : 'bg-transparent text-muted hover:text-text hover:bg-white/5'
+                                ? 'bg-plex text-background shadow-md'
+                                : 'bg-transparent text-muted hover:text-text hover:bg-white/5'
                                 }`}
                         >
                             {tab.label}
@@ -1134,7 +1134,7 @@ const SettingsDashboard: React.FC = () => {
                                 <input className="w-full p-3 rounded-lg border border-border bg-background text-text outline-none focus:border-plex focus:ring-1 focus:ring-plex transition-all" id="checkInterval" type="number" value={checkInterval} onChange={e => setCheckInterval(Number(e.target.value))} min="1" />
                                 <small>How often to check for expired users in the background.</small>
                             </div>
-                            
+
                             {libraries.length > 0 && (
                                 <div className="mb-4 mt-4">
                                     <label className="block mb-2 font-medium">Default Trial/Automated Libraries</label>
@@ -1144,9 +1144,9 @@ const SettingsDashboard: React.FC = () => {
                                             const isSelected = defaultLibraryIds.includes(lib.id);
                                             return (
                                                 <label key={lib.id} className={`flex items-center gap-2 px-3 py-1.5 rounded-lg cursor-pointer transition-all border shadow-sm select-none ${isSelected ? 'bg-plex/10 border-plex text-plex font-bold' : 'bg-background border-border/50 text-muted hover:border-white/20 hover:text-text font-medium'}`}>
-                                                    <input 
-                                                        type="checkbox" 
-                                                        checked={isSelected} 
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={isSelected}
                                                         onChange={(e) => {
                                                             if (e.target.checked) setDefaultLibraryIds([...defaultLibraryIds, lib.id]);
                                                             else setDefaultLibraryIds(defaultLibraryIds.filter(id => id !== lib.id));
@@ -1462,7 +1462,7 @@ const SettingsDashboard: React.FC = () => {
                                 <small>Provide a URL or upload a file. (Max 5MB)</small>
                             </div>
 
-                            
+
                             <div className="mb-4">
                                 <label>Time Format</label>
                                 <div className="flex items-center gap-2 mt-2">
@@ -1479,9 +1479,9 @@ const SettingsDashboard: React.FC = () => {
                                 <textarea className="w-full p-3 rounded-lg border border-border bg-background text-text outline-none focus:border-plex transition-all" value={announcement} onChange={e => setAnnouncement(e.target.value)} placeholder="E.g. Server maintenance scheduled for Friday..." rows={3}></textarea>
                                 <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 mt-2">
                                     <small>If provided, this announcement will be prominently displayed to all users.</small>
-                                    <button 
-                                        onClick={handlePushAnnouncement} 
-                                        disabled={isPushingAnnouncement || !announcement} 
+                                    <button
+                                        onClick={handlePushAnnouncement}
+                                        disabled={isPushingAnnouncement || !announcement}
                                         className="bg-plex hover:bg-plex-hover disabled:opacity-50 text-background font-bold py-1.5 px-4 rounded-lg transition-colors text-sm whitespace-nowrap"
                                     >
                                         {isPushingAnnouncement ? 'Pushing...' : 'Save & Send Email Blast'}
@@ -1935,10 +1935,10 @@ const CountUp: React.FC<{ end: number, duration?: number }> = ({ end, duration =
             if (!startTime) startTime = timestamp;
             const progress = timestamp - startTime;
             const percentage = Math.min(progress / duration, 1);
-            
+
             // easeOutQuart easing
             const easeOut = 1 - Math.pow(1 - percentage, 4);
-            
+
             setCount(Math.floor(end * easeOut));
 
             if (percentage < 1) {
@@ -4002,6 +4002,248 @@ const RebuildLibraryCacheButton: React.FC = () => {
     );
 };
 
+const WrapUpModal: React.FC<{ metric: string; analytics: any; onClose: () => void }> = ({ metric, analytics, onClose }) => {
+    useEffect(() => {
+        const handleEsc = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') onClose();
+        };
+        window.addEventListener('keydown', handleEsc);
+        return () => window.removeEventListener('keydown', handleEsc);
+    }, [onClose]);
+
+    const renderContent = () => {
+        switch (metric) {
+            case 'Server Rank':
+                return (
+                    <div className="flex flex-col items-center justify-center text-center p-6">
+                        <Trophy className="w-16 h-16 text-plex mb-4 animate-bounce" />
+                        <h2 className="text-3xl font-black text-white mb-2">You are Rank #{analytics.leaderboardRank || 'Unranked'}</h2>
+                        <p className="text-muted mb-6">Out of {analytics.totalActiveUsers || 0} active users on the server.</p>
+                        <div className="bg-plex/10 border border-plex/30 rounded-xl p-4 w-full shadow-inner">
+                            <p className="text-sm text-plex font-medium">Keep streaming to climb the leaderboard! Every movie, episode, and song counts towards your rank.</p>
+                        </div>
+                    </div>
+                );
+            case 'Total Streams':
+                return (
+                    <div className="flex flex-col items-center justify-center text-center p-6">
+                        <PlayCircle className="w-16 h-16 text-plex mb-4 drop-shadow-lg" />
+                        <h2 className="text-4xl font-black text-white mb-2">{analytics.totalPlays || 0}</h2>
+                        <p className="text-muted uppercase tracking-widest text-xs font-bold mb-6">Total Streams</p>
+                        <div className="grid grid-cols-3 gap-4 w-full">
+                            <div className="bg-gradient-to-b from-white/10 to-white/5 border border-white/10 rounded-xl p-3 flex flex-col items-center justify-center shadow-lg">
+                                <span className="text-2xl mb-1 drop-shadow">🎬</span>
+                                <span className="text-white font-bold text-lg">{analytics.moviesCount || 0}</span>
+                                <span className="text-[9px] text-muted uppercase tracking-widest font-bold">Movies</span>
+                            </div>
+                            <div className="bg-gradient-to-b from-white/10 to-white/5 border border-white/10 rounded-xl p-3 flex flex-col items-center justify-center shadow-lg">
+                                <span className="text-2xl mb-1 drop-shadow">📺</span>
+                                <span className="text-white font-bold text-lg">{analytics.showsCount || 0}</span>
+                                <span className="text-[9px] text-muted uppercase tracking-widest font-bold">Episodes</span>
+                            </div>
+                            <div className="bg-gradient-to-b from-white/10 to-white/5 border border-white/10 rounded-xl p-3 flex flex-col items-center justify-center shadow-lg">
+                                <span className="text-2xl mb-1 drop-shadow">🎵</span>
+                                <span className="text-white font-bold text-lg">{analytics.musicCount || 0}</span>
+                                <span className="text-[9px] text-muted uppercase tracking-widest font-bold">Tracks</span>
+                            </div>
+                        </div>
+                    </div>
+                );
+            case 'Top Binge':
+                return (
+                    <div className="flex flex-col items-center justify-center text-center p-6 relative">
+                        {analytics.topBinge?.thumbUrl ? (
+                            <img src={analytics.topBinge.thumbUrl} className="w-32 h-48 object-cover rounded-xl shadow-[0_0_30px_rgba(0,0,0,0.5)] mb-6 border border-white/10" />
+                        ) : (
+                            <Tv className="w-16 h-16 text-plex mb-6 drop-shadow-lg" />
+                        )}
+                        <h2 className="text-2xl font-black text-white mb-1 line-clamp-2">{analytics.topBinge?.title || 'Nothing yet'}</h2>
+                        <p className="text-plex font-black text-lg mb-4">{analytics.topBinge?.plays || 0} <span className="text-sm font-bold text-muted uppercase tracking-wider">episodes</span></p>
+                        <p className="text-sm text-gray-400 bg-white/5 border border-white/10 rounded-lg px-4 py-2 w-full">You couldn't get enough of this show!</p>
+                    </div>
+                );
+            case 'Top Movie':
+                return (
+                    <div className="flex flex-col items-center justify-center text-center p-6 relative">
+                        {analytics.topMovie?.thumbUrl ? (
+                            <img src={analytics.topMovie.thumbUrl} className="w-32 h-48 object-cover rounded-xl shadow-[0_0_30px_rgba(0,0,0,0.5)] mb-6 border border-white/10" />
+                        ) : (
+                            <Clapperboard className="w-16 h-16 text-plex mb-6 drop-shadow-lg" />
+                        )}
+                        <h2 className="text-2xl font-black text-white mb-1 line-clamp-2">{analytics.topMovie?.title || 'Nothing yet'}</h2>
+                        <p className="text-plex font-black text-lg mb-4">{analytics.topMovie?.plays || 0} <span className="text-sm font-bold text-muted uppercase tracking-wider">plays</span></p>
+                        <p className="text-sm text-gray-400 bg-white/5 border border-white/10 rounded-lg px-4 py-2 w-full">Your most watched cinematic masterpiece.</p>
+                    </div>
+                );
+            case 'Time of Day':
+                return (
+                    <div className="flex flex-col items-center justify-center text-center p-6">
+                        <Clock className="w-16 h-16 text-plex mb-4 drop-shadow-lg" />
+                        <h2 className="text-3xl font-black text-white mb-2">{analytics.timeOfDay || 'Unknown'}</h2>
+                        <p className="text-muted mb-6">You typically stream around {analytics.avgHour ? Math.round(analytics.avgHour) + ':00' : 'Unknown'}.</p>
+                        <div className="w-full bg-gradient-to-r from-plex/5 via-plex/10 to-plex/5 border border-plex/20 rounded-xl p-4 shadow-inner">
+                            <p className="text-sm text-plex font-medium">
+                                {analytics.timeOfDay === 'Early Bird' ? 'Catching the worm with those morning streams!' :
+                                    analytics.timeOfDay === 'Afternoon Watcher' ? 'Perfect way to spend the afternoon.' :
+                                        analytics.timeOfDay === 'Evening Streamer' ? 'Unwinding after a long day.' :
+                                            'Burning the midnight oil with some late night streaming!'}
+                            </p>
+                        </div>
+                    </div>
+                );
+            case 'Top Day':
+                const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+                const maxCount = Math.max(...(analytics.dayOfWeekCounts ? Object.values(analytics.dayOfWeekCounts) as number[] : [0]));
+                return (
+                    <div className="flex flex-col items-center justify-center text-center p-6">
+                        <Calendar className="w-16 h-16 text-plex mb-4 drop-shadow-lg" />
+                        <h2 className="text-3xl font-black text-white mb-2">{analytics.popularDay || 'Unknown'}</h2>
+                        <p className="text-muted mb-6 uppercase tracking-widest text-xs font-bold">Most Active Day</p>
+                        <div className="w-full flex items-end justify-between h-32 gap-1.5 mt-4 px-2">
+                            {daysOfWeek.map((day, i) => {
+                                const count = analytics.dayOfWeekCounts ? analytics.dayOfWeekCounts[i] : 0;
+                                const height = maxCount > 0 ? (count / maxCount) * 100 : 0;
+                                const isTop = count === maxCount && count > 0;
+                                return (
+                                    <div key={day} className="flex flex-col items-center w-full group">
+                                        <div className={`w-full rounded-t-md transition-all duration-500 relative flex items-end justify-center pb-1 overflow-hidden
+                                            ${isTop ? 'bg-gradient-to-t from-plex/80 to-plex shadow-[0_0_15px_rgba(229,160,13,0.3)]' : 'bg-gradient-to-t from-white/10 to-white/20 group-hover:from-white/20 group-hover:to-white/30'}`} 
+                                            style={{ height: `${Math.max(height, 8)}%` }}>
+                                            <span className={`text-[10px] font-black opacity-0 group-hover:opacity-100 transition-opacity ${isTop ? 'text-black' : 'text-white'}`}>{count}</span>
+                                        </div>
+                                        <span className={`text-[9px] mt-2 font-black uppercase tracking-wider ${isTop ? 'text-plex' : 'text-muted'}`}>{day}</span>
+                                    </div>
+                                )
+                            })}
+                        </div>
+                    </div>
+                );
+            case 'Top Library':
+                return (
+                    <div className="flex flex-col items-center justify-center text-center p-6">
+                        <Layers className="w-16 h-16 text-plex mb-4 drop-shadow-lg" />
+                        <h2 className="text-3xl font-black text-white mb-2 line-clamp-1">{analytics.favoriteLibrary || 'None'}</h2>
+                        <p className="text-muted mb-6 uppercase tracking-widest text-xs font-bold">Favorite Library</p>
+                        <div className="w-full flex flex-col gap-2">
+                            {analytics.topLibraries?.slice(0, 3).map((lib: any, i: number) => (
+                                <div key={i} className={`flex items-center justify-between border rounded-xl p-3 transition-colors ${i === 0 ? 'bg-plex/10 border-plex/30' : 'bg-white/5 border-white/10'}`}>
+                                    <span className={`font-bold text-sm truncate pr-2 ${i === 0 ? 'text-plex' : 'text-gray-300'}`}>{i + 1}. {lib.title}</span>
+                                    <span className={`font-black text-sm whitespace-nowrap ${i === 0 ? 'text-plex' : 'text-white'}`}>{lib.plays} plays</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                );
+            case 'Media Profile':
+                return (
+                    <div className="flex flex-col items-center justify-center text-center p-6">
+                        <PieChart className="w-16 h-16 text-plex mb-4 drop-shadow-lg" />
+                        <h2 className="text-3xl font-black text-white mb-2">{analytics.mediaPreference || 'Mixed Bag'}</h2>
+                        <p className="text-muted mb-6 uppercase tracking-widest text-xs font-bold">Content Breakdown</p>
+                        <div className="w-full bg-white/5 border border-white/10 rounded-xl p-5 flex flex-col gap-4 shadow-lg">
+                            <div>
+                                <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-gray-300 mb-1.5">
+                                    <span className="flex items-center gap-1.5">🎬 Movies</span>
+                                    <span>{analytics.moviesCount || 0}</span>
+                                </div>
+                                <div className="w-full bg-black/60 rounded-full h-2 overflow-hidden shadow-inner">
+                                    <div className="bg-blue-500 h-2 rounded-full shadow-[0_0_10px_rgba(59,130,246,0.5)] transition-all duration-1000" style={{ width: `${((analytics.moviesCount || 0) / Math.max(analytics.totalPlays || 1, 1)) * 100}%` }}></div>
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-gray-300 mb-1.5">
+                                    <span className="flex items-center gap-1.5">📺 Shows</span>
+                                    <span>{analytics.showsCount || 0}</span>
+                                </div>
+                                <div className="w-full bg-black/60 rounded-full h-2 overflow-hidden shadow-inner">
+                                    <div className="bg-green-500 h-2 rounded-full shadow-[0_0_10px_rgba(34,197,94,0.5)] transition-all duration-1000" style={{ width: `${((analytics.showsCount || 0) / Math.max(analytics.totalPlays || 1, 1)) * 100}%` }}></div>
+                                </div>
+                            </div>
+                            
+                            {analytics.musicCount > 0 && (
+                                <div>
+                                    <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-gray-300 mb-1.5">
+                                        <span className="flex items-center gap-1.5">🎵 Music</span>
+                                        <span>{analytics.musicCount || 0}</span>
+                                    </div>
+                                    <div className="w-full bg-black/60 rounded-full h-2 overflow-hidden shadow-inner">
+                                        <div className="bg-purple-500 h-2 rounded-full shadow-[0_0_10px_rgba(168,85,247,0.5)] transition-all duration-1000" style={{ width: `${((analytics.musicCount || 0) / Math.max(analytics.totalPlays || 1, 1)) * 100}%` }}></div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                );
+            case 'Watch Style':
+                return (
+                    <div className="flex flex-col items-center justify-center text-center p-6">
+                        <Compass className="w-16 h-16 text-plex mb-4 drop-shadow-lg" />
+                        <h2 className="text-3xl font-black text-white mb-2">{analytics.watchStyle || 'Unknown'}</h2>
+                        <p className="text-muted mb-6 uppercase tracking-widest text-xs font-bold">Discovery vs Rewatch</p>
+                        <div className="grid grid-cols-2 gap-4 w-full mb-4">
+                            <div className="bg-gradient-to-b from-white/10 to-white/5 border border-white/10 rounded-xl p-4 flex flex-col items-center justify-center shadow-lg">
+                                <span className="text-3xl font-black text-white mb-1 drop-shadow">{analytics.totalPlays || 0}</span>
+                                <span className="text-[9px] text-muted uppercase tracking-widest font-black">Total Plays</span>
+                            </div>
+                            <div className="bg-gradient-to-b from-plex/20 to-plex/5 border border-plex/30 rounded-xl p-4 flex flex-col items-center justify-center shadow-lg">
+                                <span className="text-3xl font-black text-plex mb-1 drop-shadow-md">{analytics.uniqueTitles || 0}</span>
+                                <span className="text-[9px] text-plex/80 uppercase tracking-widest font-black">Unique Titles</span>
+                            </div>
+                        </div>
+                        <p className="text-sm text-gray-300 italic bg-white/5 border border-white/10 rounded-lg px-4 py-2 w-full">
+                            {analytics.watchStyle === 'Comfort Binger' ? 'You love returning to your favorite comfort shows.' :
+                                analytics.watchStyle === 'Loyal Fan' ? 'You stick around to finish what you start.' :
+                                    'You love exploring a wide variety of different content!'}
+                        </p>
+                    </div>
+                );
+            case 'Streaming Habit':
+                return (
+                    <div className="flex flex-col items-center justify-center text-center p-6">
+                        <Coffee className="w-16 h-16 text-plex mb-4 drop-shadow-lg" />
+                        <h2 className="text-3xl font-black text-white mb-2">{analytics.streamingHabit || 'Unknown'}</h2>
+                        <p className="text-muted mb-8 uppercase tracking-widest text-xs font-bold">Weekday vs Weekend</p>
+                        
+                        <div className="w-full relative h-16 rounded-2xl overflow-hidden flex shadow-inner bg-black/50 border border-white/10">
+                            <div className="h-full bg-gradient-to-r from-blue-600 to-blue-400 flex items-center justify-center transition-all duration-1000 shadow-[inset_0_0_20px_rgba(0,0,0,0.3)]" style={{ width: `${((analytics.weekdayPlays || 0) / Math.max(analytics.totalPlays || 1, 1)) * 100}%` }}>
+                                {analytics.weekdayPlays > 0 && <span className="text-white font-black drop-shadow-md z-10 text-sm">WD</span>}
+                            </div>
+                            <div className="h-full bg-gradient-to-r from-plex to-orange-400 flex items-center justify-center transition-all duration-1000 shadow-[inset_0_0_20px_rgba(0,0,0,0.3)]" style={{ width: `${((analytics.weekendPlays || 0) / Math.max(analytics.totalPlays || 1, 1)) * 100}%` }}>
+                                {analytics.weekendPlays > 0 && <span className="text-white font-black drop-shadow-md z-10 text-sm">WE</span>}
+                            </div>
+                        </div>
+                        <div className="flex justify-between w-full mt-3 px-2">
+                            <div className="flex flex-col items-start">
+                                <span className="text-[10px] uppercase tracking-widest font-bold text-blue-400">Weekdays</span>
+                                <span className="text-lg font-black text-white">{analytics.weekdayPlays || 0}</span>
+                            </div>
+                            <div className="flex flex-col items-end">
+                                <span className="text-[10px] uppercase tracking-widest font-bold text-plex">Weekends</span>
+                                <span className="text-lg font-black text-white">{analytics.weekendPlays || 0}</span>
+                            </div>
+                        </div>
+                    </div>
+                );
+            default:
+                return null;
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/80 backdrop-blur-sm transition-opacity" onClick={onClose} />
+            <div className="relative bg-gradient-to-b from-card to-background border border-border/80 shadow-[0_0_50px_rgba(0,0,0,0.5)] rounded-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-plex/0 via-plex to-plex/0 opacity-50"></div>
+                <button onClick={onClose} className="absolute top-4 right-4 text-muted hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 rounded-full p-2 transition-all z-20 group">
+                    <X className="w-4 h-4 group-hover:rotate-90 transition-transform duration-300" />
+                </button>
+                {renderContent()}
+            </div>
+        </div>
+    );
+};
+
 const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onLogout: () => void; refreshSession: () => void; onViewAdmin: () => void; onViewStatus: () => void; onViewDashboard: () => void }> = ({ sessionInfo, publicConfig, onLogout, refreshSession, onViewAdmin, onViewStatus, onViewDashboard }) => {
     const [isLoading, setIsLoading] = useState(false);
     const [toast, setToast] = useState<ToastMessage | null>(null);
@@ -4018,6 +4260,7 @@ const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onLogout: 
     const [analyticsDaysOpen, setAnalyticsDaysOpen] = useState(false);
     const [wrapUpDaysOpen, setWrapUpDaysOpen] = useState(false);
     const [reportItem, setReportItem] = useState<any>(null);
+    const [selectedMetric, setSelectedMetric] = useState<string | null>(null);
 
     const user = sessionInfo.account;
     const [optOutNewsletter, setOptOutNewsletter] = useState(user?.optOutNewsletter || false);
@@ -4209,7 +4452,11 @@ const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onLogout: 
                     </div>
                 </div>
             </div>
-            
+
+            {selectedMetric && analytics && (
+                <WrapUpModal metric={selectedMetric} analytics={analytics} onClose={() => setSelectedMetric(null)} />
+            )}
+
             {/* Personal Wrap-Up */}
             {(sessionInfo.session.isAdmin || user) && !analyticsLoading && analytics && (
                 <div className="bg-card border border-border rounded-2xl p-6 shadow-xl mb-2">
@@ -4260,7 +4507,7 @@ const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onLogout: 
                         </div>
                     </div>
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                        <div className="rounded-xl overflow-hidden relative border border-border/50 group flex flex-col" style={{ minHeight: '130px' }}>
+                        <div onClick={() => setSelectedMetric('Server Rank')} className="rounded-xl overflow-hidden relative border border-border/50 group flex flex-col cursor-pointer hover:ring-2 hover:ring-plex/50 transition-all" style={{ minHeight: '130px' }}>
                             <div className="absolute inset-0 bg-cover bg-center z-0 transition-transform duration-700 group-hover:scale-110 opacity-60" style={{ backgroundImage: `url('https://images.unsplash.com/photo-1579546929518-9e396f3cc809?auto=format&fit=crop&q=80&w=600')` }} />
                             <div className="absolute inset-0 bg-black/60 z-10" />
                             <div className="relative z-20 p-4 flex-1 flex flex-col items-center justify-center text-center">
@@ -4271,7 +4518,7 @@ const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onLogout: 
                             </div>
                         </div>
 
-                        <div className="rounded-xl overflow-hidden relative border border-border/50 group flex flex-col" style={{ minHeight: '130px' }}>
+                        <div onClick={() => setSelectedMetric('Total Streams')} className="rounded-xl overflow-hidden relative border border-border/50 group flex flex-col cursor-pointer hover:ring-2 hover:ring-plex/50 transition-all" style={{ minHeight: '130px' }}>
                             <div className="absolute inset-0 bg-cover bg-center z-0 transition-transform duration-700 group-hover:scale-110 opacity-60" style={{ backgroundImage: `url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&q=80&w=600')` }} />
                             <div className="absolute inset-0 bg-black/60 z-10" />
                             <div className="relative z-20 p-4 flex-1 flex flex-col items-center justify-center text-center">
@@ -4281,7 +4528,7 @@ const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onLogout: 
                             </div>
                         </div>
 
-                        <div className="rounded-xl overflow-hidden relative border border-border/50 group flex flex-col" style={{ minHeight: '130px' }}>
+                        <div onClick={() => setSelectedMetric('Top Binge')} className="rounded-xl overflow-hidden relative border border-border/50 group flex flex-col cursor-pointer hover:ring-2 hover:ring-plex/50 transition-all" style={{ minHeight: '130px' }}>
                             <div className="absolute inset-0 bg-cover bg-center z-0 transition-transform duration-700 group-hover:scale-110 opacity-60" style={{ backgroundImage: `url('${analytics.topBinge?.artUrl || analytics.topBinge?.thumbUrl || 'https://images.unsplash.com/photo-1594909122845-11baa439b7bf?auto=format&fit=crop&q=80&w=600'}')` }} />
                             <div className="absolute inset-0 bg-black/60 z-10" />
                             <div className="relative z-20 p-4 flex-1 flex flex-col items-center justify-center text-center">
@@ -4291,7 +4538,7 @@ const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onLogout: 
                             </div>
                         </div>
 
-                        <div className="rounded-xl overflow-hidden relative border border-border/50 group flex flex-col" style={{ minHeight: '130px' }}>
+                        <div onClick={() => setSelectedMetric('Top Movie')} className="rounded-xl overflow-hidden relative border border-border/50 group flex flex-col cursor-pointer hover:ring-2 hover:ring-plex/50 transition-all" style={{ minHeight: '130px' }}>
                             <div className="absolute inset-0 bg-cover bg-center z-0 transition-transform duration-700 group-hover:scale-110 opacity-60" style={{ backgroundImage: `url('${analytics.topMovie?.artUrl || analytics.topMovie?.thumbUrl || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&q=80&w=600'}')` }} />
                             <div className="absolute inset-0 bg-black/60 z-10" />
                             <div className="relative z-20 p-4 flex-1 flex flex-col items-center justify-center text-center">
@@ -4301,7 +4548,7 @@ const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onLogout: 
                             </div>
                         </div>
 
-                        <div className="rounded-xl overflow-hidden relative border border-border/50 group flex flex-col" style={{ minHeight: '130px' }}>
+                        <div onClick={() => setSelectedMetric('Time of Day')} className="rounded-xl overflow-hidden relative border border-border/50 group flex flex-col cursor-pointer hover:ring-2 hover:ring-plex/50 transition-all" style={{ minHeight: '130px' }}>
                             <div className="absolute inset-0 bg-cover bg-center z-0 transition-transform duration-700 group-hover:scale-110 opacity-60" style={{ backgroundImage: `url('https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&q=80&w=600')` }} />
                             <div className="absolute inset-0 bg-black/60 z-10" />
                             <div className="relative z-20 p-4 flex-1 flex flex-col items-center justify-center text-center">
@@ -4311,7 +4558,7 @@ const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onLogout: 
                             </div>
                         </div>
 
-                        <div className="rounded-xl overflow-hidden relative border border-border/50 group flex flex-col" style={{ minHeight: '130px' }}>
+                        <div onClick={() => setSelectedMetric('Top Day')} className="rounded-xl overflow-hidden relative border border-border/50 group flex flex-col cursor-pointer hover:ring-2 hover:ring-plex/50 transition-all" style={{ minHeight: '130px' }}>
                             <div className="absolute inset-0 bg-cover bg-center z-0 transition-transform duration-700 group-hover:scale-110 opacity-60" style={{ backgroundImage: `url('https://images.unsplash.com/photo-1506784983877-45594efa4cbe?auto=format&fit=crop&q=80&w=600')` }} />
                             <div className="absolute inset-0 bg-black/60 z-10" />
                             <div className="relative z-20 p-4 flex-1 flex flex-col items-center justify-center text-center">
@@ -4321,7 +4568,7 @@ const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onLogout: 
                             </div>
                         </div>
 
-                        <div className="rounded-xl overflow-hidden relative border border-border/50 group flex flex-col" style={{ minHeight: '130px' }}>
+                        <div onClick={() => setSelectedMetric('Media Profile')} className="rounded-xl overflow-hidden relative border border-border/50 group flex flex-col cursor-pointer hover:ring-2 hover:ring-plex/50 transition-all" style={{ minHeight: '130px' }}>
                             <div className="absolute inset-0 bg-cover bg-center z-0 transition-transform duration-700 group-hover:scale-110 opacity-60" style={{ backgroundImage: `url('https://images.unsplash.com/photo-1550684848-fac1c5b4e853?auto=format&fit=crop&q=80&w=600')` }} />
                             <div className="absolute inset-0 bg-black/60 z-10" />
                             <div className="relative z-20 p-4 flex-1 flex flex-col items-center justify-center text-center">
@@ -4331,7 +4578,7 @@ const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onLogout: 
                             </div>
                         </div>
 
-                        <div className="rounded-xl overflow-hidden relative border border-border/50 group flex flex-col" style={{ minHeight: '130px' }}>
+                        <div onClick={() => setSelectedMetric('Top Library')} className="rounded-xl overflow-hidden relative border border-border/50 group flex flex-col cursor-pointer hover:ring-2 hover:ring-plex/50 transition-all" style={{ minHeight: '130px' }}>
                             <div className="absolute inset-0 bg-cover bg-center z-0 transition-transform duration-700 group-hover:scale-110 opacity-60" style={{ backgroundImage: `url('https://images.unsplash.com/photo-1485846234645-a62644f84728?auto=format&fit=crop&q=80&w=600')` }} />
                             <div className="absolute inset-0 bg-black/60 z-10" />
                             <div className="relative z-20 p-4 flex-1 flex flex-col items-center justify-center text-center">
@@ -4341,7 +4588,7 @@ const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onLogout: 
                             </div>
                         </div>
 
-                        <div className="rounded-xl overflow-hidden relative border border-border/50 group flex flex-col" style={{ minHeight: '130px' }}>
+                        <div onClick={() => setSelectedMetric('Watch Style')} className="rounded-xl overflow-hidden relative border border-border/50 group flex flex-col cursor-pointer hover:ring-2 hover:ring-plex/50 transition-all" style={{ minHeight: '130px' }}>
                             <div className="absolute inset-0 bg-cover bg-center z-0 transition-transform duration-700 group-hover:scale-110 opacity-60" style={{ backgroundImage: `url('https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&q=80&w=600')` }} />
                             <div className="absolute inset-0 bg-black/60 z-10" />
                             <div className="relative z-20 p-4 flex-1 flex flex-col items-center justify-center text-center">
@@ -4351,12 +4598,12 @@ const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onLogout: 
                             </div>
                         </div>
 
-                        <div className="rounded-xl overflow-hidden relative border border-border/50 group flex flex-col" style={{ minHeight: '130px' }}>
+                        <div onClick={() => setSelectedMetric('Streaming Habit')} className="rounded-xl overflow-hidden relative border border-border/50 group flex flex-col cursor-pointer hover:ring-2 hover:ring-plex/50 transition-all" style={{ minHeight: '130px' }}>
                             <div className="absolute inset-0 bg-cover bg-center z-0 transition-transform duration-700 group-hover:scale-110 opacity-60" style={{ backgroundImage: `url('https://images.unsplash.com/photo-1614850523459-c2f4c699c52e?auto=format&fit=crop&q=80&w=600')` }} />
                             <div className="absolute inset-0 bg-black/60 z-10" />
                             <div className="relative z-20 p-4 flex-1 flex flex-col items-center justify-center text-center">
                                 <Coffee className="w-6 h-6 text-plex mb-2 drop-shadow-md" />
-                                <p className="text-gray-300 text-[10px] uppercase tracking-widest font-bold mb-1 drop-shadow-md">Habit</p>
+                                <p className="text-gray-300 text-[10px] uppercase tracking-widest font-bold mb-1 drop-shadow-md">Streaming Habit</p>
                                 <p className="text-sm font-bold text-white drop-shadow-lg">{analytics.streamingHabit || 'Unknown'}</p>
                             </div>
                         </div>
@@ -4573,8 +4820,8 @@ const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onLogout: 
                                                     </div>
                                                 </div>
                                             </a>
-                                            <button 
-                                                onClick={(e) => { e.preventDefault(); setReportItem(item); }} 
+                                            <button
+                                                onClick={(e) => { e.preventDefault(); setReportItem(item); }}
                                                 className="opacity-0 group-hover:opacity-100 p-2 text-muted hover:text-red-400 hover:bg-red-400/10 rounded-full transition-all focus:outline-none"
                                                 title="Report a playback issue"
                                             >
@@ -4989,8 +5236,8 @@ const StatusDashboard: React.FC<{ onBack: () => void, isAdmin: boolean, isPublic
                         key={tab.id}
                         onClick={() => setActiveTab(tab.id as any)}
                         className={`px-5 py-2.5 rounded-lg font-bold text-sm transition-all duration-200 cursor-pointer border-none outline-none ${activeTab === tab.id
-                                ? 'bg-plex text-background shadow-md'
-                                : 'bg-transparent text-muted hover:text-text hover:bg-white/5'
+                            ? 'bg-plex text-background shadow-md'
+                            : 'bg-transparent text-muted hover:text-text hover:bg-white/5'
                             }`}
                     >
                         {tab.label}
@@ -5317,7 +5564,7 @@ const LibraryDashboard: React.FC<{ onBack: () => void, isAdmin?: boolean, public
             const res = await apiFetch(`/api/plex/dashboard?limit=${recentLimit}`);
             if (res.error) throw new Error(res.error);
             setDashboardData(res);
-            
+
             const statsRes = await apiFetch('/api/plex/stats/trending');
             if (!statsRes.error) {
                 setTrendingStats(statsRes);
@@ -6121,7 +6368,7 @@ const MainApp: React.FC = () => {
             {!isPublicView && <Navigation currentRoute={currentRoute} onNavigate={setRoute as any} onLogout={handleLogout} isAdmin={isAdmin} serverName={sessionInfo?.serverName || 'Server Portal'} adminThumb={sessionInfo?.adminThumb} requestUrl={sessionInfo?.requestUrl || 'https://yourdomain.com'} navOrder={sessionInfo?.navOrder || ['home', 'discover', 'status', 'logs', 'analytics', 'mediastack', 'request', 'settings', 'logout']} appVersion={publicConfig.appVersion} />}
             <div className={`flex-grow flex flex-col items-center p-4 md:p-8 pt-20 pb-[80px] md:pt-8 md:pb-8 w-full overflow-x-clip ${isPublicView ? '!pt-8 !pb-8' : ''}`}>
                 {renderView()}
-                
+
                 {/* Mobile Bottom Version */}
                 {!isPublicView && publicConfig?.appVersion && (
                     <div className="md:hidden mt-auto pt-12 pb-4 w-full text-center text-[10px] text-white/30 font-mono tracking-widest pointer-events-none">
