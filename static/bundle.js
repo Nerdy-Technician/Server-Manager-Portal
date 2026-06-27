@@ -3962,7 +3962,7 @@ var UserDashboard = ({ sessionInfo, publicConfig, onLogout, refreshSession, onVi
         ] })
       ] }) })
     ] }),
-    (sessionInfo.session.isAdmin || user) && !analyticsLoading && analytics && /* @__PURE__ */ jsxs("div", { className: "bg-card border border-border rounded-2xl p-6 shadow-xl mb-4", children: [
+    (sessionInfo.session.isAdmin || user) && !analyticsLoading && analytics && /* @__PURE__ */ jsxs("div", { className: "bg-card border border-border rounded-2xl p-6 shadow-xl mb-2", children: [
       /* @__PURE__ */ jsxs("div", { className: "flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6", children: [
         /* @__PURE__ */ jsx("h3", { className: "text-xl font-bold text-text", children: "Your Personal Wrap-Up" }),
         /* @__PURE__ */ jsxs("div", { className: "relative", children: [

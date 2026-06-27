@@ -4113,7 +4113,7 @@ const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onLogout: 
             
             {/* Personal Wrap-Up */}
             {(sessionInfo.session.isAdmin || user) && !analyticsLoading && analytics && (
-                <div className="bg-card border border-border rounded-2xl p-6 shadow-xl mb-4">
+                <div className="bg-card border border-border rounded-2xl p-6 shadow-xl mb-2">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                         <h3 className="text-xl font-bold text-text">Your Personal Wrap-Up</h3>
                         <div className="relative">
