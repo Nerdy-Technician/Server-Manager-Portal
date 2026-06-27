@@ -3260,6 +3260,8 @@ app.get('/api/plex/analytics/me', requireAuth, async (req, res) => {
             topContent,
             topBinge,
             topMovie,
+            topShows,
+            topMovies,
             timeOfDay,
             popularDay,
             favoriteLibrary,
