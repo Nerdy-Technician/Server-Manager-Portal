@@ -2926,20 +2926,32 @@ app.get('/api/tautulli/stats', requireAdmin, async (req, res) => {
             let tvPlays = 0;
             let moviePlays = 0;
             let musicPlays = 0;
+            let totalDurationSec = 0;
 
-            const concurrent = stats.find(s => s.stat_id === 'most_concurrent_streams');
-            if (concurrent && concurrent.rows && concurrent.rows[0]) streamsRecord = concurrent.rows[0].count;
-
-            const plays = stats.find(s => s.stat_id === 'total_plays');
-            if (plays && plays.rows && plays.rows[0]) {
-                totalPlays = plays.rows[0].total_plays || 0;
-                tvPlays = plays.rows[0].tv_shows || 0;
-                moviePlays = plays.rows[0].movies || 0;
-                musicPlays = plays.rows[0].music || 0;
+            const concurrent = stats.find(s => s.stat_id === 'most_concurrent');
+            if (concurrent && concurrent.rows) {
+                const c = concurrent.rows.find(r => r.title === 'Concurrent Streams');
+                if (c) streamsRecord = c.count;
             }
 
-            const duration = stats.find(s => s.stat_id === 'total_time');
-            if (duration && duration.rows && duration.rows[0]) totalTimeStr = duration.rows[0].total_time;
+            const libraries = stats.find(s => s.stat_id === 'top_libraries');
+            if (libraries && libraries.rows) {
+                libraries.rows.forEach(lib => {
+                    totalPlays += lib.total_plays || 0;
+                    totalDurationSec += lib.total_duration || 0;
+
+                    if (lib.section_type === 'show') tvPlays += lib.total_plays || 0;
+                    else if (lib.section_type === 'movie') moviePlays += lib.total_plays || 0;
+                    else if (lib.section_type === 'artist') musicPlays += lib.total_plays || 0;
+                });
+            }
+
+            if (totalDurationSec > 0) {
+                const days = Math.floor(totalDurationSec / 86400);
+                const hrs = Math.floor((totalDurationSec % 86400) / 3600);
+                if (days > 0) totalTimeStr = `${days} days, ${hrs} hrs`;
+                else totalTimeStr = `${hrs} hrs`;
+            }
 
             return res.json({ streamsRecord, totalPlays, tvPlays, moviePlays, musicPlays, totalTimeStr });
         }
