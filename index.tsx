@@ -4140,7 +4140,7 @@ const WrapUpModal: React.FC<{ metric: string; analytics: any; onClose: () => voi
                                     const height = maxHour > 0 ? (count / maxHour) * 100 : 0;
                                     const isTop = count === maxHour && count > 0;
                                     return (
-                                        <div key={hour} className="flex flex-col items-center w-full group relative">
+                                        <div key={hour} className="flex flex-col items-center justify-end w-full h-full group relative">
                                             <div className={`w-full rounded-t-sm transition-all duration-500 relative flex items-end justify-center overflow-hidden
                                                 ${isTop ? 'bg-plex shadow-[0_0_10px_rgba(229,160,13,0.5)]' : 'bg-white/10 group-hover:bg-white/30'}`} 
                                                 style={{ height: `${Math.max(height, 2)}%` }}>
@@ -4180,7 +4180,7 @@ const WrapUpModal: React.FC<{ metric: string; analytics: any; onClose: () => voi
                                 const height = maxCount > 0 ? (count / maxCount) * 100 : 0;
                                 const isTop = count === maxCount && count > 0;
                                 return (
-                                    <div key={day} className="flex flex-col items-center w-full group relative">
+                                    <div key={day} className="flex flex-col items-center justify-end w-full h-full group relative">
                                         <div className={`w-full rounded-t-md transition-all duration-500 relative flex items-end justify-center pb-1 overflow-hidden
                                             ${isTop ? 'bg-gradient-to-t from-plex/80 to-plex shadow-[0_0_15px_rgba(229,160,13,0.3)]' : 'bg-gradient-to-t from-white/10 to-white/20 group-hover:from-white/20 group-hover:to-white/30'}`} 
                                             style={{ height: `${Math.max(height, 8)}%` }}>

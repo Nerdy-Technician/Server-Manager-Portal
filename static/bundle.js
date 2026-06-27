@@ -4019,7 +4019,7 @@ var WrapUpModal = ({ metric, analytics, onClose }) => {
             /* @__PURE__ */ jsx("div", { className: "w-full flex items-end justify-between h-24 gap-[2px] mt-4 px-1", children: analytics.hourDistribution?.map((count, hour) => {
               const height = maxHour > 0 ? count / maxHour * 100 : 0;
               const isTop = count === maxHour && count > 0;
-              return /* @__PURE__ */ jsxs("div", { className: "flex flex-col items-center w-full group relative", children: [
+              return /* @__PURE__ */ jsxs("div", { className: "flex flex-col items-center justify-end w-full h-full group relative", children: [
                 /* @__PURE__ */ jsx(
                   "div",
                   {
@@ -4054,7 +4054,7 @@ var WrapUpModal = ({ metric, analytics, onClose }) => {
             const count = analytics.dayOfWeekCounts ? analytics.dayOfWeekCounts[i] : 0;
             const height = maxCount > 0 ? count / maxCount * 100 : 0;
             const isTop = count === maxCount && count > 0;
-            return /* @__PURE__ */ jsxs("div", { className: "flex flex-col items-center w-full group relative", children: [
+            return /* @__PURE__ */ jsxs("div", { className: "flex flex-col items-center justify-end w-full h-full group relative", children: [
               /* @__PURE__ */ jsx(
                 "div",
                 {
