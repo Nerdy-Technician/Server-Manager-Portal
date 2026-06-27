@@ -2828,7 +2828,7 @@ const AnalyticsDashboard: React.FC<{ isAdmin: boolean, sessionInfo: any }> = ({ 
     if (!isAdmin) {
         return <PersonalAnalyticsDashboard username={sessionInfo?.session?.username || 'User'} thumb={null} />;
     }
-    const [analyticsData, setAnalyticsData] = useState<{ topUsers: any[], topLibraries: any[], topMovies: any[], topShows: any[], topMusic: any[], topDevices: any[], peakHours: number[], totalPlaybacks: number } | null>(null);
+    const [analyticsData, setAnalyticsData] = useState<{ topUsers: any[], topLibraries: any[], topMovies: any[], topShows: any[], topMusic: any[], topDevices: any[], peakHours: number[], totalPlaybacks: number, maxConcurrentStreams: number, maxDirectPlays: number, maxTranscodes: number } | null>(null);
     const [tautulliData, setTautulliData] = useState<{ streamsRecord: number, transcodeRecord: number, directPlayRecord: number, directStreamRecord: number, totalPlays: number, tvPlays: number, moviePlays: number, musicPlays: number, totalTimeStr: string } | null>(null);
     const [isLoading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
