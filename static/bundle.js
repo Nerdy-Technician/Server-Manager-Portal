@@ -971,8 +971,6 @@ var SettingsDashboard = () => {
   const [toasts, setToasts] = useState([]);
   const [statusConfig, setStatusConfig] = useState({});
   const [users, setUsers] = useState([]);
-  const [isStatusModalOpen, setStatusModalOpen] = useState(false);
-  const [isBroadcastModalOpen, setBroadcastModalOpen] = useState(false);
   const addToast = useCallback((message, type = "success") => {
     setToasts((t) => [...t, { id: Date.now(), message, type }]);
   }, []);
@@ -1284,18 +1282,8 @@ var SettingsDashboard = () => {
   return /* @__PURE__ */ jsxs("div", { className: "w-full max-w-[1600px] mx-auto flex flex-col", children: [
     /* @__PURE__ */ jsx(Loader, { isLoading }),
     /* @__PURE__ */ jsx("div", { className: "fixed bottom-5 left-1/2 -translate-x-1/2 z-[2000] flex flex-col-reverse gap-2 items-center", children: toasts.map((toast) => /* @__PURE__ */ jsx(Toast, { ...toast, onDismiss: () => setToasts((t) => t.filter((item) => item.id !== toast.id)) }, toast.id)) }),
-    /* @__PURE__ */ jsxs("header", { className: "hidden md:flex items-center justify-between w-full mb-6 mt-2 md:mt-0", children: [
-      /* @__PURE__ */ jsx("h1", { className: "text-xl md:text-3xl font-bold text-plex", children: "Settings" }),
-      /* @__PURE__ */ jsxs("div", { className: "flex gap-4", children: [
-        /* @__PURE__ */ jsx("button", { className: "px-4 py-2 bg-border text-text rounded-md font-medium hover:bg-opacity-80 transition-colors flex items-center justify-center gap-2 text-sm", onClick: () => setStatusModalOpen(true), children: "Manage Status" }),
-        /* @__PURE__ */ jsx("button", { className: "px-4 py-2 bg-plex text-background rounded-md font-bold hover:bg-plex-hover transition-colors flex items-center justify-center gap-2 text-sm", onClick: () => setBroadcastModalOpen(true), children: "Broadcast Email" })
-      ] })
-    ] }),
+    /* @__PURE__ */ jsx("header", { className: "hidden md:flex items-center justify-between w-full mb-6 mt-2 md:mt-0", children: /* @__PURE__ */ jsx("h1", { className: "text-xl md:text-3xl font-bold text-plex", children: "Settings" }) }),
     /* @__PURE__ */ jsxs("div", { className: "bg-card p-4 md:p-8 rounded-2xl w-full flex flex-col shadow-2xl border border-border", children: [
-      /* @__PURE__ */ jsxs("div", { className: "flex md:hidden gap-3 mb-6", children: [
-        /* @__PURE__ */ jsx("button", { className: "flex-1 px-4 py-2.5 bg-border text-text rounded-lg font-medium text-sm flex items-center justify-center gap-2", onClick: () => setStatusModalOpen(true), children: "Manage Status" }),
-        /* @__PURE__ */ jsx("button", { className: "flex-1 px-4 py-2.5 bg-plex text-background rounded-lg font-bold text-sm flex items-center justify-center gap-2", onClick: () => setBroadcastModalOpen(true), children: "Broadcast Email" })
-      ] }),
       /* @__PURE__ */ jsxs("div", { className: "block md:hidden mb-6", children: [
         /* @__PURE__ */ jsx("label", { htmlFor: "settings-tab-select", className: "text-muted text-xs uppercase tracking-wider font-bold mb-2 block", children: "Settings Category" }),
         /* @__PURE__ */ jsx(
@@ -1313,6 +1301,7 @@ var SettingsDashboard = () => {
               { label: "Automated Cleanup", value: "cleanup" },
               { label: "Status Monitor", value: "status" },
               { label: "Newsletter", value: "newsletter" },
+              { label: "Broadcast Email", value: "broadcast" },
               { label: "Background Tasks", value: "tasks" },
               { label: "SMTP Alerts", value: "smtp" }
             ]
@@ -1328,6 +1317,7 @@ var SettingsDashboard = () => {
         { id: "cleanup", label: "Cleanup" },
         { id: "status", label: "Status Monitor" },
         { id: "newsletter", label: "Newsletter" },
+        { id: "broadcast", label: "Broadcast Email" },
         { id: "tasks", label: "Background Tasks" },
         { id: "smtp", label: "SMTP Alerts" }
       ].map((tab) => /* @__PURE__ */ jsx(
@@ -1638,6 +1628,10 @@ var SettingsDashboard = () => {
             ] }, key);
           }) })
         ] }),
+        activeTab === "broadcast" && /* @__PURE__ */ jsxs("div", { className: "mb-8 animate-fade-in", children: [
+          /* @__PURE__ */ jsx("h3", { className: "text-xl font-bold text-plex mb-4 border-b border-border pb-2", children: "Broadcast Email" }),
+          /* @__PURE__ */ jsx(BroadcastSettingsTab, { users, selectedUserIds: [] })
+        ] }),
         activeTab === "status" && /* @__PURE__ */ jsxs("div", { className: "mb-8 animate-fade-in", children: [
           /* @__PURE__ */ jsx("h3", { className: "text-xl font-bold text-plex mb-4 border-b border-border pb-2", children: "Status Monitor" }),
           /* @__PURE__ */ jsx(
@@ -1744,16 +1738,7 @@ var SettingsDashboard = () => {
         ] })
       ] }),
       /* @__PURE__ */ jsx("div", { className: "flex justify-end gap-4 mt-8", style: { marginTop: "2rem" }, children: /* @__PURE__ */ jsx("button", { className: "px-6 py-3 bg-plex text-background rounded-md font-bold hover:bg-plex-hover transition-colors flex items-center justify-center gap-2", onClick: handleSave, children: "Save Settings" }) })
-    ] }),
-    /* @__PURE__ */ jsx(
-      BroadcastModal,
-      {
-        isOpen: isBroadcastModalOpen,
-        onClose: () => setBroadcastModalOpen(false),
-        selectedUserIds: [],
-        users
-      }
-    )
+    ] })
   ] });
 };
 var StatusMonitorSettings = ({ config, onChange, appConfirm: appConfirm2, fetchConfig, addToast }) => {
@@ -1912,7 +1897,7 @@ var StatusMonitorSettings = ({ config, onChange, appConfirm: appConfirm2, fetchC
     ] })
   ] });
 };
-var BroadcastModal = ({ isOpen, onClose, selectedUserIds, users }) => {
+var BroadcastSettingsTab = ({ selectedUserIds, users }) => {
   const [subject, setSubject] = useState("Big updates to the Plex Server! \u{1F680}");
   const [body, setBody] = useState(`\u{1F3AC} <b>Hey everyone! Big updates to the Plex Server!</b> \u{1F680}<br><br>If you have any friends or family who want to check out the server, I\u2019m currently offering a <b>3-Day Free Trial</b> with instant access to the entire library! \u{1F37F}<br>\u2705 No bank details needed<br>\u2705 No purchase required<br>\u2705 Instant, automated setup<br><br>We also just launched a brand new <b>User Portal</b> (https://yourdomain.com) packed with awesome features for everyone:<br>\u{1F552} <b>Account Status:</b> Easily check exactly how many days you have left until your account expires.<br>\u{1F7E2} <b>Server Health:</b> View live 24/7 uptime stats for all server services.<br>\u{1F4CA} <b>Live Library Stats:</b> See exact, live counts of our massive library.<br><br>Feel free to share the link (https://yourdomain.com) with anyone who might be interested! \u{1F447}`);
   const [recipientFilter, setRecipientFilter] = useState("all");
@@ -1920,7 +1905,6 @@ var BroadcastModal = ({ isOpen, onClose, selectedUserIds, users }) => {
   const [isSending, setIsSending] = useState(false);
   const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [isSendingTest, setIsSendingTest] = useState(false);
-  if (!isOpen) return null;
   const handleSend = async () => {
     setIsSending(true);
     try {
@@ -1931,7 +1915,6 @@ var BroadcastModal = ({ isOpen, onClose, selectedUserIds, users }) => {
         body: JSON.stringify({ subject, body, recipientFilter: finalFilter, selectedUserIds: finalSelectedIds })
       });
       alert(res.message);
-      onClose();
     } catch (e) {
       alert(e.message || "Failed to send broadcast");
     } finally {
@@ -1952,10 +1935,9 @@ var BroadcastModal = ({ isOpen, onClose, selectedUserIds, users }) => {
       setIsSendingTest(false);
     }
   };
-  return /* @__PURE__ */ jsx("div", { className: "fixed inset-0 bg-black/80 backdrop-blur-sm flex justify-center items-center z-[1000]", children: /* @__PURE__ */ jsxs("div", { className: "modal-content", style: { maxWidth: "800px", width: "90%" }, children: [
-    /* @__PURE__ */ jsx("h2", { className: "text-2xl font-bold text-text", children: "Broadcast Email" }),
-    /* @__PURE__ */ jsxs("div", { style: { marginBottom: "1rem" }, children: [
-      /* @__PURE__ */ jsx("label", { style: { display: "block", marginBottom: "0.5rem", fontWeight: "bold" }, children: "Recipients" }),
+  return /* @__PURE__ */ jsxs("div", { className: "flex flex-col gap-6", children: [
+    /* @__PURE__ */ jsxs("div", { children: [
+      /* @__PURE__ */ jsx("label", { className: "block mb-2 font-bold text-text", children: "Recipients" }),
       /* @__PURE__ */ jsx(
         CustomSelect,
         {
@@ -1969,59 +1951,59 @@ var BroadcastModal = ({ isOpen, onClose, selectedUserIds, users }) => {
             { label: "Expired Users", value: "expired" },
             ...selectedUserIds.length > 0 ? [{ label: `Selected Users (${selectedUserIds.length})`, value: "selected" }] : [],
             { label: "Custom User Selection...", value: "custom" }
-          ],
-          className: "broadcast-select"
+          ]
         }
       )
     ] }),
-    recipientFilter === "custom" && /* @__PURE__ */ jsxs("div", { style: { marginBottom: "1rem", padding: "0.75rem", backgroundColor: "var(--background-dark)", border: "1px solid var(--border-color)", borderRadius: "4px", maxHeight: "200px", overflowY: "auto" }, children: [
-      /* @__PURE__ */ jsxs("div", { style: { marginBottom: "0.5rem", fontWeight: "bold" }, children: [
+    recipientFilter === "custom" && /* @__PURE__ */ jsxs("div", { className: "p-4 bg-black/20 border border-border rounded-lg max-h-48 overflow-y-auto", children: [
+      /* @__PURE__ */ jsxs("div", { className: "mb-2 font-bold text-text", children: [
         "Select Users (",
         customSelectedUserIds.length,
         " selected):"
       ] }),
-      users.map((u) => /* @__PURE__ */ jsxs("label", { style: { display: "flex", alignItems: "center", gap: "0.5rem", cursor: "pointer", padding: "0.25rem 0" }, children: [
+      users.map((u) => /* @__PURE__ */ jsxs("label", { className: "flex items-center gap-2 cursor-pointer py-1 text-sm text-text hover:text-plex transition-colors", children: [
         /* @__PURE__ */ jsx(
           "input",
           {
-            className: "w-full p-3 rounded-lg border border-border bg-background text-text outline-none focus:border-plex focus:ring-1 focus:ring-plex transition-all",
+            className: "accent-plex w-4 h-4",
             type: "checkbox",
             checked: customSelectedUserIds.includes(u.id),
             onChange: (e) => {
               if (e.target.checked) setCustomSelectedUserIds((prev) => [...prev, u.id]);
               else setCustomSelectedUserIds((prev) => prev.filter((id) => id !== u.id));
-            },
-            style: { accentColor: "var(--plex-gold)" }
+            }
           }
         ),
         u.username,
-        " (",
-        u.email || "No email",
-        ")"
+        " ",
+        /* @__PURE__ */ jsxs("span", { className: "text-muted", children: [
+          "(",
+          u.email || "No email",
+          ")"
+        ] })
       ] }, u.id))
     ] }),
-    /* @__PURE__ */ jsxs("div", { style: { marginBottom: "1rem" }, children: [
-      /* @__PURE__ */ jsx("label", { style: { display: "block", marginBottom: "0.5rem", fontWeight: "bold" }, children: "Subject" }),
+    /* @__PURE__ */ jsxs("div", { children: [
+      /* @__PURE__ */ jsx("label", { className: "block mb-2 font-bold text-text", children: "Subject" }),
       /* @__PURE__ */ jsx(
         "input",
         {
           className: "w-full p-3 rounded-lg border border-border bg-background text-text outline-none focus:border-plex focus:ring-1 focus:ring-plex transition-all",
           type: "text",
           value: subject,
-          onChange: (e) => setSubject(e.target.value),
-          style: { width: "100%", padding: "0.75rem", borderRadius: "4px", backgroundColor: "#333", color: "#fff", border: "1px solid #444" }
+          onChange: (e) => setSubject(e.target.value)
         }
       )
     ] }),
-    /* @__PURE__ */ jsxs("div", { style: { marginBottom: "1rem" }, children: [
-      /* @__PURE__ */ jsxs("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }, children: [
-        /* @__PURE__ */ jsx("label", { style: { fontWeight: "bold", margin: 0 }, children: "Email Body (HTML supported)" }),
-        /* @__PURE__ */ jsx("button", { className: "px-4 py-2 bg-border text-text rounded-md font-medium hover:bg-opacity-80 transition-colors flex items-center justify-center gap-2", onClick: () => setIsPreviewMode(!isPreviewMode), style: { padding: "0.25rem 0.5rem", fontSize: "0.85rem" }, children: isPreviewMode ? "Edit HTML" : "Preview Output" })
+    /* @__PURE__ */ jsxs("div", { children: [
+      /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-center mb-2", children: [
+        /* @__PURE__ */ jsx("label", { className: "font-bold text-text m-0", children: "Email Body (HTML supported)" }),
+        /* @__PURE__ */ jsx("button", { className: "px-3 py-1 bg-border text-text rounded text-xs font-medium hover:bg-opacity-80 transition-colors", onClick: () => setIsPreviewMode(!isPreviewMode), children: isPreviewMode ? "Edit HTML" : "Preview Output" })
       ] }),
       isPreviewMode ? /* @__PURE__ */ jsx(
         "div",
         {
-          style: { width: "100%", height: "300px", padding: "1rem", borderRadius: "4px", backgroundColor: "#fff", color: "#000", border: "1px solid #444", overflowY: "auto" },
+          className: "w-full h-[300px] p-4 rounded-lg bg-white text-black border border-border overflow-y-auto",
           dangerouslySetInnerHTML: { __html: body }
         }
       ) : /* @__PURE__ */ jsx(
@@ -2029,16 +2011,15 @@ var BroadcastModal = ({ isOpen, onClose, selectedUserIds, users }) => {
         {
           value: body,
           onChange: (e) => setBody(e.target.value),
-          style: { width: "100%", height: "300px", padding: "0.75rem", borderRadius: "4px", backgroundColor: "#333", color: "#fff", border: "1px solid #444", fontFamily: "monospace" }
+          className: "w-full h-[300px] p-3 rounded-lg border border-border bg-background text-text outline-none focus:border-plex focus:ring-1 focus:ring-plex transition-all font-mono text-sm"
         }
       )
     ] }),
-    /* @__PURE__ */ jsxs("div", { className: "flex justify-end gap-4 mt-8", style: { marginTop: "1.5rem", justifyContent: "flex-end", gap: "1rem" }, children: [
-      /* @__PURE__ */ jsx("button", { className: "px-4 py-2 bg-border text-text rounded-md font-medium hover:bg-opacity-80 transition-colors flex items-center justify-center gap-2", onClick: onClose, disabled: isSending || isSendingTest, children: "Cancel" }),
-      /* @__PURE__ */ jsx("button", { className: "px-4 py-2 bg-border text-text rounded-md font-medium hover:bg-opacity-80 transition-colors flex items-center justify-center gap-2", onClick: handleTestSend, disabled: isSending || isSendingTest, children: isSendingTest ? "Sending Test..." : "Send Test To Admin" }),
-      /* @__PURE__ */ jsx("button", { className: "px-4 py-2 bg-plex text-background rounded-md font-medium hover:bg-plex-hover transition-colors flex items-center justify-center gap-2", onClick: handleSend, disabled: isSending || isSendingTest, style: { backgroundColor: "var(--plex-gold)", color: "#000" }, children: isSending ? "Sending..." : "Send Broadcast" })
+    /* @__PURE__ */ jsxs("div", { className: "flex justify-end gap-3 mt-2", children: [
+      /* @__PURE__ */ jsx("button", { className: "px-6 py-2.5 bg-border text-text rounded-lg font-bold hover:bg-opacity-80 transition-colors flex items-center justify-center gap-2", onClick: handleTestSend, disabled: isSending || isSendingTest, children: isSendingTest ? "Sending Test..." : "Send Test To Admin" }),
+      /* @__PURE__ */ jsx("button", { className: "px-6 py-2.5 bg-plex text-background rounded-lg font-bold hover:bg-plex-hover transition-colors flex items-center justify-center gap-2", onClick: handleSend, disabled: isSending || isSendingTest, children: isSending ? "Sending..." : "Send Broadcast" })
     ] })
-  ] }) });
+  ] });
 };
 var UserAnalyticsModal = ({ userId, username, thumb, days, onClose }) => {
   const [data, setData] = useState(null);

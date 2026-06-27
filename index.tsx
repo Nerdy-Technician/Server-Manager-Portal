@@ -702,8 +702,6 @@ const SettingsDashboard: React.FC = () => {
     // Admin features moved here
     const [statusConfig, setStatusConfig] = useState<any>({});
     const [users, setUsers] = useState<User[]>([]);
-    const [isStatusModalOpen, setStatusModalOpen] = useState(false);
-    const [isBroadcastModalOpen, setBroadcastModalOpen] = useState(false);
 
     const addToast = useCallback((message: string, type: 'success' | 'error' = 'success') => {
         setToasts(t => [...t, { id: Date.now(), message, type }]);
@@ -1052,18 +1050,9 @@ const SettingsDashboard: React.FC = () => {
 
             <header className="hidden md:flex items-center justify-between w-full mb-6 mt-2 md:mt-0">
                 <h1 className="text-xl md:text-3xl font-bold text-plex">Settings</h1>
-                <div className="flex gap-4">
-                    <button className="px-4 py-2 bg-border text-text rounded-md font-medium hover:bg-opacity-80 transition-colors flex items-center justify-center gap-2 text-sm" onClick={() => setStatusModalOpen(true)}>Manage Status</button>
-                    <button className="px-4 py-2 bg-plex text-background rounded-md font-bold hover:bg-plex-hover transition-colors flex items-center justify-center gap-2 text-sm" onClick={() => setBroadcastModalOpen(true)}>Broadcast Email</button>
-                </div>
             </header>
 
             <div className="bg-card p-4 md:p-8 rounded-2xl w-full flex flex-col shadow-2xl border border-border">
-                {/* Mobile-only action buttons */}
-                <div className="flex md:hidden gap-3 mb-6">
-                    <button className="flex-1 px-4 py-2.5 bg-border text-text rounded-lg font-medium text-sm flex items-center justify-center gap-2" onClick={() => setStatusModalOpen(true)}>Manage Status</button>
-                    <button className="flex-1 px-4 py-2.5 bg-plex text-background rounded-lg font-bold text-sm flex items-center justify-center gap-2" onClick={() => setBroadcastModalOpen(true)}>Broadcast Email</button>
-                </div>
                 {/* Mobile Dropdown Category Select */}
                 <div className="block md:hidden mb-6">
                     <label htmlFor="settings-tab-select" className="text-muted text-xs uppercase tracking-wider font-bold mb-2 block">Settings Category</label>
@@ -1080,6 +1069,7 @@ const SettingsDashboard: React.FC = () => {
                             { label: 'Automated Cleanup', value: 'cleanup' },
                             { label: 'Status Monitor', value: 'status' },
                             { label: 'Newsletter', value: 'newsletter' },
+                            { label: 'Broadcast Email', value: 'broadcast' },
                             { label: 'Background Tasks', value: 'tasks' },
                             { label: 'SMTP Alerts', value: 'smtp' }
                         ]}
@@ -1097,6 +1087,7 @@ const SettingsDashboard: React.FC = () => {
                         { id: 'cleanup', label: 'Cleanup' },
                         { id: 'status', label: 'Status Monitor' },
                         { id: 'newsletter', label: 'Newsletter' },
+                        { id: 'broadcast', label: 'Broadcast Email' },
                         { id: 'tasks', label: 'Background Tasks' },
                         { id: 'smtp', label: 'SMTP Alerts' }
                     ].map(tab => (
@@ -1431,6 +1422,13 @@ const SettingsDashboard: React.FC = () => {
                         </div>
                     )}
 
+                    {activeTab === 'broadcast' && (
+                        <div className="mb-8 animate-fade-in">
+                            <h3 className="text-xl font-bold text-plex mb-4 border-b border-border pb-2">Broadcast Email</h3>
+                            <BroadcastSettingsTab users={users} selectedUserIds={[]} />
+                        </div>
+                    )}
+
                     {activeTab === 'status' && (
                         <div className="mb-8 animate-fade-in">
                             <h3 className="text-xl font-bold text-plex mb-4 border-b border-border pb-2">Status Monitor</h3>
@@ -1548,14 +1546,6 @@ const SettingsDashboard: React.FC = () => {
                     <button className="px-6 py-3 bg-plex text-background rounded-md font-bold hover:bg-plex-hover transition-colors flex items-center justify-center gap-2" onClick={handleSave}>Save Settings</button>
                 </div>
             </div>
-
-
-            <BroadcastModal
-                isOpen={isBroadcastModalOpen}
-                onClose={() => setBroadcastModalOpen(false)}
-                selectedUserIds={[]}
-                users={users}
-            />
         </div>
     );
 };
@@ -1721,7 +1711,7 @@ const StatusMonitorSettings: React.FC<{ config: any; onChange: (cfg: any) => voi
     );
 };
 
-const BroadcastModal: React.FC<{ isOpen: boolean; onClose: () => void; selectedUserIds: string[]; users: User[]; }> = ({ isOpen, onClose, selectedUserIds, users }) => {
+const BroadcastSettingsTab: React.FC<{ selectedUserIds: string[]; users: User[]; }> = ({ selectedUserIds, users }) => {
     const [subject, setSubject] = useState('Big updates to the Plex Server! 🚀');
     const [body, setBody] = useState(`🎬 <b>Hey everyone! Big updates to the Plex Server!</b> 🚀<br><br>If you have any friends or family who want to check out the server, I’m currently offering a <b>3-Day Free Trial</b> with instant access to the entire library! 🍿<br>✅ No bank details needed<br>✅ No purchase required<br>✅ Instant, automated setup<br><br>We also just launched a brand new <b>User Portal</b> (https://yourdomain.com) packed with awesome features for everyone:<br>🕒 <b>Account Status:</b> Easily check exactly how many days you have left until your account expires.<br>🟢 <b>Server Health:</b> View live 24/7 uptime stats for all server services.<br>📊 <b>Live Library Stats:</b> See exact, live counts of our massive library.<br><br>Feel free to share the link (https://yourdomain.com) with anyone who might be interested! 👇`);
     const [recipientFilter, setRecipientFilter] = useState<'all' | 'active' | 'trial' | 'expiring' | 'expired' | 'selected' | 'custom'>('all');
@@ -1729,8 +1719,6 @@ const BroadcastModal: React.FC<{ isOpen: boolean; onClose: () => void; selectedU
     const [isSending, setIsSending] = useState(false);
     const [isPreviewMode, setIsPreviewMode] = useState(false);
     const [isSendingTest, setIsSendingTest] = useState(false);
-
-    if (!isOpen) return null;
 
     const handleSend = async () => {
         setIsSending(true);
@@ -1743,7 +1731,6 @@ const BroadcastModal: React.FC<{ isOpen: boolean; onClose: () => void; selectedU
                 body: JSON.stringify({ subject, body, recipientFilter: finalFilter, selectedUserIds: finalSelectedIds })
             });
             alert(res.message);
-            onClose();
         } catch (e: any) {
             alert(e.message || 'Failed to send broadcast');
         } finally {
@@ -1767,88 +1754,80 @@ const BroadcastModal: React.FC<{ isOpen: boolean; onClose: () => void; selectedU
     };
 
     return (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex justify-center items-center z-[1000]">
-            <div className="modal-content" style={{ maxWidth: '800px', width: '90%' }}>
-                <h2 className="text-2xl font-bold text-text">Broadcast Email</h2>
+        <div className="flex flex-col gap-6">
+            <div>
+                <label className="block mb-2 font-bold text-text">Recipients</label>
+                <CustomSelect
+                    value={recipientFilter}
+                    onChange={val => setRecipientFilter(val as any)}
+                    options={[
+                        { label: 'All Users', value: 'all' },
+                        { label: 'Active Users Only', value: 'active' },
+                        { label: 'Trial Users Only', value: 'trial' },
+                        { label: 'Expiring Soon (Next 7 Days)', value: 'expiring' },
+                        { label: 'Expired Users', value: 'expired' },
+                        ...(selectedUserIds.length > 0 ? [{ label: `Selected Users (${selectedUserIds.length})`, value: 'selected' }] : []),
+                        { label: 'Custom User Selection...', value: 'custom' }
+                    ]}
+                />
+            </div>
 
-                <div style={{ marginBottom: '1rem' }}>
-                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>Recipients</label>
-                    <CustomSelect
-                        value={recipientFilter}
-                        onChange={val => setRecipientFilter(val as any)}
-                        options={[
-                            { label: 'All Users', value: 'all' },
-                            { label: 'Active Users Only', value: 'active' },
-                            { label: 'Trial Users Only', value: 'trial' },
-                            { label: 'Expiring Soon (Next 7 Days)', value: 'expiring' },
-                            { label: 'Expired Users', value: 'expired' },
-                            ...(selectedUserIds.length > 0 ? [{ label: `Selected Users (${selectedUserIds.length})`, value: 'selected' }] : []),
-                            { label: 'Custom User Selection...', value: 'custom' }
-                        ]}
-                        className="broadcast-select"
-                    />
+            {recipientFilter === 'custom' && (
+                <div className="p-4 bg-black/20 border border-border rounded-lg max-h-48 overflow-y-auto">
+                    <div className="mb-2 font-bold text-text">Select Users ({customSelectedUserIds.length} selected):</div>
+                    {users.map(u => (
+                        <label key={u.id} className="flex items-center gap-2 cursor-pointer py-1 text-sm text-text hover:text-plex transition-colors">
+                            <input className="accent-plex w-4 h-4"
+                                type="checkbox"
+                                checked={customSelectedUserIds.includes(u.id)}
+                                onChange={(e) => {
+                                    if (e.target.checked) setCustomSelectedUserIds(prev => [...prev, u.id]);
+                                    else setCustomSelectedUserIds(prev => prev.filter(id => id !== u.id));
+                                }}
+                            />
+                            {u.username} <span className="text-muted">({u.email || 'No email'})</span>
+                        </label>
+                    ))}
                 </div>
+            )}
 
-                {recipientFilter === 'custom' && (
-                    <div style={{ marginBottom: '1rem', padding: '0.75rem', backgroundColor: 'var(--background-dark)', border: '1px solid var(--border-color)', borderRadius: '4px', maxHeight: '200px', overflowY: 'auto' }}>
-                        <div style={{ marginBottom: '0.5rem', fontWeight: 'bold' }}>Select Users ({customSelectedUserIds.length} selected):</div>
-                        {users.map(u => (
-                            <label key={u.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', padding: '0.25rem 0' }}>
-                                <input className="w-full p-3 rounded-lg border border-border bg-background text-text outline-none focus:border-plex focus:ring-1 focus:ring-plex transition-all"
-                                    type="checkbox"
-                                    checked={customSelectedUserIds.includes(u.id)}
-                                    onChange={(e) => {
-                                        if (e.target.checked) setCustomSelectedUserIds(prev => [...prev, u.id]);
-                                        else setCustomSelectedUserIds(prev => prev.filter(id => id !== u.id));
-                                    }}
-                                    style={{ accentColor: 'var(--plex-gold)' }}
-                                />
-                                {u.username} ({u.email || 'No email'})
-                            </label>
-                        ))}
-                    </div>
+            <div>
+                <label className="block mb-2 font-bold text-text">Subject</label>
+                <input className="w-full p-3 rounded-lg border border-border bg-background text-text outline-none focus:border-plex focus:ring-1 focus:ring-plex transition-all"
+                    type="text"
+                    value={subject}
+                    onChange={e => setSubject(e.target.value)}
+                />
+            </div>
+
+            <div>
+                <div className="flex justify-between items-center mb-2">
+                    <label className="font-bold text-text m-0">Email Body (HTML supported)</label>
+                    <button className="px-3 py-1 bg-border text-text rounded text-xs font-medium hover:bg-opacity-80 transition-colors" onClick={() => setIsPreviewMode(!isPreviewMode)}>
+                        {isPreviewMode ? 'Edit HTML' : 'Preview Output'}
+                    </button>
+                </div>
+                {isPreviewMode ? (
+                    <div
+                        className="w-full h-[300px] p-4 rounded-lg bg-white text-black border border-border overflow-y-auto"
+                        dangerouslySetInnerHTML={{ __html: body }}
+                    />
+                ) : (
+                    <textarea
+                        value={body}
+                        onChange={e => setBody(e.target.value)}
+                        className="w-full h-[300px] p-3 rounded-lg border border-border bg-background text-text outline-none focus:border-plex focus:ring-1 focus:ring-plex transition-all font-mono text-sm"
+                    />
                 )}
+            </div>
 
-                <div style={{ marginBottom: '1rem' }}>
-                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>Subject</label>
-                    <input className="w-full p-3 rounded-lg border border-border bg-background text-text outline-none focus:border-plex focus:ring-1 focus:ring-plex transition-all"
-                        type="text"
-                        value={subject}
-                        onChange={e => setSubject(e.target.value)}
-                        style={{ width: '100%', padding: '0.75rem', borderRadius: '4px', backgroundColor: '#333', color: '#fff', border: '1px solid #444' }}
-                    />
-                </div>
-
-                <div style={{ marginBottom: '1rem' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                        <label style={{ fontWeight: 'bold', margin: 0 }}>Email Body (HTML supported)</label>
-                        <button className="px-4 py-2 bg-border text-text rounded-md font-medium hover:bg-opacity-80 transition-colors flex items-center justify-center gap-2" onClick={() => setIsPreviewMode(!isPreviewMode)} style={{ padding: '0.25rem 0.5rem', fontSize: '0.85rem' }}>
-                            {isPreviewMode ? 'Edit HTML' : 'Preview Output'}
-                        </button>
-                    </div>
-                    {isPreviewMode ? (
-                        <div
-                            style={{ width: '100%', height: '300px', padding: '1rem', borderRadius: '4px', backgroundColor: '#fff', color: '#000', border: '1px solid #444', overflowY: 'auto' }}
-                            dangerouslySetInnerHTML={{ __html: body }}
-                        />
-                    ) : (
-                        <textarea
-                            value={body}
-                            onChange={e => setBody(e.target.value)}
-                            style={{ width: '100%', height: '300px', padding: '0.75rem', borderRadius: '4px', backgroundColor: '#333', color: '#fff', border: '1px solid #444', fontFamily: 'monospace' }}
-                        />
-                    )}
-                </div>
-
-                <div className="flex justify-end gap-4 mt-8" style={{ marginTop: '1.5rem', justifyContent: 'flex-end', gap: '1rem' }}>
-                    <button className="px-4 py-2 bg-border text-text rounded-md font-medium hover:bg-opacity-80 transition-colors flex items-center justify-center gap-2" onClick={onClose} disabled={isSending || isSendingTest}>Cancel</button>
-                    <button className="px-4 py-2 bg-border text-text rounded-md font-medium hover:bg-opacity-80 transition-colors flex items-center justify-center gap-2" onClick={handleTestSend} disabled={isSending || isSendingTest}>
-                        {isSendingTest ? 'Sending Test...' : 'Send Test To Admin'}
-                    </button>
-                    <button className="px-4 py-2 bg-plex text-background rounded-md font-medium hover:bg-plex-hover transition-colors flex items-center justify-center gap-2" onClick={handleSend} disabled={isSending || isSendingTest} style={{ backgroundColor: 'var(--plex-gold)', color: '#000' }}>
-                        {isSending ? 'Sending...' : 'Send Broadcast'}
-                    </button>
-                </div>
+            <div className="flex justify-end gap-3 mt-2">
+                <button className="px-6 py-2.5 bg-border text-text rounded-lg font-bold hover:bg-opacity-80 transition-colors flex items-center justify-center gap-2" onClick={handleTestSend} disabled={isSending || isSendingTest}>
+                    {isSendingTest ? 'Sending Test...' : 'Send Test To Admin'}
+                </button>
+                <button className="px-6 py-2.5 bg-plex text-background rounded-lg font-bold hover:bg-plex-hover transition-colors flex items-center justify-center gap-2" onClick={handleSend} disabled={isSending || isSendingTest}>
+                    {isSending ? 'Sending...' : 'Send Broadcast'}
+                </button>
             </div>
         </div>
     );
