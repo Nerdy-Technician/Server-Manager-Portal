@@ -3948,7 +3948,7 @@ var UserDashboard = ({ sessionInfo, publicConfig, onLogout, refreshSession, onVi
           ] })
         ] })
       ] }),
-      /* @__PURE__ */ jsxs("div", { className: "grid grid-cols-2 md:grid-cols-4 gap-4", children: [
+      /* @__PURE__ */ jsxs("div", { className: "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-4", children: [
         /* @__PURE__ */ jsxs("div", { className: "bg-background rounded-xl p-4 border border-border/50 flex flex-col items-center justify-center text-center", children: [
           /* @__PURE__ */ jsx(Trophy, { className: "w-6 h-6 text-plex mb-2" }),
           /* @__PURE__ */ jsx("p", { className: "text-muted text-[10px] uppercase tracking-widest font-bold mb-1", children: "Server Rank" }),
@@ -3973,6 +3973,21 @@ var UserDashboard = ({ sessionInfo, publicConfig, onLogout, refreshSession, onVi
           /* @__PURE__ */ jsx(Clock, { className: "w-6 h-6 text-plex mb-2" }),
           /* @__PURE__ */ jsx("p", { className: "text-muted text-[10px] uppercase tracking-widest font-bold mb-1", children: "Time of Day" }),
           /* @__PURE__ */ jsx("p", { className: "text-sm font-bold text-text", children: analytics.timeOfDay || "Unknown" })
+        ] }),
+        /* @__PURE__ */ jsxs("div", { className: "bg-background rounded-xl p-4 border border-border/50 flex flex-col items-center justify-center text-center", children: [
+          /* @__PURE__ */ jsx(Calendar, { className: "w-6 h-6 text-plex mb-2" }),
+          /* @__PURE__ */ jsx("p", { className: "text-muted text-[10px] uppercase tracking-widest font-bold mb-1", children: "Top Day" }),
+          /* @__PURE__ */ jsx("p", { className: "text-sm font-bold text-text", children: analytics.popularDay || "Unknown" })
+        ] }),
+        /* @__PURE__ */ jsxs("div", { className: "bg-background rounded-xl p-4 border border-border/50 flex flex-col items-center justify-center text-center", children: [
+          /* @__PURE__ */ jsx(Layers, { className: "w-6 h-6 text-plex mb-2" }),
+          /* @__PURE__ */ jsx("p", { className: "text-muted text-[10px] uppercase tracking-widest font-bold mb-1", children: "Top Library" }),
+          /* @__PURE__ */ jsx("p", { className: "text-sm font-bold text-text line-clamp-2", children: analytics.favoriteLibrary || "None" })
+        ] }),
+        /* @__PURE__ */ jsxs("div", { className: "bg-background rounded-xl p-4 border border-border/50 flex flex-col items-center justify-center text-center", children: [
+          /* @__PURE__ */ jsx(Film, { className: "w-6 h-6 text-plex mb-2" }),
+          /* @__PURE__ */ jsx("p", { className: "text-muted text-[10px] uppercase tracking-widest font-bold mb-1", children: "Media Profile" }),
+          /* @__PURE__ */ jsx("p", { className: "text-sm font-bold text-text", children: analytics.mediaPreference || "Mixed Bag" })
         ] })
       ] })
     ] }),

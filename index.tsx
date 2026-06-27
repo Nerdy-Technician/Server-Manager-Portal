@@ -4160,7 +4160,7 @@ const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onLogout: 
                             )}
                         </div>
                     </div>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-4">
                         <div className="bg-background rounded-xl p-4 border border-border/50 flex flex-col items-center justify-center text-center">
                             <Trophy className="w-6 h-6 text-plex mb-2" />
                             <p className="text-muted text-[10px] uppercase tracking-widest font-bold mb-1">Server Rank</p>
@@ -4181,6 +4181,21 @@ const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onLogout: 
                             <Clock className="w-6 h-6 text-plex mb-2" />
                             <p className="text-muted text-[10px] uppercase tracking-widest font-bold mb-1">Time of Day</p>
                             <p className="text-sm font-bold text-text">{analytics.timeOfDay || 'Unknown'}</p>
+                        </div>
+                        <div className="bg-background rounded-xl p-4 border border-border/50 flex flex-col items-center justify-center text-center">
+                            <Calendar className="w-6 h-6 text-plex mb-2" />
+                            <p className="text-muted text-[10px] uppercase tracking-widest font-bold mb-1">Top Day</p>
+                            <p className="text-sm font-bold text-text">{analytics.popularDay || 'Unknown'}</p>
+                        </div>
+                        <div className="bg-background rounded-xl p-4 border border-border/50 flex flex-col items-center justify-center text-center">
+                            <Layers className="w-6 h-6 text-plex mb-2" />
+                            <p className="text-muted text-[10px] uppercase tracking-widest font-bold mb-1">Top Library</p>
+                            <p className="text-sm font-bold text-text line-clamp-2">{analytics.favoriteLibrary || 'None'}</p>
+                        </div>
+                        <div className="bg-background rounded-xl p-4 border border-border/50 flex flex-col items-center justify-center text-center">
+                            <Film className="w-6 h-6 text-plex mb-2" />
+                            <p className="text-muted text-[10px] uppercase tracking-widest font-bold mb-1">Media Profile</p>
+                            <p className="text-sm font-bold text-text">{analytics.mediaPreference || 'Mixed Bag'}</p>
                         </div>
                     </div>
                 </div>

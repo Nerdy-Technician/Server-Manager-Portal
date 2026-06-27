@@ -3106,12 +3106,23 @@ app.get('/api/plex/analytics/me', requireAuth, async (req, res) => {
         let totalHourOfDay = 0;
         let hourCount = 0;
 
+        const dayOfWeekCounts = { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 };
+        let moviesCount = 0;
+        let showsCount = 0;
+        let musicCount = 0;
+
         historyRes.MediaContainer.Metadata.forEach(item => {
             if (cutoffDate > 0 && item.viewedAt < cutoffDate) return;
             totalPlays++;
             
-            totalHourOfDay += new Date(item.viewedAt * 1000).getHours();
+            const viewDate = new Date(item.viewedAt * 1000);
+            totalHourOfDay += viewDate.getHours();
             hourCount++;
+            dayOfWeekCounts[viewDate.getDay()]++;
+
+            if (item.type === 'movie') moviesCount++;
+            else if (item.type === 'episode') showsCount++;
+            else if (item.type === 'track') musicCount++;
 
             if (recentHistory.length < 200) {
                 recentHistory.push({
@@ -3163,6 +3174,27 @@ app.get('/api/plex/analytics/me', requireAuth, async (req, res) => {
         const topShows = Object.values(contentCounts).filter(c => c.type === 'show').sort((a, b) => b.plays - a.plays);
         const topBinge = topShows.length > 0 ? topShows[0] : null;
 
+        const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        let maxDayIndex = 0;
+        let maxDayCount = 0;
+        for (let i = 0; i < 7; i++) {
+            if (dayOfWeekCounts[i] > maxDayCount) {
+                maxDayCount = dayOfWeekCounts[i];
+                maxDayIndex = i;
+            }
+        }
+        const popularDay = maxDayCount > 0 ? daysOfWeek[maxDayIndex] : 'Unknown';
+        
+        const favoriteLibrary = topLibraries.length > 0 ? topLibraries[0].title : 'None';
+
+        let mediaPreference = 'Mixed Bag';
+        const totalPrefCount = moviesCount + showsCount + musicCount;
+        if (totalPrefCount > 0) {
+            if (moviesCount / totalPrefCount >= 0.6) mediaPreference = 'Movie Buff';
+            else if (showsCount / totalPrefCount >= 0.6) mediaPreference = 'TV Show Binger';
+            else if (musicCount / totalPrefCount >= 0.6) mediaPreference = 'Music Lover';
+        }
+
         const trendingStats = await loadFile(TRENDING_CACHE_PATH, {});
         
         let periodKey = '30';
@@ -3182,6 +3214,9 @@ app.get('/api/plex/analytics/me', requireAuth, async (req, res) => {
             topContent,
             topBinge,
             timeOfDay,
+            popularDay,
+            favoriteLibrary,
+            mediaPreference,
             leaderboardRank,
             totalActiveUsers,
             recentHistory: recentHistory.map(h => {
