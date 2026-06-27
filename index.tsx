@@ -141,6 +141,9 @@ interface AppSettings {
     sonarrApiKey?: string;
     radarrUrl?: string;
     radarrApiKey?: string;
+    tautulliUrl?: string;
+    tautulliApiKey?: string;
+    primaryColor?: string;
     navOrder?: string[];
 }
 
@@ -794,6 +797,8 @@ const SettingsDashboard: React.FC = () => {
     const [sonarrApiKey, setSonarrApiKey] = useState('');
     const [radarrUrl, setRadarrUrl] = useState('');
     const [radarrApiKey, setRadarrApiKey] = useState('');
+    const [tautulliUrl, setTautulliUrl] = useState('');
+    const [tautulliApiKey, setTautulliApiKey] = useState('');
 
     // Branding & UI States
     const [primaryColor, setPrimaryColor] = useState('#E5A00D');
@@ -1372,7 +1377,16 @@ const SettingsDashboard: React.FC = () => {
                             </div>
                             <div className="mb-4">
                                 <label htmlFor="radarrApiKey">Radarr API Key</label>
-                                <input className="w-full p-3 rounded-lg border border-border bg-background text-text outline-none focus:border-plex focus:ring-1 focus:ring-plex transition-all" id="radarrApiKey" type="password" value={radarrApiKey} onChange={(e) => setRadarrApiKey(e.target.value)} placeholder="API Key from Radarr Settings -> General" />
+                                <input className="w-full p-3 rounded-lg border border-border bg-background text-text outline-none focus:border-plex focus:ring-1 focus:ring-plex transition-all" id="radarrApiKey" type="password" value={radarrApiKey} onChange={(e) => setRadarrApiKey(e.target.value)} placeholder="Enter Radarr API Key" />
+                            </div>
+                            <h3 className="text-xl font-bold text-plex mb-4 border-b border-border pb-2 mt-8">Tautulli Integration (Optional)</h3>
+                            <div className="mb-4">
+                                <label htmlFor="tautulliUrl">Tautulli URL</label>
+                                <input className="w-full p-3 rounded-lg border border-border bg-background text-text outline-none focus:border-plex focus:ring-1 focus:ring-plex transition-all" id="tautulliUrl" type="text" value={tautulliUrl} onChange={(e) => setTautulliUrl(e.target.value)} placeholder="http://localhost:8181" />
+                            </div>
+                            <div className="mb-8">
+                                <label htmlFor="tautulliApiKey">Tautulli API Key</label>
+                                <input className="w-full p-3 rounded-lg border border-border bg-background text-text outline-none focus:border-plex focus:ring-1 focus:ring-plex transition-all" id="tautulliApiKey" type="password" value={tautulliApiKey} onChange={(e) => setTautulliApiKey(e.target.value)} placeholder="Enter Tautulli API Key" />
                             </div>
                         </div>
                     )}
@@ -2665,6 +2679,7 @@ const AnalyticsDashboard: React.FC<{ isAdmin: boolean, sessionInfo: any }> = ({ 
         return <PersonalAnalyticsDashboard username={sessionInfo?.session?.username || 'User'} thumb={null} />;
     }
     const [analyticsData, setAnalyticsData] = useState<{ topUsers: any[], topLibraries: any[], topMovies: any[], topShows: any[], topMusic: any[], topDevices: any[], peakHours: number[], totalPlaybacks: number } | null>(null);
+    const [tautulliData, setTautulliData] = useState<{ streamsRecord: number, totalPlays: number, totalTimeStr: string } | null>(null);
     const [isLoading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [days, setDays] = useState<string>('30');
@@ -2692,6 +2707,14 @@ const AnalyticsDashboard: React.FC<{ isAdmin: boolean, sessionInfo: any }> = ({ 
             try {
                 const data = await apiFetch(`/api/plex/analytics?days=${days}`);
                 setAnalyticsData(data);
+                
+                try {
+                    const tData = await apiFetch('/api/tautulli/stats');
+                    setTautulliData(tData);
+                } catch (e) {
+                    // Tautulli might not be configured, ignore error
+                    setTautulliData(null);
+                }
             } catch (err: any) {
                 setError(err.message);
             } finally {
@@ -2885,6 +2908,30 @@ const AnalyticsDashboard: React.FC<{ isAdmin: boolean, sessionInfo: any }> = ({ 
                                         </div>
                                     </div>
                                 ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Tautulli Insights Card */}
+                    {tautulliData && (
+                        <div className="bg-card/50 backdrop-blur-md rounded-xl p-4 md:p-6 shadow-xl border border-border mt-6 relative overflow-hidden">
+                            <div className="absolute top-0 right-0 p-3 opacity-20 pointer-events-none">
+                                <Activity className="w-16 h-16" />
+                            </div>
+                            <h2 className="text-xl font-bold text-text mb-4 uppercase tracking-wider flex items-center gap-2"><Activity className="text-[#3b82f6] w-5 h-5" /> Tautulli Insights</h2>
+                            <div className="flex flex-col gap-4 relative z-10">
+                                <div className="flex items-center justify-between p-3 bg-black/20 rounded-lg hover:bg-black/40 transition-colors border border-white/5">
+                                    <span className="font-bold text-text flex items-center gap-2"><Users className="w-4 h-4 text-[#3b82f6]" /> Max Concurrent Streams</span>
+                                    <span className="font-mono font-black text-[#3b82f6] text-lg">{tautulliData.streamsRecord || 0}</span>
+                                </div>
+                                <div className="flex items-center justify-between p-3 bg-black/20 rounded-lg hover:bg-black/40 transition-colors border border-white/5">
+                                    <span className="font-bold text-text flex items-center gap-2"><Play className="w-4 h-4 text-[#e5a00d]" /> Total Play Counts</span>
+                                    <span className="font-mono font-black text-[#e5a00d] text-lg">{tautulliData.totalPlays ? tautulliData.totalPlays.toLocaleString() : 0}</span>
+                                </div>
+                                <div className="flex items-center justify-between p-3 bg-black/20 rounded-lg hover:bg-black/40 transition-colors border border-white/5">
+                                    <span className="font-bold text-text flex items-center gap-2"><Clock className="w-4 h-4 text-green-400" /> Watch Time</span>
+                                    <span className="font-mono font-black text-green-400 text-sm whitespace-nowrap ml-2 text-right">{tautulliData.totalTimeStr || '0 hrs'}</span>
+                                </div>
                             </div>
                         </div>
                     )}
@@ -3829,6 +3876,13 @@ const SetupWizard: React.FC<{ onComplete: () => void }> = ({ onComplete }) => {
                                 <div className="flex gap-2">
                                     <input type="text" className="w-1/2 p-3 rounded-lg bg-background border border-border text-text focus:border-plex outline-none transition-colors" placeholder="http://localhost:7878" value={radarrUrl} onChange={e => setRadarrUrl(e.target.value)} />
                                     <input type="password" className="w-1/2 p-3 rounded-lg bg-background border border-border text-text focus:border-plex outline-none transition-colors" placeholder="Radarr API Key" value={radarrApiKey} onChange={e => setRadarrApiKey(e.target.value)} />
+                                </div>
+                            </div>
+                            <div className="flex flex-col gap-2">
+                                <label className="text-sm font-bold text-muted uppercase tracking-wider">Tautulli URL & API Key</label>
+                                <div className="flex gap-2">
+                                    <input type="text" className="w-1/2 p-3 rounded-lg bg-background border border-border text-text focus:border-plex outline-none transition-colors" placeholder="http://localhost:8181" value={tautulliUrl} onChange={e => setTautulliUrl(e.target.value)} />
+                                    <input type="password" className="w-1/2 p-3 rounded-lg bg-background border border-border text-text focus:border-plex outline-none transition-colors" placeholder="Tautulli API Key" value={tautulliApiKey} onChange={e => setTautulliApiKey(e.target.value)} />
                                 </div>
                             </div>
                         </div>

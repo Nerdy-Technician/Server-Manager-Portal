@@ -1221,6 +1221,8 @@ app.get('/api/config', requireAdmin, async (req, res) => {
                 sonarrApiKey: config.sonarrApiKey || '',
                 radarrUrl: config.radarrUrl || '',
                 radarrApiKey: config.radarrApiKey || '',
+                tautulliUrl: config.tautulliUrl || '',
+                tautulliApiKey: config.tautulliApiKey || '',
                 primaryColor: config.primaryColor || '#E5A00D',
                 customLogoUrl: config.customLogoUrl || '',
                 referralEnabled: !!config.referralEnabled,
@@ -1278,7 +1280,7 @@ app.post('/api/config', async (req, res) => {
         token, serverIdentifier, checkIntervalMinutes, 
         smtpHost, smtpPort, smtpUser, smtpPass, smtpFrom, smtpSecure, emailDaysBefore,
         newsletterFrequency, newsletterDay, publicDomain, requestUrl, contactUrl,
-        sonarrUrl, sonarrApiKey, radarrUrl, radarrApiKey,
+        sonarrUrl, sonarrApiKey, radarrUrl, radarrApiKey, tautulliUrl, tautulliApiKey,
         inactiveCleanupEnabled, inactiveCleanupDays,
         primaryColor, customLogoUrl, referralEnabled, referralTrialDays, referralRewardDays, announcement, navOrder, hideStreamUsers, defaultLibraryIds, use24HourClock
     } = req.body;
@@ -2899,6 +2901,39 @@ app.post('/api/announcements/push', requireAdmin, async (req, res) => {
     } catch (e) {
         log(`Error pushing announcement: ${e.message}`);
         res.status(500).json({ error: 'Failed to update announcement' });
+    }
+});
+
+app.get('/api/tautulli/stats', requireAdmin, async (req, res) => {
+    try {
+        const config = await loadFile(CONFIG_PATH, null);
+        if (!config || !config.tautulliUrl || !config.tautulliApiKey) {
+            return res.status(404).json({ error: 'Tautulli is not configured.' });
+        }
+        const tUrl = config.tautulliUrl.replace(/\/+$/, '');
+        const response = await fetch(`${tUrl}/api/v2?apikey=${config.tautulliApiKey}&cmd=get_home_stats`, { headers: { 'Accept': 'application/json' } }).then(r => r.json());
+        
+        if (response && response.response && response.response.data) {
+            const stats = response.response.data;
+            let streamsRecord = 0;
+            let totalPlays = 0;
+            let totalTimeStr = '';
+
+            const concurrent = stats.find(s => s.stat_id === 'most_concurrent_streams');
+            if (concurrent && concurrent.rows && concurrent.rows[0]) streamsRecord = concurrent.rows[0].count;
+
+            const plays = stats.find(s => s.stat_id === 'total_plays');
+            if (plays && plays.rows && plays.rows[0]) totalPlays = plays.rows[0].total_plays;
+
+            const duration = stats.find(s => s.stat_id === 'total_time');
+            if (duration && duration.rows && duration.rows[0]) totalTimeStr = duration.rows[0].total_time;
+
+            return res.json({ streamsRecord, totalPlays, totalTimeStr });
+        }
+        res.status(500).json({ error: 'Invalid response from Tautulli' });
+    } catch (e) {
+        log(`Tautulli Error: ${e.message}`);
+        res.status(500).json({ error: 'Failed to connect to Tautulli' });
     }
 });
 
