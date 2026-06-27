@@ -4144,11 +4144,27 @@ var WrapUpModal = ({ metric, analytics, onClose }) => {
           ] })
         ] });
       case "Watch Style":
+        const discoveryPlays = analytics.uniqueTitles || 0;
+        const rewatchPlays = Math.max(0, (analytics.totalPlays || 0) - discoveryPlays);
         return /* @__PURE__ */ jsxs("div", { className: "flex flex-col items-center justify-center text-center p-6", children: [
           /* @__PURE__ */ jsx(Compass, { className: "w-16 h-16 text-plex mb-4 drop-shadow-lg" }),
           /* @__PURE__ */ jsx("h2", { className: "text-3xl font-black text-white mb-2", children: analytics.watchStyle || "Unknown" }),
           /* @__PURE__ */ jsx("p", { className: "text-muted mb-6 uppercase tracking-widest text-xs font-bold", children: "Discovery vs Rewatch" }),
-          /* @__PURE__ */ jsxs("div", { className: "grid grid-cols-2 gap-4 w-full mb-4", children: [
+          /* @__PURE__ */ jsxs("div", { className: "w-full relative h-4 rounded-full overflow-hidden flex shadow-inner bg-black/50 border border-white/10 mb-2 mt-2", children: [
+            /* @__PURE__ */ jsx("div", { className: "h-full bg-gradient-to-r from-plex to-orange-400 flex items-center justify-center transition-all duration-1000 shadow-[inset_0_0_20px_rgba(0,0,0,0.3)] relative overflow-hidden", style: { width: `${discoveryPlays / Math.max(analytics.totalPlays || 1, 1) * 100}%` } }),
+            /* @__PURE__ */ jsx("div", { className: "h-full bg-gradient-to-r from-blue-600 to-blue-400 flex items-center justify-center transition-all duration-1000 shadow-[inset_0_0_20px_rgba(0,0,0,0.3)] relative overflow-hidden", style: { width: `${rewatchPlays / Math.max(analytics.totalPlays || 1, 1) * 100}%` } })
+          ] }),
+          /* @__PURE__ */ jsxs("div", { className: "flex justify-between w-full px-2 mb-6 text-[10px] font-black uppercase tracking-wider", children: [
+            /* @__PURE__ */ jsxs("span", { className: "text-plex", children: [
+              discoveryPlays,
+              " New"
+            ] }),
+            /* @__PURE__ */ jsxs("span", { className: "text-blue-400", children: [
+              rewatchPlays,
+              " Rewatches"
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxs("div", { className: "grid grid-cols-2 gap-4 w-full mb-6", children: [
             /* @__PURE__ */ jsxs("div", { className: "bg-gradient-to-b from-white/10 to-white/5 border border-white/10 rounded-xl p-4 flex flex-col items-center justify-center shadow-lg", children: [
               /* @__PURE__ */ jsx("span", { className: "text-3xl font-black text-white mb-1 drop-shadow", children: analytics.totalPlays || 0 }),
               /* @__PURE__ */ jsx("span", { className: "text-[9px] text-muted uppercase tracking-widest font-black", children: "Total Plays" })
@@ -4159,7 +4175,24 @@ var WrapUpModal = ({ metric, analytics, onClose }) => {
               /* @__PURE__ */ jsx("span", { className: "text-[9px] text-plex/80 uppercase tracking-widest font-black", children: "Unique Titles" })
             ] })
           ] }),
-          /* @__PURE__ */ jsx("p", { className: "text-sm text-gray-300 italic bg-white/5 border border-white/10 rounded-lg px-4 py-2 w-full", children: analytics.watchStyle === "Comfort Binger" ? "You love returning to your favorite comfort shows." : analytics.watchStyle === "Loyal Fan" ? "You stick around to finish what you start." : "You love exploring a wide variety of different content!" })
+          /* @__PURE__ */ jsx("p", { className: "text-sm text-gray-300 italic bg-white/5 border border-white/10 rounded-lg px-4 py-3 w-full shadow-inner mb-4", children: analytics.watchStyle === "Comfort Binger" ? "You love returning to your favorite comfort shows." : analytics.watchStyle === "Loyal Fan" ? "You stick around to finish what you start." : "You love exploring a wide variety of different content!" }),
+          analytics.topContent && analytics.topContent.filter((c) => c.plays > 1).length > 0 && /* @__PURE__ */ jsxs("div", { className: "w-full mt-2", children: [
+            /* @__PURE__ */ jsx("p", { className: "text-left text-xs uppercase tracking-widest font-bold text-muted mb-3 border-b border-white/10 pb-2", children: "Top Obsessions" }),
+            /* @__PURE__ */ jsx("div", { className: "flex flex-col gap-2", children: analytics.topContent.filter((c) => c.plays > 1).slice(0, 3).map((item, i) => /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between bg-white/5 border border-white/5 rounded-lg p-2 hover:bg-white/10 transition-colors", children: [
+              /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-3", children: [
+                /* @__PURE__ */ jsx("span", { className: "text-gray-500 font-bold w-4 text-right", children: i + 1 }),
+                item.thumbUrl ? /* @__PURE__ */ jsx("img", { src: item.thumbUrl, className: "w-8 h-12 object-cover rounded shadow-sm" }) : /* @__PURE__ */ jsx("div", { className: "w-8 h-12 bg-white/10 rounded" }),
+                /* @__PURE__ */ jsxs("div", { className: "flex flex-col text-left", children: [
+                  /* @__PURE__ */ jsx("span", { className: "font-bold text-sm text-gray-200 line-clamp-1", children: item.title }),
+                  /* @__PURE__ */ jsx("span", { className: "text-[10px] text-gray-400 font-bold tracking-widest uppercase", children: item.type })
+                ] })
+              ] }),
+              /* @__PURE__ */ jsxs("span", { className: "text-xs font-black text-plex whitespace-nowrap", children: [
+                item.plays,
+                " plays"
+              ] })
+            ] }, i)) })
+          ] })
         ] });
       case "Streaming Habit":
         const avgWd = (analytics.weekdayPlays || 0) / 5;
@@ -5644,24 +5677,10 @@ var Navigation = ({ currentRoute, onNavigate, onLogout, isAdmin, serverName, adm
         /* @__PURE__ */ jsx("span", { className: "font-bold text-text uppercase tracking-widest text-sm", children: serverName })
       ] }),
       /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-4", children: [
-        /* @__PURE__ */ jsx("button", { onClick: (e) => {
+        isAdmin && /* @__PURE__ */ jsx("button", { onClick: (e) => {
           e.preventDefault();
-          onNavigate("analytics");
-        }, className: `text-muted hover:text-text transition-colors ${currentRoute === "analytics" ? "text-plex" : ""}`, children: /* @__PURE__ */ jsx(ChartColumn, { className: "w-5 h-5" }) }),
-        isAdmin && /* @__PURE__ */ jsxs(Fragment, { children: [
-          /* @__PURE__ */ jsx("button", { onClick: (e) => {
-            e.preventDefault();
-            onNavigate("mediastack");
-          }, className: `text-muted hover:text-text transition-colors ${currentRoute === "mediastack" ? "text-plex" : ""}`, children: /* @__PURE__ */ jsx(Layers, { className: "w-5 h-5" }) }),
-          /* @__PURE__ */ jsx("button", { onClick: (e) => {
-            e.preventDefault();
-            onNavigate("logs");
-          }, className: `text-muted hover:text-text transition-colors ${currentRoute === "logs" ? "text-plex" : ""}`, children: /* @__PURE__ */ jsx(FileText, { className: "w-5 h-5" }) }),
-          /* @__PURE__ */ jsx("button", { onClick: (e) => {
-            e.preventDefault();
-            onNavigate("settings");
-          }, className: `text-muted hover:text-text transition-colors ${currentRoute === "settings" ? "text-plex" : ""}`, children: /* @__PURE__ */ jsx(Settings, { className: "w-5 h-5" }) })
-        ] }),
+          onNavigate("logs");
+        }, className: `text-muted hover:text-text transition-colors ${currentRoute === "logs" ? "text-plex" : ""}`, children: /* @__PURE__ */ jsx(FileText, { className: "w-5 h-5" }) }),
         /* @__PURE__ */ jsx("button", { onClick: (e) => {
           e.preventDefault();
           onLogout();
