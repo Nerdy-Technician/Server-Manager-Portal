@@ -6406,13 +6406,31 @@ const LibraryDashboard: React.FC<{ onBack: () => void, isAdmin?: boolean, public
                                         </div>
                                     </div>
                                     {/* Progress Bar with embedded text */}
-                                    <div className="w-full h-5 bg-background/80 relative mt-auto z-10">
-                                        <div className="h-full bg-plex absolute top-0 left-0 transition-all duration-1000" style={{ width: `${session.progress}%` }}></div>
-                                        <div className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-white drop-shadow-[0_1px_2px_rgba(0,0,0,1)] z-20 pointer-events-none whitespace-nowrap">
-                                            {Math.round(session.progress)}%
-                                            {session.timeRemaining > 0 && session.state === 'playing' ? ` • ETA ${formatTime(new Date(Date.now() + session.timeRemaining))}` : ''}
-                                        </div>
-                                    </div>
+                                    {(() => {
+                                        const progressBarText = `${Math.round(session.progress)}%${session.timeRemaining > 0 && session.state === 'playing' ? ` • ETA ${formatTime(new Date(Date.now() + session.timeRemaining))}` : ''}`;
+                                        return (
+                                            <div className="w-full h-5 bg-background/80 relative mt-auto z-10 overflow-hidden rounded-b-lg">
+                                                {/* Progress fill */}
+                                                <div className="h-full bg-plex absolute top-0 left-0 transition-all duration-1000 z-10" style={{ width: `${session.progress}%` }}></div>
+                                                
+                                                {/* Text visible on black background (white text) */}
+                                                <div 
+                                                    className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-white z-20 pointer-events-none whitespace-nowrap"
+                                                    style={{ clipPath: `inset(0 0 0 ${session.progress}%)` }}
+                                                >
+                                                    {progressBarText}
+                                                </div>
+                                                
+                                                {/* Text visible on yellow progress bar (black text) */}
+                                                <div 
+                                                    className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-black z-30 pointer-events-none whitespace-nowrap"
+                                                    style={{ clipPath: `inset(0 ${100 - session.progress}% 0 0)` }}
+                                                >
+                                                    {progressBarText}
+                                                </div>
+                                            </div>
+                                        );
+                                    })()}
                                 </div>
                             ))}
                         </div>
