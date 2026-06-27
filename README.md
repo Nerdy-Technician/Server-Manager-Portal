@@ -1,6 +1,6 @@
 <div align="center">
 
-# Server Manager Portal
+# Server Portal
 
 **A premium, fully-automated management and analytics portal for Plex Media Servers.**
 
