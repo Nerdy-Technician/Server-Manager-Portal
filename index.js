@@ -3159,8 +3159,17 @@ app.get('/api/plex/analytics/me', requireAuth, async (req, res) => {
         const topBinge = topShows.length > 0 ? topShows[0] : null;
 
         const trendingStats = await loadFile(TRENDING_CACHE_PATH, {});
-        const leaderboardRank = trendingStats.leaderboard && accountID ? trendingStats.leaderboard[accountID] : null;
-        const totalActiveUsers = trendingStats.totalActiveUsers || 0;
+        
+        let periodKey = '30';
+        if (req.query.days === 'all') periodKey = 'all';
+        else if (req.query.days) periodKey = req.query.days;
+
+        const leaderboardRank = trendingStats.leaderboards && trendingStats.leaderboards[periodKey] && accountID 
+            ? trendingStats.leaderboards[periodKey][accountID] 
+            : null;
+        const totalActiveUsers = trendingStats.totalActiveUsers && trendingStats.totalActiveUsers[periodKey] 
+            ? trendingStats.totalActiveUsers[periodKey] 
+            : 0;
 
         res.json({ 
             totalPlays, 
@@ -3766,6 +3775,9 @@ async function calculateTrendingStats() {
         const now = Date.now() / 1000;
         const days7 = now - (7 * 24 * 60 * 60);
         const days30 = now - (30 * 24 * 60 * 60);
+        const days60 = now - (60 * 24 * 60 * 60);
+        const days90 = now - (90 * 24 * 60 * 60);
+        const days180 = now - (180 * 24 * 60 * 60);
         const days365 = now - (365 * 24 * 60 * 60);
         
         const counts = {
@@ -3779,7 +3791,15 @@ async function calculateTrendingStats() {
             retroHits: {},
             cultClassics: {}
         };
-        const userPlays30Days = {};
+        const userPlays = {
+            '7': {},
+            '30': {},
+            '60': {},
+            '90': {},
+            '180': {},
+            '365': {},
+            'all': {}
+        };
 
         history.forEach(item => {
             const viewedAt = item.viewedAt;
@@ -3806,14 +3826,24 @@ async function calculateTrendingStats() {
             };
 
             increment(counts.allTime); // All time gets incremented for every view
+            userPlays['all'][item.accountID] = (userPlays['all'][item.accountID] || 0) + 1;
             
             // Time-based stats
-            if (viewedAt >= days7) increment(counts.trending7Days);
-            if (viewedAt >= days365) increment(counts.top365Days);
+            if (viewedAt >= days7) {
+                increment(counts.trending7Days);
+                userPlays['7'][item.accountID] = (userPlays['7'][item.accountID] || 0) + 1;
+            }
+            if (viewedAt >= days30) userPlays['30'][item.accountID] = (userPlays['30'][item.accountID] || 0) + 1;
+            if (viewedAt >= days60) userPlays['60'][item.accountID] = (userPlays['60'][item.accountID] || 0) + 1;
+            if (viewedAt >= days90) userPlays['90'][item.accountID] = (userPlays['90'][item.accountID] || 0) + 1;
+            if (viewedAt >= days180) userPlays['180'][item.accountID] = (userPlays['180'][item.accountID] || 0) + 1;
+            if (viewedAt >= days365) {
+                increment(counts.top365Days);
+                userPlays['365'][item.accountID] = (userPlays['365'][item.accountID] || 0) + 1;
+            }
             
             // Movie / Show 30 days
             if (viewedAt >= days30) {
-                userPlays30Days[item.accountID] = (userPlays30Days[item.accountID] || 0) + 1;
                 if (item.type === 'movie') increment(counts.movies30Days);
                 if (item.type === 'episode') increment(counts.shows30Days);
             }
@@ -3853,10 +3883,15 @@ async function calculateTrendingStats() {
                 .slice(0, 20);
         };
 
-        const sortedUsers = Object.entries(userPlays30Days).sort((a, b) => b[1] - a[1]);
-        const leaderboard = {};
-        sortedUsers.forEach(([accountId, plays], index) => {
-            leaderboard[accountId] = index + 1;
+        const leaderboards = {};
+        const totalActiveUsers = {};
+        Object.keys(userPlays).forEach(period => {
+            const sortedUsers = Object.entries(userPlays[period]).sort((a, b) => b[1] - a[1]);
+            leaderboards[period] = {};
+            sortedUsers.forEach(([accountId, plays], index) => {
+                leaderboards[period][accountId] = index + 1;
+            });
+            totalActiveUsers[period] = sortedUsers.length;
         });
 
         const stats = {
@@ -3869,8 +3904,8 @@ async function calculateTrendingStats() {
             nightOwls: getTop(counts.nightOwls),
             retroHits: getTop(counts.retroHits),
             cultClassics: getCultClassics(counts.cultClassics),
-            leaderboard,
-            totalActiveUsers: sortedUsers.length,
+            leaderboards,
+            totalActiveUsers,
             lastUpdated: Date.now()
         };
 

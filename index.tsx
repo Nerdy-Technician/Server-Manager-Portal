@@ -3887,6 +3887,7 @@ const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onLogout: 
     const RECENT_HISTORY_PAGE_SIZE = 5;
     const [analyticsDays, setAnalyticsDays] = useState<number | 'all'>(30);
     const [analyticsDaysOpen, setAnalyticsDaysOpen] = useState(false);
+    const [wrapUpDaysOpen, setWrapUpDaysOpen] = useState(false);
 
     const user = sessionInfo.account;
     const [optOutNewsletter, setOptOutNewsletter] = useState(user?.optOutNewsletter || false);
@@ -4082,7 +4083,52 @@ const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onLogout: 
             {/* Personal Wrap-Up */}
             {(sessionInfo.session.isAdmin || user) && !analyticsLoading && analytics && (
                 <div className="bg-card border border-border rounded-2xl p-6 shadow-xl mb-6">
-                    <h3 className="text-xl font-bold text-text mb-6">Your 30-Day Wrap-Up</h3>
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                        <h3 className="text-xl font-bold text-text">Your Personal Wrap-Up</h3>
+                        <div className="relative">
+                            <button
+                                onClick={() => setWrapUpDaysOpen(!wrapUpDaysOpen)}
+                                className="flex items-center gap-2 bg-background border border-border/50 rounded-lg px-3 py-1.5 text-sm font-medium text-text focus:outline-none hover:border-plex/50 transition-colors cursor-pointer shadow-sm"
+                            >
+                                <span>
+                                    {analyticsDays === 7 ? 'Last 7 Days' :
+                                        analyticsDays === 30 ? 'Last 30 Days' :
+                                            analyticsDays === 60 ? 'Last 60 Days' :
+                                                analyticsDays === 90 ? 'Last 90 Days' :
+                                                    analyticsDays === 180 ? 'Last 180 Days' :
+                                                        'All Time'}
+                                </span>
+                                <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${wrapUpDaysOpen ? 'rotate-180 text-plex' : 'text-muted'}`} />
+                            </button>
+
+                            {wrapUpDaysOpen && (
+                                <>
+                                    <div className="fixed inset-0 z-40" onClick={() => setWrapUpDaysOpen(false)} />
+                                    <div className="absolute right-0 mt-2 w-40 bg-card border border-border rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.5)] z-50 overflow-hidden flex flex-col py-1 animate-in fade-in slide-in-from-top-2 duration-200">
+                                        {[
+                                            { value: 7, label: 'Last 7 Days' },
+                                            { value: 30, label: 'Last 30 Days' },
+                                            { value: 60, label: 'Last 60 Days' },
+                                            { value: 90, label: 'Last 90 Days' },
+                                            { value: 180, label: 'Last 180 Days' },
+                                            { value: 'all', label: 'All Time' }
+                                        ].map(opt => (
+                                            <button
+                                                key={opt.value}
+                                                onClick={() => {
+                                                    setAnalyticsDays(opt.value as any);
+                                                    setWrapUpDaysOpen(false);
+                                                }}
+                                                className={`w-full text-left px-4 py-2.5 text-sm transition-colors ${analyticsDays === opt.value ? 'bg-plex/10 text-plex font-bold border-l-2 border-plex' : 'text-text hover:bg-white/5 border-l-2 border-transparent'}`}
+                                            >
+                                                {opt.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    </div>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <div className="bg-background rounded-xl p-4 border border-border/50 flex flex-col items-center justify-center text-center">
                             <Trophy className="w-6 h-6 text-plex mb-2" />
