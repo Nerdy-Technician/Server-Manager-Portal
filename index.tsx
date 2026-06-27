@@ -4013,25 +4013,88 @@ const WrapUpModal: React.FC<{ metric: string; analytics: any; onClose: () => voi
 
     const renderContent = () => {
         switch (metric) {
-            case 'Server Rank':
+            case 'Server Rank': {
                 const percentile = analytics.totalActiveUsers > 0 ? Math.max(1, Math.round((analytics.leaderboardRank / analytics.totalActiveUsers) * 100)) : 100;
+                const progressPct = analytics.totalActiveUsers > 0 ? Math.max(2, 100 - Math.round(((analytics.leaderboardRank - 1) / analytics.totalActiveUsers) * 100)) : 100;
+                const neighbourhood: any[] = analytics.leaderboardNeighbourhood || [];
+                const myPlays = analytics.myPlaysOnLeaderboard || analytics.totalPlays || 0;
+                const userAbove = neighbourhood.find((u: any) => !u.isMe && u.rank < (analytics.leaderboardRank || 999));
+                const playsToClimb = userAbove ? (userAbove.plays - myPlays + 1) : null;
+
+                const rankEmoji = (analytics.leaderboardRank === 1) ? '🥇' : (analytics.leaderboardRank === 2) ? '🥈' : (analytics.leaderboardRank === 3) ? '🥉' : '🏆';
+
                 return (
                     <div className="flex flex-col items-center justify-center text-center p-6">
-                        <Trophy className="w-16 h-16 text-plex mb-4 animate-bounce" />
-                        <h2 className="text-3xl font-black text-white mb-2">You are Rank #{analytics.leaderboardRank || 'Unranked'}</h2>
-                        <p className="text-muted mb-6">Out of {analytics.totalActiveUsers || 0} active users on the server.</p>
-                        
-                        <div className="w-full bg-white/5 border border-white/10 rounded-xl p-6 mb-6 relative overflow-hidden">
-                            <div className="absolute top-0 right-0 w-32 h-32 bg-plex/20 blur-3xl -mr-10 -mt-10 rounded-full"></div>
-                            <h3 className="text-4xl font-black text-white drop-shadow-md mb-1">Top {percentile}%</h3>
-                            <p className="text-xs font-bold text-plex uppercase tracking-widest">Of All Viewers</p>
+                        <span className="text-5xl mb-3">{rankEmoji}</span>
+                        <h2 className="text-3xl font-black text-white mb-1">Rank #{analytics.leaderboardRank || 'Unranked'}</h2>
+                        <p className="text-muted mb-5 text-sm">Out of {analytics.totalActiveUsers || 0} active users</p>
+
+                        {/* Progress bar */}
+                        <div className="w-full mb-1">
+                            <div className="flex justify-between text-[10px] font-black uppercase tracking-widest mb-1.5">
+                                <span className="text-gray-500">#1 Top</span>
+                                <span className="text-plex">Top {percentile}%</span>
+                                <span className="text-gray-500">#{analytics.totalActiveUsers} Last</span>
+                            </div>
+                            <div className="w-full h-3 bg-black/50 rounded-full overflow-hidden border border-white/10">
+                                <div
+                                    className="h-full bg-gradient-to-r from-plex via-amber-400 to-orange-400 rounded-full shadow-[0_0_10px_rgba(229,160,13,0.6)] transition-all duration-1000"
+                                    style={{ width: `${progressPct}%` }}
+                                />
+                            </div>
                         </div>
 
-                        <div className="bg-plex/10 border border-plex/30 rounded-xl p-4 w-full shadow-inner">
-                            <p className="text-sm text-plex font-medium">Keep streaming to climb the leaderboard! Every movie, episode, and song counts towards your rank.</p>
+                        {/* Stats row */}
+                        <div className="grid grid-cols-2 gap-3 w-full mt-4 mb-4">
+                            <div className="bg-gradient-to-b from-white/10 to-white/5 border border-white/10 rounded-xl p-4 flex flex-col items-center shadow-lg">
+                                <span className="text-2xl font-black text-white mb-1">{myPlays}</span>
+                                <span className="text-[9px] text-muted uppercase tracking-widest font-black">My Streams</span>
+                            </div>
+                            <div className="bg-gradient-to-b from-plex/20 to-plex/5 border border-plex/30 rounded-xl p-4 flex flex-col items-center shadow-lg relative overflow-hidden">
+                                <div className="absolute top-0 right-0 w-16 h-16 bg-plex/20 blur-xl -mr-5 -mt-5 rounded-full" />
+                                <span className="text-2xl font-black text-plex mb-1">{percentile}%</span>
+                                <span className="text-[9px] text-plex/80 uppercase tracking-widest font-black">Top Percentile</span>
+                            </div>
                         </div>
+
+                        {/* Plays to climb */}
+                        {playsToClimb !== null && playsToClimb > 0 && (
+                            <div className="w-full bg-blue-500/10 border border-blue-500/20 rounded-xl px-4 py-3 mb-4 text-sm text-blue-300 font-medium">
+                                🎯 <strong>{playsToClimb} more stream{playsToClimb !== 1 ? 's' : ''}</strong> to overtake <strong>{userAbove?.username}</strong> (Rank #{userAbove?.rank})
+                            </div>
+                        )}
+                        {playsToClimb === null && analytics.leaderboardRank === 1 && (
+                            <div className="w-full bg-plex/10 border border-plex/30 rounded-xl px-4 py-3 mb-4 text-sm text-plex font-medium">
+                                👑 You're at the top of the leaderboard!
+                            </div>
+                        )}
+
+                        {/* Mini leaderboard neighbourhood */}
+                        {neighbourhood.length > 0 && (
+                            <div className="w-full">
+                                <p className="text-left text-xs uppercase tracking-widest font-bold text-muted mb-3 border-b border-white/10 pb-2">Your Leaderboard Position</p>
+                                <div className="flex flex-col gap-1.5">
+                                    {neighbourhood.map((u: any, i: number) => (
+                                        <div key={i} className={`flex items-center justify-between rounded-lg px-3 py-2.5 border transition-all ${
+                                            u.isMe
+                                                ? 'bg-plex/15 border-plex/50 shadow-[0_0_12px_rgba(229,160,13,0.2)]'
+                                                : 'bg-white/5 border-white/5'
+                                        }`}>
+                                            <div className="flex items-center gap-3">
+                                                <span className={`font-black text-sm w-8 text-right ${ u.isMe ? 'text-plex' : 'text-gray-500' }`}>#{u.rank}</span>
+                                                <span className={`font-bold text-sm ${ u.isMe ? 'text-white' : 'text-gray-300' }`}>
+                                                    {u.isMe ? <span className="inline-flex items-center gap-1.5">{u.username} <span className="text-[9px] text-plex font-black uppercase tracking-widest bg-plex/20 px-1.5 py-0.5 rounded">You</span></span> : u.username}
+                                                </span>
+                                            </div>
+                                            <span className={`text-xs font-black whitespace-nowrap ${ u.isMe ? 'text-plex' : 'text-gray-400' }`}>{u.plays} plays</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                     </div>
                 );
+            }
             case 'Total Streams':
                 return (
                     <div className="flex flex-col items-center justify-center text-center p-6">

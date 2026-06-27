@@ -3277,12 +3277,33 @@ app.get('/api/plex/analytics/me', requireAuth, async (req, res) => {
         if (req.query.days === 'all') periodKey = 'all';
         else if (req.query.days) periodKey = req.query.days;
 
-        const leaderboardRank = trendingStats.leaderboards && trendingStats.leaderboards[periodKey] && accountID 
+        const userEntry = trendingStats.leaderboards && trendingStats.leaderboards[periodKey] && accountID 
             ? trendingStats.leaderboards[periodKey][accountID] 
             : null;
+        const leaderboardRank = userEntry ? (typeof userEntry === 'object' ? userEntry.rank : userEntry) : null;
+        const myPlaysOnLeaderboard = userEntry ? (typeof userEntry === 'object' ? userEntry.plays : null) : null;
         const totalActiveUsers = trendingStats.totalActiveUsers && trendingStats.totalActiveUsers[periodKey] 
             ? trendingStats.totalActiveUsers[periodKey] 
             : 0;
+
+        // Build a neighbourhood snapshot: the 2 users above and 2 below
+        const users = await loadFile(USERS_PATH, []);
+        const usernameMap = {};
+        users.forEach(u => { if (u.plexAccountId) usernameMap[u.plexAccountId] = u.username || u.email || 'Unknown'; });
+        
+        let leaderboardNeighbourhood = [];
+        const sortedBoard = trendingStats.leaderboardsSorted && trendingStats.leaderboardsSorted[periodKey] ? trendingStats.leaderboardsSorted[periodKey] : [];
+        if (leaderboardRank && sortedBoard.length > 0) {
+            const myIdx = leaderboardRank - 1;
+            const start = Math.max(0, myIdx - 2);
+            const end = Math.min(sortedBoard.length - 1, myIdx + 2);
+            leaderboardNeighbourhood = sortedBoard.slice(start, end + 1).map(entry => ({
+                rank: entry.rank,
+                plays: entry.plays,
+                isMe: entry.accountId === String(accountID),
+                username: usernameMap[entry.accountId] || `User ${entry.rank}`
+            }));
+        }
 
         res.json({ 
             totalPlays, 
@@ -3300,6 +3321,8 @@ app.get('/api/plex/analytics/me', requireAuth, async (req, res) => {
             streamingHabit,
             leaderboardRank,
             totalActiveUsers,
+            myPlaysOnLeaderboard,
+            leaderboardNeighbourhood,
             moviesCount,
             showsCount,
             musicCount,
@@ -4047,12 +4070,14 @@ async function calculateTrendingStats() {
         };
 
         const leaderboards = {};
+        const leaderboardsSorted = {};
         const totalActiveUsers = {};
         Object.keys(userPlays).forEach(period => {
             const sortedUsers = Object.entries(userPlays[period]).sort((a, b) => b[1] - a[1]);
             leaderboards[period] = {};
+            leaderboardsSorted[period] = sortedUsers.map(([accountId, plays], index) => ({ accountId, plays, rank: index + 1 }));
             sortedUsers.forEach(([accountId, plays], index) => {
-                leaderboards[period][accountId] = index + 1;
+                leaderboards[period][accountId] = { rank: index + 1, plays };
             });
             totalActiveUsers[period] = sortedUsers.length;
         });
@@ -4068,6 +4093,7 @@ async function calculateTrendingStats() {
             retroHits: getTop(counts.retroHits),
             cultClassics: getCultClassics(counts.cultClassics),
             leaderboards,
+            leaderboardsSorted,
             totalActiveUsers,
             lastUpdated: Date.now()
         };
