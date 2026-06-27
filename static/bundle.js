@@ -1595,8 +1595,8 @@ var SettingsDashboard = () => {
           /* @__PURE__ */ jsxs("div", { className: "mb-4", children: [
             /* @__PURE__ */ jsx("label", { children: "Time Format" }),
             /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-2 mt-2", children: [
-              /* @__PURE__ */ jsx("input", { type: "checkbox", id: "use24HourClock", checked: use24HourClock, onChange: (e) => setUse24HourClock(e.target.checked), className: "w-5 h-5 accent-plex cursor-pointer" }),
-              /* @__PURE__ */ jsx("label", { htmlFor: "use24HourClock", className: "cursor-pointer text-sm font-medium", children: "Use 24-Hour Clock across the Portal" })
+              /* @__PURE__ */ jsx("button", { type: "button", onClick: () => setUse24HourClock(!use24HourClock), className: `relative inline-flex items-center h-6 rounded-full w-11 transition-colors flex-shrink-0 cursor-pointer ${use24HourClock ? "bg-plex" : "bg-border"}`, children: /* @__PURE__ */ jsx("span", { className: `inline-block w-4 h-4 transform bg-white rounded-full shadow-sm transition-transform ${use24HourClock ? "translate-x-6" : "translate-x-1"}` }) }),
+              /* @__PURE__ */ jsx("span", { className: "text-sm font-medium cursor-pointer select-none hover:text-plex transition-colors", onClick: () => setUse24HourClock(!use24HourClock), children: "Use 24-Hour Clock across the Portal" })
             ] })
           ] }),
           /* @__PURE__ */ jsx("h3", { className: "text-xl font-bold text-plex mb-4 border-b border-border pb-2 mt-8", children: "Announcements" }),
