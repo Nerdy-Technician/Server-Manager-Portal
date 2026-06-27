@@ -1137,6 +1137,8 @@ var SettingsDashboard = () => {
       setSonarrApiKey(initialSettings.sonarrApiKey || "");
       setRadarrUrl(initialSettings.radarrUrl || "");
       setRadarrApiKey(initialSettings.radarrApiKey || "");
+      setTautulliUrl(initialSettings.tautulliUrl || "");
+      setTautulliApiKey(initialSettings.tautulliApiKey || "");
       setPrimaryColor(initialSettings.primaryColor || "#E5A00D");
       setCustomLogoUrl(initialSettings.customLogoUrl || "");
       setReferralEnabled(!!initialSettings.referralEnabled);
