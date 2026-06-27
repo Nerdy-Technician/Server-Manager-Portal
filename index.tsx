@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
-import { Home, Film, Activity, Sparkles, LogOut, Settings, FileText, BarChart3, Users, PlaySquare, TrendingUp, X, Star, Layers, HardDrive, Calendar, Tv, Clock, DownloadCloud, MonitorSmartphone, Copy, ChevronUp, ChevronDown, List, Palette, Music, Play, Shield, CheckCircle, AlertCircle, RefreshCw, ChevronLeft, ChevronRight, Trophy, PlayCircle, Coffee, Compass, PieChart, Clapperboard } from 'lucide-react';
+import { Home, Film, Activity, Sparkles, LogOut, Settings, FileText, BarChart3, Users, PlaySquare, TrendingUp, X, Star, Layers, HardDrive, Calendar, Tv, Clock, DownloadCloud, MonitorSmartphone, Copy, ChevronUp, ChevronDown, List, Palette, Music, Play, Shield, CheckCircle, AlertCircle, RefreshCw, ChevronLeft, ChevronRight, Trophy, PlayCircle, Coffee, Compass, PieChart, Clapperboard, AlertTriangle, Check } from 'lucide-react';
 
 declare global {
     interface Window {
@@ -1941,6 +1941,121 @@ const UserAnalyticsModal: React.FC<{ userId: string, username: string, thumb: st
     );
 };
 
+const CountUp: React.FC<{ end: number, duration?: number }> = ({ end, duration = 1500 }) => {
+    const [count, setCount] = useState(0);
+
+    useEffect(() => {
+        let startTime: number | null = null;
+        let animationFrame: number;
+
+        const animate = (timestamp: number) => {
+            if (!startTime) startTime = timestamp;
+            const progress = timestamp - startTime;
+            const percentage = Math.min(progress / duration, 1);
+            
+            // easeOutQuart easing
+            const easeOut = 1 - Math.pow(1 - percentage, 4);
+            
+            setCount(Math.floor(end * easeOut));
+
+            if (percentage < 1) {
+                animationFrame = requestAnimationFrame(animate);
+            } else {
+                setCount(end);
+            }
+        };
+
+        animationFrame = requestAnimationFrame(animate);
+
+        return () => cancelAnimationFrame(animationFrame);
+    }, [end, duration]);
+
+    return <span>{count.toLocaleString()}</span>;
+};
+
+const ReportIssueModal: React.FC<{ item: any, onClose: () => void }> = ({ item, onClose }) => {
+    const [issue, setIssue] = useState('');
+    const [status, setStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setStatus('submitting');
+        try {
+            const res = await apiFetch('/api/plex/report-issue', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ title: item.title, key: item.key || item.ratingKey, issue })
+            });
+            if (res.success) {
+                setStatus('success');
+                setTimeout(() => onClose(), 2000);
+            } else {
+                setStatus('error');
+            }
+        } catch (e) {
+            setStatus('error');
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-card border border-border rounded-2xl p-6 w-full max-w-md shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+                <div className="flex items-center justify-between mb-6">
+                    <h2 className="text-xl font-bold flex items-center gap-2">
+                        <AlertTriangle className="w-5 h-5 text-plex" />
+                        Report Issue
+                    </h2>
+                    <button onClick={onClose} className="p-2 hover:bg-white/5 rounded-full transition-colors text-muted hover:text-text">
+                        <X className="w-5 h-5" />
+                    </button>
+                </div>
+                {status === 'success' ? (
+                    <div className="text-center py-8">
+                        <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <Check className="w-8 h-8 text-green-500" />
+                        </div>
+                        <h3 className="text-xl font-bold mb-2">Report Sent!</h3>
+                        <p className="text-muted">The server admin has been notified.</p>
+                    </div>
+                ) : (
+                    <form onSubmit={handleSubmit}>
+                        <div className="mb-4">
+                            <p className="text-sm text-muted mb-2">Reporting issue for:</p>
+                            <div className="bg-black/20 border border-white/5 p-3 rounded-xl flex items-center gap-3">
+                                {item.thumbUrl ? (
+                                    <img src={item.thumbUrl} className="w-10 h-10 rounded-lg object-cover" />
+                                ) : (
+                                    <div className="w-10 h-10 bg-white/5 rounded-lg flex items-center justify-center"><Film className="w-5 h-5 text-muted/50" /></div>
+                                )}
+                                <div>
+                                    <p className="font-bold text-sm truncate">{item.title}</p>
+                                    {item.episodeTitle && <p className="text-xs text-muted truncate">{item.episodeTitle}</p>}
+                                </div>
+                            </div>
+                        </div>
+                        <div className="mb-6">
+                            <label className="block text-sm font-bold text-muted mb-2 uppercase tracking-wider">What's wrong?</label>
+                            <textarea
+                                value={issue}
+                                onChange={e => setIssue(e.target.value)}
+                                placeholder="E.g., Audio is out of sync, subtitles are missing, buffering constantly..."
+                                className="w-full bg-background border border-border/50 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-plex/50 text-text resize-none h-32"
+                                required
+                            />
+                        </div>
+                        <div className="flex gap-3">
+                            <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 rounded-xl border border-border/50 text-text font-bold hover:bg-white/5 transition-colors">Cancel</button>
+                            <button type="submit" disabled={status === 'submitting' || !issue.trim()} className="flex-1 px-4 py-2.5 rounded-xl bg-plex text-black font-black hover:bg-plex/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
+                                {status === 'submitting' ? <><RefreshCw className="w-4 h-4 animate-spin" /> Sending...</> : 'Send Report'}
+                            </button>
+                        </div>
+                    </form>
+                )}
+            </div>
+        </div>
+    );
+};
+
 // --- Analytics Dashboard Component ---
 const PersonalAnalyticsDashboard: React.FC<{ username: string, thumb: string | null }> = ({ username, thumb }) => {
     const [data, setData] = useState<any>(null);
@@ -2651,7 +2766,7 @@ const AnalyticsDashboard: React.FC<{ isAdmin: boolean, sessionInfo: any }> = ({ 
                     </div>
                     <div>
                         <p className="text-muted text-sm uppercase tracking-wider font-bold mb-1">Total Playbacks</p>
-                        <p className="text-2xl font-black text-text">{totalPlaybacks.toLocaleString()}</p>
+                        <p className="text-2xl font-black text-text"><CountUp end={totalPlaybacks} /></p>
                     </div>
                 </div>
                 <div className="bg-card/50 backdrop-blur-md rounded-xl p-6 shadow-xl border border-border flex items-center gap-4">
@@ -3919,6 +4034,7 @@ const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onLogout: 
     const [analyticsDays, setAnalyticsDays] = useState<number | 'all'>(30);
     const [analyticsDaysOpen, setAnalyticsDaysOpen] = useState(false);
     const [wrapUpDaysOpen, setWrapUpDaysOpen] = useState(false);
+    const [reportItem, setReportItem] = useState<any>(null);
 
     const user = sessionInfo.account;
     const [optOutNewsletter, setOptOutNewsletter] = useState(user?.optOutNewsletter || false);
@@ -4164,13 +4280,13 @@ const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onLogout: 
                         <div className="bg-background rounded-xl p-4 border border-border/50 flex flex-col items-center justify-center text-center">
                             <Trophy className="w-6 h-6 text-plex mb-2" />
                             <p className="text-muted text-[10px] uppercase tracking-widest font-bold mb-1">Server Rank</p>
-                            <p className="text-2xl font-black text-text">{analytics.leaderboardRank ? `#${analytics.leaderboardRank}` : 'Unranked'}</p>
+                            <p className="text-2xl font-black text-text">{analytics.leaderboardRank ? <><span className="text-plex text-xl mr-0.5">#</span><CountUp end={analytics.leaderboardRank} /></> : 'Unranked'}</p>
                             {analytics.totalActiveUsers > 0 && <p className="text-[10px] text-muted mt-1">out of {analytics.totalActiveUsers} users</p>}
                         </div>
                         <div className="bg-background rounded-xl p-4 border border-border/50 flex flex-col items-center justify-center text-center">
                             <PlayCircle className="w-6 h-6 text-plex mb-2" />
                             <p className="text-muted text-[10px] uppercase tracking-widest font-bold mb-1">Total Streams</p>
-                            <p className="text-2xl font-black text-text">{analytics.totalPlays || 0}</p>
+                            <p className="text-2xl font-black text-text"><CountUp end={analytics.totalPlays || 0} /></p>
                         </div>
                         <div className="bg-background rounded-xl p-4 border border-border/50 flex flex-col items-center justify-center text-center">
                             <Tv className="w-6 h-6 text-plex mb-2" />
@@ -4405,25 +4521,34 @@ const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onLogout: 
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2 items-stretch">
                                     {analytics.recentHistory.slice(recentHistoryPage * RECENT_HISTORY_PAGE_SIZE, (recentHistoryPage + 1) * RECENT_HISTORY_PAGE_SIZE).map((item: any, idx: number) => (
-                                        <a key={idx} href={item.plexUrl} target="_blank" rel="noreferrer" className="flex items-center self-stretch gap-3 p-2 bg-black/20 rounded-xl border border-white/5 hover:border-plex/50 hover:bg-black/40 hover:shadow-[0_0_15px_rgba(229,160,13,0.15)] transition-all group">
-                                            <div className="w-10 h-10 rounded-lg overflow-hidden bg-background flex-shrink-0 shadow-md">
-                                                {item.thumbUrl ? (
-                                                    <img src={item.thumbUrl} alt={item.title} className="w-full h-full object-cover" />
-                                                ) : (
-                                                    <div className="w-full h-full flex items-center justify-center">
-                                                        <PlaySquare className="w-5 h-5 text-muted/50" />
-                                                    </div>
-                                                )}
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <h4 className="font-bold text-text text-sm truncate group-hover:text-plex transition-colors">{item.title}</h4>
-                                                {item.episodeTitle && <p className="text-xs text-muted truncate mt-0.5">{item.episodeTitle}</p>}
-                                                <div className="flex items-center gap-1 mt-1">
-                                                    <Clock className="w-3 h-3 text-muted" />
-                                                    <p className="text-[10px] text-muted">{new Date(item.viewedAt * 1000).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })}</p>
+                                        <div key={idx} className="flex items-center self-stretch gap-3 p-2 bg-black/20 rounded-xl border border-white/5 hover:border-plex/50 hover:bg-black/40 hover:shadow-[0_0_15px_rgba(229,160,13,0.15)] transition-all group relative">
+                                            <a href={item.plexUrl} target="_blank" rel="noreferrer" className="flex items-center flex-1 min-w-0 gap-3">
+                                                <div className="w-10 h-10 rounded-lg overflow-hidden bg-background flex-shrink-0 shadow-md">
+                                                    {item.thumbUrl ? (
+                                                        <img src={item.thumbUrl} alt={item.title} className="w-full h-full object-cover" />
+                                                    ) : (
+                                                        <div className="w-full h-full flex items-center justify-center">
+                                                            <PlaySquare className="w-5 h-5 text-muted/50" />
+                                                        </div>
+                                                    )}
                                                 </div>
-                                            </div>
-                                        </a>
+                                                <div className="flex-1 min-w-0">
+                                                    <h4 className="font-bold text-text text-sm truncate group-hover:text-plex transition-colors">{item.title}</h4>
+                                                    {item.episodeTitle && <p className="text-xs text-muted truncate mt-0.5">{item.episodeTitle}</p>}
+                                                    <div className="flex items-center gap-1 mt-1">
+                                                        <Clock className="w-3 h-3 text-muted" />
+                                                        <p className="text-[10px] text-muted">{new Date(item.viewedAt * 1000).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })}</p>
+                                                    </div>
+                                                </div>
+                                            </a>
+                                            <button 
+                                                onClick={(e) => { e.preventDefault(); setReportItem(item); }} 
+                                                className="opacity-0 group-hover:opacity-100 p-2 text-muted hover:text-red-400 hover:bg-red-400/10 rounded-full transition-all focus:outline-none"
+                                                title="Report a playback issue"
+                                            >
+                                                <AlertTriangle className="w-4 h-4" />
+                                            </button>
+                                        </div>
                                     ))}
                                 </div>
                             </div>
@@ -4715,7 +4840,9 @@ const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onLogout: 
                     )}
                 </div>
             )}
-
+            {reportItem && (
+                <ReportIssueModal item={reportItem} onClose={() => setReportItem(null)} />
+            )}
         </div>
     );
 };

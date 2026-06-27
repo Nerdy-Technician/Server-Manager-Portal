@@ -3251,6 +3251,33 @@ app.get('/api/plex/analytics/me', requireAuth, async (req, res) => {
     }
 });
 
+app.post('/api/plex/report-issue', requireAuth, async (req, res) => {
+    try {
+        const config = await loadFile(CONFIG_PATH, null);
+        if (!config || !config.smtpUser) return res.status(503).json({ error: 'SMTP not configured' });
+
+        const { title, key, issue } = req.body;
+        if (!title || !issue) return res.status(400).json({ error: 'Missing title or issue' });
+
+        const subject = `Plex Issue Report: ${title}`;
+        const html = `
+            <h2>Issue Reported by ${req.user.username}</h2>
+            <p><strong>Media:</strong> ${title}</p>
+            ${key ? `<p><strong>Key:</strong> ${key}</p>` : ''}
+            <p><strong>User's Note:</strong></p>
+            <blockquote style="background: #f9f9f9; padding: 10px; border-left: 5px solid #E5A00D;">
+                ${issue.replace(/\n/g, '<br/>')}
+            </blockquote>
+        `;
+
+        await sendEmail(config, config.smtpUser, subject, html);
+        res.json({ success: true });
+    } catch (e) {
+        log(`Error reporting issue: ${e.message}`);
+        res.status(500).json({ error: 'Failed to report issue' });
+    }
+});
+
 app.get('/api/plex/analytics/user/:id', requireAdmin, async (req, res) => {
     try {
         const config = await loadFile(CONFIG_PATH, null);
