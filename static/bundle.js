@@ -1305,31 +1305,31 @@ var SettingsDashboard = () => {
             value: activeTab,
             onChange: (val) => setActiveTab(val),
             options: [
-              { label: "Plex Integration", value: "plex" },
-              { label: "SMTP Alerts", value: "smtp" },
-              { label: "Newsletter", value: "newsletter" },
-              { label: "Automated Cleanup", value: "cleanup" },
-              { label: "Media Stack", value: "mediastack" },
               { label: "Portal UI", value: "branding" },
+              { label: "Plex Integration", value: "plex" },
+              { label: "Media Stack", value: "mediastack" },
               { label: "Navigation", value: "navigation" },
-              { label: "Status Monitor", value: "status" },
               { label: "Invites", value: "invites" },
-              { label: "Tasks", value: "tasks" }
+              { label: "Automated Cleanup", value: "cleanup" },
+              { label: "Status Monitor", value: "status" },
+              { label: "Newsletter", value: "newsletter" },
+              { label: "Background Tasks", value: "tasks" },
+              { label: "SMTP Alerts", value: "smtp" }
             ]
           }
         )
       ] }),
       /* @__PURE__ */ jsx("div", { className: "hidden md:flex flex-wrap gap-2 mt-4 mb-8 p-1.5 bg-black/20 rounded-xl border border-border w-fit", children: [
-        { id: "plex", label: "Plex Integration" },
-        { id: "smtp", label: "SMTP Alerts" },
-        { id: "newsletter", label: "Newsletter" },
-        { id: "cleanup", label: "Cleanup" },
-        { id: "mediastack", label: "Media Stack" },
         { id: "branding", label: "Portal UI" },
+        { id: "plex", label: "Plex Integration" },
+        { id: "mediastack", label: "Media Stack" },
         { id: "navigation", label: "Navigation" },
-        { id: "status", label: "Status Monitor" },
         { id: "invites", label: "Invites" },
-        { id: "tasks", label: "Background Tasks" }
+        { id: "cleanup", label: "Cleanup" },
+        { id: "status", label: "Status Monitor" },
+        { id: "newsletter", label: "Newsletter" },
+        { id: "tasks", label: "Background Tasks" },
+        { id: "smtp", label: "SMTP Alerts" }
       ].map((tab) => /* @__PURE__ */ jsx(
         "button",
         {
