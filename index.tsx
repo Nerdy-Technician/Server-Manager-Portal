@@ -3915,7 +3915,7 @@ const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onLogout: 
     const [topContentPage, setTopContentPage] = useState(0);
     const TOP_CONTENT_PAGE_SIZE = 18;
     const [recentHistoryPage, setRecentHistoryPage] = useState(0);
-    const RECENT_HISTORY_PAGE_SIZE = 12;
+    const RECENT_HISTORY_PAGE_SIZE = 16;
     const [analyticsDays, setAnalyticsDays] = useState<number | 'all'>(30);
     const [analyticsDaysOpen, setAnalyticsDaysOpen] = useState(false);
     const [wrapUpDaysOpen, setWrapUpDaysOpen] = useState(false);
