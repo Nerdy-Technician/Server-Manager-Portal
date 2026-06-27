@@ -2950,7 +2950,7 @@ var AnalyticsDashboard = ({ isAdmin, sessionInfo }) => {
           /* @__PURE__ */ jsx(Activity, { className: "text-[#3b82f6] w-5 h-5" }),
           " Tautulli All-Time Insights"
         ] }),
-        /* @__PURE__ */ jsxs("div", { className: "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 relative z-10", children: [
+        /* @__PURE__ */ jsxs("div", { className: "grid grid-cols-2 md:grid-cols-4 gap-4 relative z-10", children: [
           /* @__PURE__ */ jsxs("div", { className: "flex flex-col p-4 bg-black/20 rounded-lg border border-white/5 shadow-inner", children: [
             /* @__PURE__ */ jsxs("span", { className: "font-bold text-muted text-xs uppercase tracking-wider mb-2 flex items-center gap-2", children: [
               /* @__PURE__ */ jsx(Users, { className: "w-4 h-4 text-[#3b82f6]" }),
@@ -2978,6 +2978,27 @@ var AnalyticsDashboard = ({ isAdmin, sessionInfo }) => {
               " Movies Played"
             ] }),
             /* @__PURE__ */ jsx("span", { className: "font-mono font-black text-red-400 text-3xl", children: tautulliData.moviePlays ? tautulliData.moviePlays.toLocaleString() : 0 })
+          ] }),
+          /* @__PURE__ */ jsxs("div", { className: "flex flex-col p-4 bg-black/20 rounded-lg border border-white/5 shadow-inner", children: [
+            /* @__PURE__ */ jsxs("span", { className: "font-bold text-muted text-xs uppercase tracking-wider mb-2 flex items-center gap-2", children: [
+              /* @__PURE__ */ jsx(Monitor, { className: "w-4 h-4 text-cyan-400" }),
+              " Peak Direct Plays"
+            ] }),
+            /* @__PURE__ */ jsx("span", { className: "font-mono font-black text-cyan-400 text-3xl", children: tautulliData.directPlayRecord || 0 })
+          ] }),
+          /* @__PURE__ */ jsxs("div", { className: "flex flex-col p-4 bg-black/20 rounded-lg border border-white/5 shadow-inner", children: [
+            /* @__PURE__ */ jsxs("span", { className: "font-bold text-muted text-xs uppercase tracking-wider mb-2 flex items-center gap-2", children: [
+              /* @__PURE__ */ jsx(Activity, { className: "w-4 h-4 text-orange-400" }),
+              " Peak Direct Streams"
+            ] }),
+            /* @__PURE__ */ jsx("span", { className: "font-mono font-black text-orange-400 text-3xl", children: tautulliData.directStreamRecord || 0 })
+          ] }),
+          /* @__PURE__ */ jsxs("div", { className: "flex flex-col p-4 bg-black/20 rounded-lg border border-white/5 shadow-inner", children: [
+            /* @__PURE__ */ jsxs("span", { className: "font-bold text-muted text-xs uppercase tracking-wider mb-2 flex items-center gap-2", children: [
+              /* @__PURE__ */ jsx(Settings, { className: "w-4 h-4 text-rose-400" }),
+              " Peak Transcodes"
+            ] }),
+            /* @__PURE__ */ jsx("span", { className: "font-mono font-black text-rose-400 text-3xl", children: tautulliData.transcodeRecord || 0 })
           ] }),
           /* @__PURE__ */ jsxs("div", { className: "flex flex-col p-4 bg-black/20 rounded-lg border border-white/5 shadow-inner", children: [
             /* @__PURE__ */ jsxs("span", { className: "font-bold text-muted text-xs uppercase tracking-wider mb-2 flex items-center gap-2", children: [

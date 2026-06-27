@@ -2683,7 +2683,7 @@ const AnalyticsDashboard: React.FC<{ isAdmin: boolean, sessionInfo: any }> = ({ 
         return <PersonalAnalyticsDashboard username={sessionInfo?.session?.username || 'User'} thumb={null} />;
     }
     const [analyticsData, setAnalyticsData] = useState<{ topUsers: any[], topLibraries: any[], topMovies: any[], topShows: any[], topMusic: any[], topDevices: any[], peakHours: number[], totalPlaybacks: number } | null>(null);
-    const [tautulliData, setTautulliData] = useState<{ streamsRecord: number, totalPlays: number, tvPlays: number, moviePlays: number, musicPlays: number, totalTimeStr: string } | null>(null);
+    const [tautulliData, setTautulliData] = useState<{ streamsRecord: number, transcodeRecord: number, directPlayRecord: number, directStreamRecord: number, totalPlays: number, tvPlays: number, moviePlays: number, musicPlays: number, totalTimeStr: string } | null>(null);
     const [isLoading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [days, setDays] = useState<string>('30');
@@ -2924,7 +2924,7 @@ const AnalyticsDashboard: React.FC<{ isAdmin: boolean, sessionInfo: any }> = ({ 
                             <Activity className="w-32 h-32 text-[#3b82f6]" />
                         </div>
                         <h2 className="text-xl font-bold text-text mb-6 uppercase tracking-wider flex items-center gap-2 relative z-10"><Activity className="text-[#3b82f6] w-5 h-5" /> Tautulli All-Time Insights</h2>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 relative z-10">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 relative z-10">
                             <div className="flex flex-col p-4 bg-black/20 rounded-lg border border-white/5 shadow-inner">
                                 <span className="font-bold text-muted text-xs uppercase tracking-wider mb-2 flex items-center gap-2"><Users className="w-4 h-4 text-[#3b82f6]" /> Peak Streams</span>
                                 <span className="font-mono font-black text-[#3b82f6] text-3xl">{tautulliData.streamsRecord || 0}</span>
@@ -2940,6 +2940,18 @@ const AnalyticsDashboard: React.FC<{ isAdmin: boolean, sessionInfo: any }> = ({ 
                             <div className="flex flex-col p-4 bg-black/20 rounded-lg border border-white/5 shadow-inner">
                                 <span className="font-bold text-muted text-xs uppercase tracking-wider mb-2 flex items-center gap-2"><Film className="w-4 h-4 text-red-400" /> Movies Played</span>
                                 <span className="font-mono font-black text-red-400 text-3xl">{tautulliData.moviePlays ? tautulliData.moviePlays.toLocaleString() : 0}</span>
+                            </div>
+                            <div className="flex flex-col p-4 bg-black/20 rounded-lg border border-white/5 shadow-inner">
+                                <span className="font-bold text-muted text-xs uppercase tracking-wider mb-2 flex items-center gap-2"><Monitor className="w-4 h-4 text-cyan-400" /> Peak Direct Plays</span>
+                                <span className="font-mono font-black text-cyan-400 text-3xl">{tautulliData.directPlayRecord || 0}</span>
+                            </div>
+                            <div className="flex flex-col p-4 bg-black/20 rounded-lg border border-white/5 shadow-inner">
+                                <span className="font-bold text-muted text-xs uppercase tracking-wider mb-2 flex items-center gap-2"><Activity className="w-4 h-4 text-orange-400" /> Peak Direct Streams</span>
+                                <span className="font-mono font-black text-orange-400 text-3xl">{tautulliData.directStreamRecord || 0}</span>
+                            </div>
+                            <div className="flex flex-col p-4 bg-black/20 rounded-lg border border-white/5 shadow-inner">
+                                <span className="font-bold text-muted text-xs uppercase tracking-wider mb-2 flex items-center gap-2"><Settings className="w-4 h-4 text-rose-400" /> Peak Transcodes</span>
+                                <span className="font-mono font-black text-rose-400 text-3xl">{tautulliData.transcodeRecord || 0}</span>
                             </div>
                             <div className="flex flex-col p-4 bg-black/20 rounded-lg border border-white/5 shadow-inner">
                                 <span className="font-bold text-muted text-xs uppercase tracking-wider mb-2 flex items-center gap-2"><Music className="w-4 h-4 text-yellow-400" /> Music Played</span>
