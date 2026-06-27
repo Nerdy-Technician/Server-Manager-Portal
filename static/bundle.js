@@ -4252,8 +4252,8 @@ var WrapUpModal = ({ metric, analytics, days, onClose }) => {
         const moviePct = Math.round(movies / total * 100);
         const showPct = Math.round(shows / total * 100);
         const musicPct = Math.round(music / total * 100);
-        const topMovie = analytics.topMovies?.[0];
-        const topShow = analytics.topShows?.[0];
+        const topMoviesList = (analytics.topMovies || []).slice(0, 3);
+        const topShowsList = (analytics.topShows || []).slice(0, 3);
         const profileDesc = analytics.mediaPreference === "Movie Buff" ? "You love the big screen experience. Movies are your go-to comfort." : analytics.mediaPreference === "TV Show Binger" ? "You're a serial binger \u2014 once you start a show, you see it through." : analytics.mediaPreference === "Music Lover" ? "Music is your thing \u2014 you're always on the listening grind." : "You keep things varied. A bit of everything keeps it interesting.";
         return /* @__PURE__ */ jsxs("div", { className: "flex flex-col items-center justify-center text-center p-6", children: [
           /* @__PURE__ */ jsx(ChartPie, { className: "w-14 h-14 text-plex mb-3 drop-shadow-lg" }),
@@ -4307,32 +4307,38 @@ var WrapUpModal = ({ metric, analytics, days, onClose }) => {
               /* @__PURE__ */ jsx("div", { className: "w-full bg-black/60 rounded-full h-3 overflow-hidden shadow-inner border border-white/5", children: /* @__PURE__ */ jsx("div", { className: "bg-gradient-to-r from-purple-600 to-purple-400 h-full rounded-full shadow-[0_0_10px_rgba(168,85,247,0.5)] transition-all duration-1000", style: { width: `${musicPct}%` } }) })
             ] })
           ] }),
-          (topMovie || topShow) && /* @__PURE__ */ jsxs("div", { className: "w-full", children: [
+          (topMoviesList.length > 0 || topShowsList.length > 0) && /* @__PURE__ */ jsxs("div", { className: "w-full", children: [
             /* @__PURE__ */ jsx("p", { className: "text-left text-xs uppercase tracking-widest font-bold text-muted mb-3 border-b border-white/10 pb-2", children: "Top Picks This Period" }),
             /* @__PURE__ */ jsxs("div", { className: "flex flex-col gap-2", children: [
-              topMovie && /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-3 bg-white/5 border border-white/5 rounded-lg p-2 hover:bg-white/10 transition-colors", children: [
-                topMovie.thumbUrl ? /* @__PURE__ */ jsx("img", { src: topMovie.thumbUrl, className: "w-10 h-14 object-cover rounded shadow-sm flex-shrink-0" }) : /* @__PURE__ */ jsx("div", { className: "w-10 h-14 bg-white/10 rounded flex-shrink-0 flex items-center justify-center text-xl", children: "\u{1F3AC}" }),
-                /* @__PURE__ */ jsxs("div", { className: "flex flex-col text-left overflow-hidden", children: [
-                  /* @__PURE__ */ jsx("span", { className: "text-[9px] text-blue-400 font-black uppercase tracking-widest", children: "Top Movie" }),
-                  /* @__PURE__ */ jsx("span", { className: "font-bold text-sm text-gray-200 truncate", children: topMovie.title }),
-                  /* @__PURE__ */ jsxs("span", { className: "text-[10px] text-gray-400", children: [
-                    topMovie.plays,
-                    " play",
-                    topMovie.plays !== 1 ? "s" : ""
+              topMoviesList.length > 0 && /* @__PURE__ */ jsxs(Fragment, { children: [
+                /* @__PURE__ */ jsx("p", { className: "text-left text-[9px] text-blue-400 font-black uppercase tracking-widest mt-1", children: "\u{1F3AC} Movies" }),
+                topMoviesList.map((m, i) => /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-3 bg-white/5 border border-white/5 rounded-lg p-2 hover:bg-white/10 transition-colors", children: [
+                  /* @__PURE__ */ jsx("span", { className: "text-gray-500 font-black text-xs w-4 text-right flex-shrink-0", children: i + 1 }),
+                  m.thumbUrl ? /* @__PURE__ */ jsx("img", { src: m.thumbUrl, className: "w-8 h-12 object-cover rounded shadow-sm flex-shrink-0" }) : /* @__PURE__ */ jsx("div", { className: "w-8 h-12 bg-white/10 rounded flex-shrink-0" }),
+                  /* @__PURE__ */ jsxs("div", { className: "flex flex-col text-left overflow-hidden", children: [
+                    /* @__PURE__ */ jsx("span", { className: "font-bold text-sm text-gray-200 truncate", children: m.title }),
+                    /* @__PURE__ */ jsxs("span", { className: "text-[10px] text-gray-400", children: [
+                      m.plays,
+                      " play",
+                      m.plays !== 1 ? "s" : ""
+                    ] })
                   ] })
-                ] })
+                ] }, i))
               ] }),
-              topShow && /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-3 bg-white/5 border border-white/5 rounded-lg p-2 hover:bg-white/10 transition-colors", children: [
-                topShow.thumbUrl ? /* @__PURE__ */ jsx("img", { src: topShow.thumbUrl, className: "w-10 h-14 object-cover rounded shadow-sm flex-shrink-0" }) : /* @__PURE__ */ jsx("div", { className: "w-10 h-14 bg-white/10 rounded flex-shrink-0 flex items-center justify-center text-xl", children: "\u{1F4FA}" }),
-                /* @__PURE__ */ jsxs("div", { className: "flex flex-col text-left overflow-hidden", children: [
-                  /* @__PURE__ */ jsx("span", { className: "text-[9px] text-green-400 font-black uppercase tracking-widest", children: "Top Show" }),
-                  /* @__PURE__ */ jsx("span", { className: "font-bold text-sm text-gray-200 truncate", children: topShow.title }),
-                  /* @__PURE__ */ jsxs("span", { className: "text-[10px] text-gray-400", children: [
-                    topShow.plays,
-                    " episode",
-                    topShow.plays !== 1 ? "s" : ""
+              topShowsList.length > 0 && /* @__PURE__ */ jsxs(Fragment, { children: [
+                /* @__PURE__ */ jsx("p", { className: "text-left text-[9px] text-green-400 font-black uppercase tracking-widest mt-2", children: "\u{1F4FA} Shows" }),
+                topShowsList.map((s, i) => /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-3 bg-white/5 border border-white/5 rounded-lg p-2 hover:bg-white/10 transition-colors", children: [
+                  /* @__PURE__ */ jsx("span", { className: "text-gray-500 font-black text-xs w-4 text-right flex-shrink-0", children: i + 1 }),
+                  s.thumbUrl ? /* @__PURE__ */ jsx("img", { src: s.thumbUrl, className: "w-8 h-12 object-cover rounded shadow-sm flex-shrink-0" }) : /* @__PURE__ */ jsx("div", { className: "w-8 h-12 bg-white/10 rounded flex-shrink-0" }),
+                  /* @__PURE__ */ jsxs("div", { className: "flex flex-col text-left overflow-hidden", children: [
+                    /* @__PURE__ */ jsx("span", { className: "font-bold text-sm text-gray-200 truncate", children: s.title }),
+                    /* @__PURE__ */ jsxs("span", { className: "text-[10px] text-gray-400", children: [
+                      s.plays,
+                      " episode",
+                      s.plays !== 1 ? "s" : ""
+                    ] })
                   ] })
-                ] })
+                ] }, i))
               ] })
             ] })
           ] })

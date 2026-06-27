@@ -4383,8 +4383,8 @@ const WrapUpModal: React.FC<{ metric: string; analytics: any; days: number | str
                 const showPct = Math.round((shows / total) * 100);
                 const musicPct = Math.round((music / total) * 100);
 
-                const topMovie = analytics.topMovies?.[0];
-                const topShow = analytics.topShows?.[0];
+                const topMoviesList: any[] = (analytics.topMovies || []).slice(0, 3);
+                const topShowsList: any[] = (analytics.topShows || []).slice(0, 3);
 
                 const profileDesc = analytics.mediaPreference === 'Movie Buff'
                     ? 'You love the big screen experience. Movies are your go-to comfort.'
@@ -4435,33 +4435,43 @@ const WrapUpModal: React.FC<{ metric: string; analytics: any; days: number | str
                         </div>
 
                         {/* Top picks per category */}
-                        {(topMovie || topShow) && (
+                        {(topMoviesList.length > 0 || topShowsList.length > 0) && (
                             <div className="w-full">
                                 <p className="text-left text-xs uppercase tracking-widest font-bold text-muted mb-3 border-b border-white/10 pb-2">Top Picks This Period</p>
                                 <div className="flex flex-col gap-2">
-                                    {topMovie && (
-                                        <div className="flex items-center gap-3 bg-white/5 border border-white/5 rounded-lg p-2 hover:bg-white/10 transition-colors">
-                                            {topMovie.thumbUrl
-                                                ? <img src={topMovie.thumbUrl} className="w-10 h-14 object-cover rounded shadow-sm flex-shrink-0" />
-                                                : <div className="w-10 h-14 bg-white/10 rounded flex-shrink-0 flex items-center justify-center text-xl">🎬</div>}
-                                            <div className="flex flex-col text-left overflow-hidden">
-                                                <span className="text-[9px] text-blue-400 font-black uppercase tracking-widest">Top Movie</span>
-                                                <span className="font-bold text-sm text-gray-200 truncate">{topMovie.title}</span>
-                                                <span className="text-[10px] text-gray-400">{topMovie.plays} play{topMovie.plays !== 1 ? 's' : ''}</span>
-                                            </div>
-                                        </div>
+                                    {topMoviesList.length > 0 && (
+                                        <>
+                                            <p className="text-left text-[9px] text-blue-400 font-black uppercase tracking-widest mt-1">🎬 Movies</p>
+                                            {topMoviesList.map((m: any, i: number) => (
+                                                <div key={i} className="flex items-center gap-3 bg-white/5 border border-white/5 rounded-lg p-2 hover:bg-white/10 transition-colors">
+                                                    <span className="text-gray-500 font-black text-xs w-4 text-right flex-shrink-0">{i + 1}</span>
+                                                    {m.thumbUrl
+                                                        ? <img src={m.thumbUrl} className="w-8 h-12 object-cover rounded shadow-sm flex-shrink-0" />
+                                                        : <div className="w-8 h-12 bg-white/10 rounded flex-shrink-0" />}
+                                                    <div className="flex flex-col text-left overflow-hidden">
+                                                        <span className="font-bold text-sm text-gray-200 truncate">{m.title}</span>
+                                                        <span className="text-[10px] text-gray-400">{m.plays} play{m.plays !== 1 ? 's' : ''}</span>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </>
                                     )}
-                                    {topShow && (
-                                        <div className="flex items-center gap-3 bg-white/5 border border-white/5 rounded-lg p-2 hover:bg-white/10 transition-colors">
-                                            {topShow.thumbUrl
-                                                ? <img src={topShow.thumbUrl} className="w-10 h-14 object-cover rounded shadow-sm flex-shrink-0" />
-                                                : <div className="w-10 h-14 bg-white/10 rounded flex-shrink-0 flex items-center justify-center text-xl">📺</div>}
-                                            <div className="flex flex-col text-left overflow-hidden">
-                                                <span className="text-[9px] text-green-400 font-black uppercase tracking-widest">Top Show</span>
-                                                <span className="font-bold text-sm text-gray-200 truncate">{topShow.title}</span>
-                                                <span className="text-[10px] text-gray-400">{topShow.plays} episode{topShow.plays !== 1 ? 's' : ''}</span>
-                                            </div>
-                                        </div>
+                                    {topShowsList.length > 0 && (
+                                        <>
+                                            <p className="text-left text-[9px] text-green-400 font-black uppercase tracking-widest mt-2">📺 Shows</p>
+                                            {topShowsList.map((s: any, i: number) => (
+                                                <div key={i} className="flex items-center gap-3 bg-white/5 border border-white/5 rounded-lg p-2 hover:bg-white/10 transition-colors">
+                                                    <span className="text-gray-500 font-black text-xs w-4 text-right flex-shrink-0">{i + 1}</span>
+                                                    {s.thumbUrl
+                                                        ? <img src={s.thumbUrl} className="w-8 h-12 object-cover rounded shadow-sm flex-shrink-0" />
+                                                        : <div className="w-8 h-12 bg-white/10 rounded flex-shrink-0" />}
+                                                    <div className="flex flex-col text-left overflow-hidden">
+                                                        <span className="font-bold text-sm text-gray-200 truncate">{s.title}</span>
+                                                        <span className="text-[10px] text-gray-400">{s.plays} episode{s.plays !== 1 ? 's' : ''}</span>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </>
                                     )}
                                 </div>
                             </div>
