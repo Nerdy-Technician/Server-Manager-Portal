@@ -2697,11 +2697,12 @@ const TautulliGraphsTab: React.FC = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
     const [days, setDays] = useState('30');
+    const [yAxis, setYAxis] = useState<'plays' | 'duration'>('plays');
 
     useEffect(() => {
         setIsLoading(true);
         setError('');
-        apiFetch(`/api/tautulli/graphs?days=${days}`)
+        apiFetch(`/api/tautulli/graphs?days=${days}&y_axis=${yAxis}`)
             .then(data => {
                 setGraphs(data);
                 setIsLoading(false);
@@ -2710,7 +2711,7 @@ const TautulliGraphsTab: React.FC = () => {
                 setError(err.message || 'Failed to load graphs');
                 setIsLoading(false);
             });
-    }, [days]);
+    }, [days, yAxis]);
 
     if (isLoading) {
         return (
@@ -2747,7 +2748,12 @@ const TautulliGraphsTab: React.FC = () => {
         return data.categories.map((date: string, i: number) => {
             const obj: any = { date };
             data.series.forEach((s: any) => {
-                obj[s.name] = s.data[i] || 0;
+                let val = s.data[i] || 0;
+                if (yAxis === 'duration') {
+                    // Convert seconds to hours, rounded to 1 decimal place
+                    val = parseFloat((val / 3600).toFixed(1));
+                }
+                obj[s.name] = val;
             });
             return obj;
         });
@@ -2773,7 +2779,17 @@ const TautulliGraphsTab: React.FC = () => {
 
     return (
         <div className="space-y-6 mt-6">
-            <div className="flex justify-end">
+            <div className="flex flex-col sm:flex-row justify-between items-end sm:items-center gap-4">
+                {/* Y-Axis Toggle */}
+                <div className="flex bg-black/40 rounded-lg p-1 border border-white/5 w-fit">
+                    <button onClick={() => setYAxis('plays')} className={`px-4 py-1.5 rounded-md text-xs font-bold uppercase tracking-wider transition-colors ${yAxis === 'plays' ? 'bg-plex text-white shadow-lg' : 'text-muted hover:text-white'}`}>
+                        Play Count
+                    </button>
+                    <button onClick={() => setYAxis('duration')} className={`px-4 py-1.5 rounded-md text-xs font-bold uppercase tracking-wider transition-colors ${yAxis === 'duration' ? 'bg-plex text-white shadow-lg' : 'text-muted hover:text-white'}`}>
+                        Watch Duration
+                    </button>
+                </div>
+                {/* Timeframe selector */}
                 <div className="w-48">
                     <CustomSelect
                         value={days}
@@ -2792,7 +2808,7 @@ const TautulliGraphsTab: React.FC = () => {
             {/* Daily Play Count by Media Type */}
             <div className="bg-card/50 backdrop-blur-md rounded-xl p-4 md:p-6 shadow-xl border border-border relative overflow-hidden">
                 <h3 className="text-lg font-bold text-text mb-4 uppercase tracking-wider flex items-center gap-2">
-                    <LucideLineChart className="w-5 h-5 text-[#3b82f6]" /> Daily Play Count by Media Type
+                    <LucideLineChart className="w-5 h-5 text-[#3b82f6]" /> {yAxis === 'plays' ? 'Daily Play Count by Media Type' : 'Daily Watch Duration by Media Type (Hours)'}
                 </h3>
                 <div className="h-72 w-full">
                     <ResponsiveContainer width="100%" height="100%">
@@ -2815,7 +2831,7 @@ const TautulliGraphsTab: React.FC = () => {
                 {/* Play count by day of week */}
                 <div className="bg-card/50 backdrop-blur-md rounded-xl p-4 md:p-6 shadow-xl border border-border relative overflow-hidden">
                     <h3 className="text-lg font-bold text-text mb-4 uppercase tracking-wider flex items-center gap-2">
-                        <Calendar className="w-5 h-5 text-green-400" /> Play Count by Day of Week
+                        <Calendar className="w-5 h-5 text-green-400" /> {yAxis === 'plays' ? 'Play Count by Day of Week' : 'Watch Duration by Day of Week (Hours)'}
                     </h3>
                     <div className="h-64 w-full">
                         <ResponsiveContainer width="100%" height="100%">
@@ -2836,7 +2852,7 @@ const TautulliGraphsTab: React.FC = () => {
                 {/* Play count by hour of day */}
                 <div className="bg-card/50 backdrop-blur-md rounded-xl p-4 md:p-6 shadow-xl border border-border relative overflow-hidden">
                     <h3 className="text-lg font-bold text-text mb-4 uppercase tracking-wider flex items-center gap-2">
-                        <Clock className="w-5 h-5 text-orange-400" /> Play Count by Hour of Day
+                        <Clock className="w-5 h-5 text-orange-400" /> {yAxis === 'plays' ? 'Play Count by Hour of Day' : 'Watch Duration by Hour of Day (Hours)'}
                     </h3>
                     <div className="h-64 w-full">
                         <ResponsiveContainer width="100%" height="100%">
@@ -2857,7 +2873,7 @@ const TautulliGraphsTab: React.FC = () => {
                 {/* Play count by stream type */}
                 <div className="bg-card/50 backdrop-blur-md rounded-xl p-4 md:p-6 shadow-xl border border-border relative overflow-hidden">
                     <h3 className="text-lg font-bold text-text mb-4 uppercase tracking-wider flex items-center gap-2">
-                        <Activity className="w-5 h-5 text-sky-400" /> Stream Type Breakdown
+                        <Activity className="w-5 h-5 text-sky-400" /> {yAxis === 'plays' ? 'Stream Type Breakdown' : 'Stream Type Duration Breakdown (Hours)'}
                     </h3>
                     <div className="h-64 w-full">
                         <ResponsiveContainer width="100%" height="100%">
@@ -2878,7 +2894,7 @@ const TautulliGraphsTab: React.FC = () => {
                 {/* Play count by stream resolution */}
                 <div className="bg-card/50 backdrop-blur-md rounded-xl p-4 md:p-6 shadow-xl border border-border relative overflow-hidden">
                     <h3 className="text-lg font-bold text-text mb-4 uppercase tracking-wider flex items-center gap-2">
-                        <MonitorSmartphone className="w-5 h-5 text-purple-400" /> Stream Resolution
+                        <MonitorSmartphone className="w-5 h-5 text-purple-400" /> {yAxis === 'plays' ? 'Stream Resolution Breakdown' : 'Stream Resolution Duration Breakdown (Hours)'}
                     </h3>
                     <div className="h-64 w-full">
                         <ResponsiveContainer width="100%" height="100%">
@@ -2900,7 +2916,7 @@ const TautulliGraphsTab: React.FC = () => {
             {/* Play count by platform */}
             <div className="bg-card/50 backdrop-blur-md rounded-xl p-4 md:p-6 shadow-xl border border-border relative overflow-hidden">
                 <h3 className="text-lg font-bold text-text mb-4 uppercase tracking-wider flex items-center gap-2">
-                    <Users className="w-5 h-5 text-teal-400" /> Top 10 Streaming Platforms
+                    <Users className="w-5 h-5 text-teal-400" /> {yAxis === 'plays' ? 'Top 10 Streaming Platforms' : 'Top 10 Platforms by Watch Duration (Hours)'}
                 </h3>
                 <div className="h-72 w-full">
                     <ResponsiveContainer width="100%" height="100%">

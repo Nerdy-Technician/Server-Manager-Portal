@@ -51075,17 +51075,18 @@ var TautulliGraphsTab = () => {
   const [isLoading, setIsLoading] = (0, import_react61.useState)(true);
   const [error, setError] = (0, import_react61.useState)("");
   const [days, setDays] = (0, import_react61.useState)("30");
+  const [yAxis, setYAxis] = (0, import_react61.useState)("plays");
   (0, import_react61.useEffect)(() => {
     setIsLoading(true);
     setError("");
-    apiFetch(`/api/tautulli/graphs?days=${days}`).then((data) => {
+    apiFetch(`/api/tautulli/graphs?days=${days}&y_axis=${yAxis}`).then((data) => {
       setGraphs(data);
       setIsLoading(false);
     }).catch((err) => {
       setError(err.message || "Failed to load graphs");
       setIsLoading(false);
     });
-  }, [days]);
+  }, [days, yAxis]);
   if (isLoading) {
     return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "flex justify-center items-center h-64 bg-card/50 backdrop-blur-md rounded-xl border border-border mt-6", children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(RefreshCw, { className: "w-8 h-8 text-plex animate-spin" }) });
   }
@@ -51111,7 +51112,11 @@ var TautulliGraphsTab = () => {
     return data.categories.map((date2, i) => {
       const obj = { date: date2 };
       data.series.forEach((s2) => {
-        obj[s2.name] = s2.data[i] || 0;
+        let val = s2.data[i] || 0;
+        if (yAxis === "duration") {
+          val = parseFloat((val / 3600).toFixed(1));
+        }
+        obj[s2.name] = val;
       });
       return obj;
     });
@@ -51130,24 +51135,31 @@ var TautulliGraphsTab = () => {
   const platformData = parseDateData(get_plays_by_top_10_platforms);
   const platformKeys = getSeriesKeys(get_plays_by_top_10_platforms);
   return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "space-y-6 mt-6", children: [
-    /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "flex justify-end", children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "w-48", children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
-      CustomSelect,
-      {
-        value: days,
-        onChange: setDays,
-        options: [
-          { label: "Last 7 Days", value: "7" },
-          { label: "Last 30 Days", value: "30" },
-          { label: "Last 90 Days", value: "90" },
-          { label: "Last 365 Days", value: "365" },
-          { label: "All Time", value: "0" }
-        ]
-      }
-    ) }) }),
+    /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "flex flex-col sm:flex-row justify-between items-end sm:items-center gap-4", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "flex bg-black/40 rounded-lg p-1 border border-white/5 w-fit", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { onClick: () => setYAxis("plays"), className: `px-4 py-1.5 rounded-md text-xs font-bold uppercase tracking-wider transition-colors ${yAxis === "plays" ? "bg-plex text-white shadow-lg" : "text-muted hover:text-white"}`, children: "Play Count" }),
+        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { onClick: () => setYAxis("duration"), className: `px-4 py-1.5 rounded-md text-xs font-bold uppercase tracking-wider transition-colors ${yAxis === "duration" ? "bg-plex text-white shadow-lg" : "text-muted hover:text-white"}`, children: "Watch Duration" })
+      ] }),
+      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "w-48", children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
+        CustomSelect,
+        {
+          value: days,
+          onChange: setDays,
+          options: [
+            { label: "Last 7 Days", value: "7" },
+            { label: "Last 30 Days", value: "30" },
+            { label: "Last 90 Days", value: "90" },
+            { label: "Last 365 Days", value: "365" },
+            { label: "All Time", value: "0" }
+          ]
+        }
+      ) })
+    ] }),
     /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "bg-card/50 backdrop-blur-md rounded-xl p-4 md:p-6 shadow-xl border border-border relative overflow-hidden", children: [
       /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("h3", { className: "text-lg font-bold text-text mb-4 uppercase tracking-wider flex items-center gap-2", children: [
         /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ChartLine, { className: "w-5 h-5 text-[#3b82f6]" }),
-        " Daily Play Count by Media Type"
+        " ",
+        yAxis === "plays" ? "Daily Play Count by Media Type" : "Daily Watch Duration by Media Type (Hours)"
       ] }),
       /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "h-72 w-full", children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ResponsiveContainer, { width: "100%", height: "100%", children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(LineChart, { data: dailyData, margin: { top: 10, right: 10, left: -20, bottom: 0 }, children: [
         /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CartesianGrid, { strokeDasharray: "3 3", stroke: "#333", vertical: false }),
@@ -51165,7 +51177,8 @@ var TautulliGraphsTab = () => {
       /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "bg-card/50 backdrop-blur-md rounded-xl p-4 md:p-6 shadow-xl border border-border relative overflow-hidden", children: [
         /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("h3", { className: "text-lg font-bold text-text mb-4 uppercase tracking-wider flex items-center gap-2", children: [
           /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Calendar, { className: "w-5 h-5 text-green-400" }),
-          " Play Count by Day of Week"
+          " ",
+          yAxis === "plays" ? "Play Count by Day of Week" : "Watch Duration by Day of Week (Hours)"
         ] }),
         /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "h-64 w-full", children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ResponsiveContainer, { width: "100%", height: "100%", children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(BarChart, { data: dayOfWeekData, margin: { top: 10, right: 10, left: -20, bottom: 0 }, children: [
           /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CartesianGrid, { strokeDasharray: "3 3", stroke: "#333", vertical: false }),
@@ -51181,7 +51194,8 @@ var TautulliGraphsTab = () => {
       /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "bg-card/50 backdrop-blur-md rounded-xl p-4 md:p-6 shadow-xl border border-border relative overflow-hidden", children: [
         /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("h3", { className: "text-lg font-bold text-text mb-4 uppercase tracking-wider flex items-center gap-2", children: [
           /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Clock, { className: "w-5 h-5 text-orange-400" }),
-          " Play Count by Hour of Day"
+          " ",
+          yAxis === "plays" ? "Play Count by Hour of Day" : "Watch Duration by Hour of Day (Hours)"
         ] }),
         /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "h-64 w-full", children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ResponsiveContainer, { width: "100%", height: "100%", children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(BarChart, { data: hourOfDayData, margin: { top: 10, right: 10, left: -20, bottom: 0 }, children: [
           /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CartesianGrid, { strokeDasharray: "3 3", stroke: "#333", vertical: false }),
@@ -51197,7 +51211,8 @@ var TautulliGraphsTab = () => {
       /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "bg-card/50 backdrop-blur-md rounded-xl p-4 md:p-6 shadow-xl border border-border relative overflow-hidden", children: [
         /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("h3", { className: "text-lg font-bold text-text mb-4 uppercase tracking-wider flex items-center gap-2", children: [
           /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Activity, { className: "w-5 h-5 text-sky-400" }),
-          " Stream Type Breakdown"
+          " ",
+          yAxis === "plays" ? "Stream Type Breakdown" : "Stream Type Duration Breakdown (Hours)"
         ] }),
         /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "h-64 w-full", children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ResponsiveContainer, { width: "100%", height: "100%", children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(BarChart, { data: streamTypeData, margin: { top: 10, right: 10, left: -20, bottom: 0 }, children: [
           /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CartesianGrid, { strokeDasharray: "3 3", stroke: "#333", vertical: false }),
@@ -51211,7 +51226,8 @@ var TautulliGraphsTab = () => {
       /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "bg-card/50 backdrop-blur-md rounded-xl p-4 md:p-6 shadow-xl border border-border relative overflow-hidden", children: [
         /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("h3", { className: "text-lg font-bold text-text mb-4 uppercase tracking-wider flex items-center gap-2", children: [
           /* @__PURE__ */ (0, import_jsx_runtime.jsx)(MonitorSmartphone, { className: "w-5 h-5 text-purple-400" }),
-          " Stream Resolution"
+          " ",
+          yAxis === "plays" ? "Stream Resolution Breakdown" : "Stream Resolution Duration Breakdown (Hours)"
         ] }),
         /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "h-64 w-full", children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ResponsiveContainer, { width: "100%", height: "100%", children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(BarChart, { data: resolutionData, margin: { top: 10, right: 10, left: -20, bottom: 0 }, children: [
           /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CartesianGrid, { strokeDasharray: "3 3", stroke: "#333", vertical: false }),
@@ -51226,7 +51242,8 @@ var TautulliGraphsTab = () => {
     /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "bg-card/50 backdrop-blur-md rounded-xl p-4 md:p-6 shadow-xl border border-border relative overflow-hidden", children: [
       /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("h3", { className: "text-lg font-bold text-text mb-4 uppercase tracking-wider flex items-center gap-2", children: [
         /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Users, { className: "w-5 h-5 text-teal-400" }),
-        " Top 10 Streaming Platforms"
+        " ",
+        yAxis === "plays" ? "Top 10 Streaming Platforms" : "Top 10 Platforms by Watch Duration (Hours)"
       ] }),
       /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "h-72 w-full", children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ResponsiveContainer, { width: "100%", height: "100%", children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(BarChart, { data: platformData, margin: { top: 10, right: 10, left: -20, bottom: 0 }, children: [
         /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CartesianGrid, { strokeDasharray: "3 3", stroke: "#333", vertical: false }),

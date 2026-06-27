@@ -2983,6 +2983,7 @@ app.get('/api/tautulli/graphs', requireAdmin, async (req, res) => {
         }
         const tUrl = config.tautulliUrl.replace(/\/+$/, '');
         const days = req.query.days || 30;
+        const yAxis = req.query.y_axis || 'plays';
 
         const endpoints = [
             'get_plays_by_date', 
@@ -2994,7 +2995,7 @@ app.get('/api/tautulli/graphs', requireAdmin, async (req, res) => {
         ];
         const results = await Promise.all(
             endpoints.map(cmd =>
-                fetch(`${tUrl}/api/v2?apikey=${config.tautulliApiKey}&cmd=${cmd}&time_range=${days}`, { headers: { 'Accept': 'application/json' } })
+                fetch(`${tUrl}/api/v2?apikey=${config.tautulliApiKey}&cmd=${cmd}&time_range=${days}&y_axis=${yAxis}`, { headers: { 'Accept': 'application/json' } })
                     .then(r => r.json())
                     .then(j => ({ cmd, data: j?.response?.data || {} }))
                     .catch(e => ({ cmd, data: {} }))
