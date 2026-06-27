@@ -1226,7 +1226,8 @@ app.get('/api/config', requireAdmin, async (req, res) => {
                 announcement: config.announcement || '',
                 hideStreamUsers: config.hideStreamUsers === true ? 'anonymous' : (config.hideStreamUsers || 'false'),
                 navOrder: config.navOrder || ['home', 'discover', 'users', 'status', 'logs', 'analytics', 'mediastack', 'request', 'settings', 'logout'],
-                defaultLibraryIds: config.defaultLibraryIds || null
+                defaultLibraryIds: config.defaultLibraryIds || null,
+                use24HourClock: !!config.use24HourClock
             },
         });
     } else {
@@ -1262,7 +1263,8 @@ app.get('/api/config', requireAdmin, async (req, res) => {
                 announcement: '',
                 hideStreamUsers: 'false',
                 navOrder: ['home', 'discover', 'users', 'status', 'logs', 'analytics', 'mediastack', 'request', 'settings', 'logout'],
-                defaultLibraryIds: null
+                defaultLibraryIds: null,
+                use24HourClock: false
             },
         });
     }

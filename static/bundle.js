@@ -1066,6 +1066,7 @@ var SettingsDashboard = () => {
       if (initialSettings.navOrder) setNavOrder(initialSettings.navOrder);
       setHideStreamUsers(initialSettings.hideStreamUsers === true ? "anonymous" : initialSettings.hideStreamUsers || "false");
       if (initialSettings.defaultLibraryIds) setDefaultLibraryIds(initialSettings.defaultLibraryIds);
+      if (initialSettings.use24HourClock !== void 0) setUse24HourClock(!!initialSettings.use24HourClock);
       setTestRecipient("");
       setServers([]);
     }

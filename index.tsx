@@ -887,6 +887,7 @@ const SettingsDashboard: React.FC = () => {
             if (initialSettings.navOrder) setNavOrder(initialSettings.navOrder);
             setHideStreamUsers(initialSettings.hideStreamUsers === true ? 'anonymous' : (initialSettings.hideStreamUsers || 'false'));
             if (initialSettings.defaultLibraryIds) setDefaultLibraryIds(initialSettings.defaultLibraryIds);
+            if (initialSettings.use24HourClock !== undefined) setUse24HourClock(!!initialSettings.use24HourClock);
             setTestRecipient('');
             setServers([]);
         }
