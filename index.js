@@ -3143,6 +3143,7 @@ app.get('/api/plex/analytics/me', requireAuth, async (req, res) => {
             const contentKey = item.type === 'episode' ? (item.grandparentKey || item.parentKey || item.ratingKey) : item.ratingKey;
             const contentTitle = item.type === 'episode' ? (item.grandparentTitle || item.parentTitle || item.title) : item.title;
             const contentThumb = item.type === 'episode' ? (item.grandparentThumb || item.parentThumb || item.thumb) : item.thumb;
+            const contentArt = item.type === 'episode' ? (item.grandparentArt || item.parentArt || item.art) : item.art;
             
             if (contentKey) {
                 if (!contentCounts[contentKey]) {
@@ -3151,6 +3152,7 @@ app.get('/api/plex/analytics/me', requireAuth, async (req, res) => {
                         title: contentTitle,
                         type: item.type === 'episode' ? 'show' : item.type,
                         thumb: contentThumb,
+                        art: contentArt,
                         plays: 0,
                         plexUrl: `https://app.plex.tv/desktop/#!/server/${config.serverIdentifier}/details?key=${encodeURIComponent('/library/metadata/' + contentKey.split('/').pop())}`
                     };
@@ -3172,7 +3174,7 @@ app.get('/api/plex/analytics/me', requireAuth, async (req, res) => {
         else if (avgHour >= 18) timeOfDay = 'Evening Streamer';
 
         const topShows = Object.values(contentCounts).filter(c => c.type === 'show').sort((a, b) => b.plays - a.plays);
-        const topBinge = topShows.length > 0 ? { ...topShows[0], thumbUrl: topShows[0].thumb ? `/api/plex/image?path=${encodeURIComponent(topShows[0].thumb)}` : null } : null;
+        const topBinge = topShows.length > 0 ? { ...topShows[0], artUrl: topShows[0].art ? `/api/plex/image?path=${encodeURIComponent(topShows[0].art)}` : null, thumbUrl: topShows[0].thumb ? `/api/plex/image?path=${encodeURIComponent(topShows[0].thumb)}` : null } : null;
 
         const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
         let maxDayIndex = 0;
@@ -3196,7 +3198,7 @@ app.get('/api/plex/analytics/me', requireAuth, async (req, res) => {
         }
 
         const topMoviesList = Object.values(contentCounts).filter(c => c.type === 'movie').sort((a, b) => b.plays - a.plays);
-        const topMovie = topMoviesList.length > 0 ? { ...topMoviesList[0], thumbUrl: topMoviesList[0].thumb ? `/api/plex/image?path=${encodeURIComponent(topMoviesList[0].thumb)}` : null } : null;
+        const topMovie = topMoviesList.length > 0 ? { ...topMoviesList[0], artUrl: topMoviesList[0].art ? `/api/plex/image?path=${encodeURIComponent(topMoviesList[0].art)}` : null, thumbUrl: topMoviesList[0].thumb ? `/api/plex/image?path=${encodeURIComponent(topMoviesList[0].thumb)}` : null } : null;
 
         let watchStyle = 'Explorer';
         if (totalPlays > 0) {
@@ -3340,6 +3342,7 @@ app.get('/api/plex/analytics/user/:id', requireAdmin, async (req, res) => {
             const contentKey = item.type === 'episode' ? (item.grandparentKey || item.parentKey || item.ratingKey) : item.ratingKey;
             const contentTitle = item.type === 'episode' ? (item.grandparentTitle || item.parentTitle || item.title) : item.title;
             const contentThumb = item.type === 'episode' ? (item.grandparentThumb || item.parentThumb || item.thumb) : item.thumb;
+            const contentArt = item.type === 'episode' ? (item.grandparentArt || item.parentArt || item.art) : item.art;
             
             if (contentKey) {
                 if (!contentCounts[contentKey]) {
@@ -3348,6 +3351,7 @@ app.get('/api/plex/analytics/user/:id', requireAdmin, async (req, res) => {
                         title: contentTitle,
                         type: item.type === 'episode' ? 'show' : item.type,
                         thumb: contentThumb,
+                        art: contentArt,
                         plays: 0,
                         plexUrl: `https://app.plex.tv/desktop/#!/server/${config.serverIdentifier}/details?key=${encodeURIComponent('/library/metadata/' + contentKey.split('/').pop())}`
                     };
@@ -3359,6 +3363,7 @@ app.get('/api/plex/analytics/user/:id', requireAdmin, async (req, res) => {
         const topLibraries = Object.values(libraryCounts).sort((a, b) => b.plays - a.plays).slice(0, 5);
         const topContent = Object.values(contentCounts).sort((a, b) => b.plays - a.plays).slice(0, 6).map(c => {
             if (c.thumb) c.thumbUrl = `/api/plex/image?path=${encodeURIComponent(c.thumb)}`;
+            if (c.art) c.artUrl = `/api/plex/image?path=${encodeURIComponent(c.art)}`;
             return c;
         });
 

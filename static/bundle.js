@@ -4123,7 +4123,7 @@ var UserDashboard = ({ sessionInfo, publicConfig, onLogout, refreshSession, onVi
           ] })
         ] }),
         /* @__PURE__ */ jsxs("div", { className: "rounded-xl overflow-hidden relative border border-border/50 group flex flex-col", style: { minHeight: "130px" }, children: [
-          /* @__PURE__ */ jsx("div", { className: "absolute inset-0 bg-cover bg-center z-0 transition-transform duration-700 group-hover:scale-110 opacity-60", style: { backgroundImage: `url('${analytics.topBinge?.thumbUrl || "https://images.unsplash.com/photo-1594909122845-11baa439b7bf?auto=format&fit=crop&q=80&w=600"}')` } }),
+          /* @__PURE__ */ jsx("div", { className: "absolute inset-0 bg-cover bg-center z-0 transition-transform duration-700 group-hover:scale-110 opacity-60", style: { backgroundImage: `url('${analytics.topBinge?.artUrl || analytics.topBinge?.thumbUrl || "https://images.unsplash.com/photo-1594909122845-11baa439b7bf?auto=format&fit=crop&q=80&w=600"}')` } }),
           /* @__PURE__ */ jsx("div", { className: "absolute inset-0 bg-black/60 z-10" }),
           /* @__PURE__ */ jsxs("div", { className: "relative z-20 p-4 flex-1 flex flex-col items-center justify-center text-center", children: [
             /* @__PURE__ */ jsx(Tv, { className: "w-6 h-6 text-plex mb-2 drop-shadow-md" }),
@@ -4132,7 +4132,7 @@ var UserDashboard = ({ sessionInfo, publicConfig, onLogout, refreshSession, onVi
           ] })
         ] }),
         /* @__PURE__ */ jsxs("div", { className: "rounded-xl overflow-hidden relative border border-border/50 group flex flex-col", style: { minHeight: "130px" }, children: [
-          /* @__PURE__ */ jsx("div", { className: "absolute inset-0 bg-cover bg-center z-0 transition-transform duration-700 group-hover:scale-110 opacity-60", style: { backgroundImage: `url('${analytics.topMovie?.thumbUrl || "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&q=80&w=600"}')` } }),
+          /* @__PURE__ */ jsx("div", { className: "absolute inset-0 bg-cover bg-center z-0 transition-transform duration-700 group-hover:scale-110 opacity-60", style: { backgroundImage: `url('${analytics.topMovie?.artUrl || analytics.topMovie?.thumbUrl || "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&q=80&w=600"}')` } }),
           /* @__PURE__ */ jsx("div", { className: "absolute inset-0 bg-black/60 z-10" }),
           /* @__PURE__ */ jsxs("div", { className: "relative z-20 p-4 flex-1 flex flex-col items-center justify-center text-center", children: [
             /* @__PURE__ */ jsx(Clapperboard, { className: "w-6 h-6 text-plex mb-2 drop-shadow-md" }),
