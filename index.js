@@ -3052,7 +3052,12 @@ app.get('/api/plex/analytics', requireAdmin, async (req, res) => {
         const topShows = await Promise.all(Object.values(contentCountsShows).sort((a, b) => b.plays - a.plays).slice(0, 10).map(fetchRichMetadata));
         const topMusic = await Promise.all(Object.values(contentCountsMusic).sort((a, b) => b.plays - a.plays).slice(0, 10).map(fetchRichMetadata));
 
-        res.json({ topUsers, topLibraries, topMovies, topShows, topMusic, topDevices, peakHours, totalPlaybacks });
+        const stats = await loadFile(PLEX_STATS_CACHE_PATH, {});
+        const maxConcurrentStreams = stats.maxConcurrentStreams || 0;
+        const maxDirectPlays = stats.maxDirectPlays || 0;
+        const maxTranscodes = stats.maxTranscodes || 0;
+
+        res.json({ topUsers, topLibraries, topMovies, topShows, topMusic, topDevices, peakHours, totalPlaybacks, maxConcurrentStreams, maxDirectPlays, maxTranscodes });
     } catch (e) {
         log(`Error fetching analytics: ${e.message}`);
         res.status(500).json({ error: 'Analytics error' });
@@ -4124,6 +4129,70 @@ app.get('/api/plex/stats/trending', requireAuth, async (req, res) => {
     }
 });
 
+// Monitor Plex sessions to track high watermarks
+async function monitorConcurrentSessions() {
+    try {
+        const config = await loadFile(CONFIG_PATH, null);
+        if (!config || !config.plexToken || !config.serverIdentifier) return;
+        
+        const uri = await getPlexConnectionUri(config);
+        if (!uri) return;
+
+        const sessionsRes = await fetch(`${uri}/status/sessions?X-Plex-Token=${config.plexToken}`, { headers: { 'Accept': 'application/json' } }).then(r => r.json()).catch(() => null);
+        
+        if (sessionsRes && sessionsRes.MediaContainer) {
+            const currentStreams = sessionsRes.MediaContainer.size || 0;
+            let currentDirect = 0;
+            let currentTranscodes = 0;
+            
+            if (sessionsRes.MediaContainer.Metadata) {
+                sessionsRes.MediaContainer.Metadata.forEach(m => {
+                    let isTranscode = false;
+                    if (m.TranscodeSession) {
+                        isTranscode = true;
+                    } else if (m.Media && m.Media.length > 0) {
+                        for (const media of m.Media) {
+                            if (media.Part && media.Part.length > 0) {
+                                for (const part of media.Part) {
+                                    if (part.decision === 'transcode' || (part.Stream && part.Stream.some(s => s.decision === 'transcode'))) {
+                                        isTranscode = true;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    if (isTranscode) {
+                        currentTranscodes++;
+                    } else {
+                        currentDirect++;
+                    }
+                });
+            }
+
+            const stats = await loadFile(PLEX_STATS_CACHE_PATH, {});
+            let updated = false;
+
+            if (currentStreams > (stats.maxConcurrentStreams || 0)) {
+                stats.maxConcurrentStreams = currentStreams;
+                updated = true;
+            }
+            if (currentDirect > (stats.maxDirectPlays || 0)) {
+                stats.maxDirectPlays = currentDirect;
+                updated = true;
+            }
+            if (currentTranscodes > (stats.maxTranscodes || 0)) {
+                stats.maxTranscodes = currentTranscodes;
+                updated = true;
+            }
+
+            if (updated) {
+                await saveFile(PLEX_STATS_CACHE_PATH, stats);
+            }
+        }
+    } catch (e) {}
+}
+
 app.listen(PORT, async () => {
     log(`--- Server Manager Portal Service starting on http://localhost:${PORT} ---`);
     
@@ -4140,6 +4209,8 @@ app.listen(PORT, async () => {
     await loadStatusState();
     runMonitorCycle();
     setInterval(runMonitorCycle, 15000);
+    monitorConcurrentSessions();
+    setInterval(monitorConcurrentSessions, 15000);
     startBackgroundService();
     startPlexStatsBackgroundTask(); // start 24-hour library size cache task
     

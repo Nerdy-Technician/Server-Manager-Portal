@@ -2705,7 +2705,7 @@ const AnalyticsDashboard: React.FC<{ isAdmin: boolean, sessionInfo: any }> = ({ 
     if (error) return <div className="text-red-500 font-bold p-8 text-center">{error}</div>;
     if (!analyticsData) return null;
 
-    const { topUsers, topLibraries, topMovies, topShows, topMusic, topDevices, peakHours, totalPlaybacks } = analyticsData;
+    const { topUsers, topLibraries, topMovies, topShows, topMusic, topDevices, peakHours, totalPlaybacks, maxConcurrentStreams, maxDirectPlays, maxTranscodes } = analyticsData;
     const maxLibraryPlays = Math.max(...topLibraries.map(l => l.plays), 1);
     const maxDevicePlays = Math.max(...topDevices.map(d => d.plays), 1);
     const maxPeakHour = Math.max(...peakHours, 1);
@@ -2864,6 +2864,25 @@ const AnalyticsDashboard: React.FC<{ isAdmin: boolean, sessionInfo: any }> = ({ 
                                     </div>
                                 </div>
                             ))}
+                        </div>
+                    </div>
+
+                    {/* High Watermarks Card */}
+                    <div className="bg-card/50 backdrop-blur-md rounded-xl p-4 md:p-6 shadow-xl border border-border mt-6">
+                        <h2 className="text-xl font-bold text-text mb-4 uppercase tracking-wider flex items-center gap-2"><Activity className="text-plex w-5 h-5" /> All-Time Highs</h2>
+                        <div className="flex flex-col gap-4">
+                            <div className="flex items-center justify-between p-3 bg-black/20 rounded-lg hover:bg-black/40 transition-colors border border-white/5">
+                                <span className="font-bold text-text flex items-center gap-2"><Users className="w-4 h-4 text-plex" /> Concurrent Streams</span>
+                                <span className="font-mono font-black text-plex text-lg">{maxConcurrentStreams || 0}</span>
+                            </div>
+                            <div className="flex items-center justify-between p-3 bg-black/20 rounded-lg hover:bg-black/40 transition-colors border border-white/5">
+                                <span className="font-bold text-text flex items-center gap-2"><Play className="w-4 h-4 text-blue-400" /> Direct Plays</span>
+                                <span className="font-mono font-black text-blue-400 text-lg">{maxDirectPlays || 0}</span>
+                            </div>
+                            <div className="flex items-center justify-between p-3 bg-black/20 rounded-lg hover:bg-black/40 transition-colors border border-white/5">
+                                <span className="font-bold text-text flex items-center gap-2"><Cpu className="w-4 h-4 text-orange-400" /> Transcodes</span>
+                                <span className="font-mono font-black text-orange-400 text-lg">{maxTranscodes || 0}</span>
+                            </div>
                         </div>
                     </div>
                 </div>

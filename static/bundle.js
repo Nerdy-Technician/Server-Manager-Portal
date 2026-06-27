@@ -358,17 +358,29 @@ var __iconNode25 = [
 ];
 var Music = createLucideIcon("music", __iconNode25);
 
-// node_modules/lucide-react/dist/esm/icons/refresh-cw.mjs
+// node_modules/lucide-react/dist/esm/icons/play.mjs
 var __iconNode26 = [
+  [
+    "path",
+    {
+      d: "M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z",
+      key: "10ikf1"
+    }
+  ]
+];
+var Play = createLucideIcon("play", __iconNode26);
+
+// node_modules/lucide-react/dist/esm/icons/refresh-cw.mjs
+var __iconNode27 = [
   ["path", { d: "M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8", key: "v9h5vc" }],
   ["path", { d: "M21 3v5h-5", key: "1q7to0" }],
   ["path", { d: "M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16", key: "3uifl3" }],
   ["path", { d: "M8 16H3v5", key: "1cv678" }]
 ];
-var RefreshCw = createLucideIcon("refresh-cw", __iconNode26);
+var RefreshCw = createLucideIcon("refresh-cw", __iconNode27);
 
 // node_modules/lucide-react/dist/esm/icons/settings.mjs
-var __iconNode27 = [
+var __iconNode28 = [
   [
     "path",
     {
@@ -378,10 +390,10 @@ var __iconNode27 = [
   ],
   ["circle", { cx: "12", cy: "12", r: "3", key: "1v7zrd" }]
 ];
-var Settings = createLucideIcon("settings", __iconNode27);
+var Settings = createLucideIcon("settings", __iconNode28);
 
 // node_modules/lucide-react/dist/esm/icons/shield.mjs
-var __iconNode28 = [
+var __iconNode29 = [
   [
     "path",
     {
@@ -390,10 +402,10 @@ var __iconNode28 = [
     }
   ]
 ];
-var Shield = createLucideIcon("shield", __iconNode28);
+var Shield = createLucideIcon("shield", __iconNode29);
 
 // node_modules/lucide-react/dist/esm/icons/sparkles.mjs
-var __iconNode29 = [
+var __iconNode30 = [
   [
     "path",
     {
@@ -405,10 +417,10 @@ var __iconNode29 = [
   ["path", { d: "M22 4h-4", key: "gwowj6" }],
   ["circle", { cx: "4", cy: "20", r: "2", key: "6kqj1y" }]
 ];
-var Sparkles = createLucideIcon("sparkles", __iconNode29);
+var Sparkles = createLucideIcon("sparkles", __iconNode30);
 
 // node_modules/lucide-react/dist/esm/icons/square-play.mjs
-var __iconNode30 = [
+var __iconNode31 = [
   ["rect", { x: "3", y: "3", width: "18", height: "18", rx: "2", key: "h1oib" }],
   [
     "path",
@@ -418,10 +430,10 @@ var __iconNode30 = [
     }
   ]
 ];
-var SquarePlay = createLucideIcon("square-play", __iconNode30);
+var SquarePlay = createLucideIcon("square-play", __iconNode31);
 
 // node_modules/lucide-react/dist/esm/icons/star.mjs
-var __iconNode31 = [
+var __iconNode32 = [
   [
     "path",
     {
@@ -430,10 +442,10 @@ var __iconNode31 = [
     }
   ]
 ];
-var Star = createLucideIcon("star", __iconNode31);
+var Star = createLucideIcon("star", __iconNode32);
 
 // node_modules/lucide-react/dist/esm/icons/triangle-alert.mjs
-var __iconNode32 = [
+var __iconNode33 = [
   [
     "path",
     {
@@ -444,17 +456,17 @@ var __iconNode32 = [
   ["path", { d: "M12 9v4", key: "juzpu7" }],
   ["path", { d: "M12 17h.01", key: "p32p05" }]
 ];
-var TriangleAlert = createLucideIcon("triangle-alert", __iconNode32);
+var TriangleAlert = createLucideIcon("triangle-alert", __iconNode33);
 
 // node_modules/lucide-react/dist/esm/icons/trending-up.mjs
-var __iconNode33 = [
+var __iconNode34 = [
   ["path", { d: "M16 7h6v6", key: "box55l" }],
   ["path", { d: "m22 7-8.5 8.5-5-5L2 17", key: "1t1m79" }]
 ];
-var TrendingUp = createLucideIcon("trending-up", __iconNode33);
+var TrendingUp = createLucideIcon("trending-up", __iconNode34);
 
 // node_modules/lucide-react/dist/esm/icons/trophy.mjs
-var __iconNode34 = [
+var __iconNode35 = [
   ["path", { d: "M10 14.66v1.626a2 2 0 0 1-.976 1.696A5 5 0 0 0 7 21.978", key: "1n3hpd" }],
   ["path", { d: "M14 14.66v1.626a2 2 0 0 0 .976 1.696A5 5 0 0 1 17 21.978", key: "rfe1zi" }],
   ["path", { d: "M18 9h1.5a1 1 0 0 0 0-5H18", key: "7xy6bh" }],
@@ -462,30 +474,30 @@ var __iconNode34 = [
   ["path", { d: "M6 9a6 6 0 0 0 12 0V3a1 1 0 0 0-1-1H7a1 1 0 0 0-1 1z", key: "1mhfuq" }],
   ["path", { d: "M6 9H4.5a1 1 0 0 1 0-5H6", key: "tex48p" }]
 ];
-var Trophy = createLucideIcon("trophy", __iconNode34);
+var Trophy = createLucideIcon("trophy", __iconNode35);
 
 // node_modules/lucide-react/dist/esm/icons/tv.mjs
-var __iconNode35 = [
+var __iconNode36 = [
   ["path", { d: "m17 2-5 5-5-5", key: "16satq" }],
   ["rect", { width: "20", height: "15", x: "2", y: "7", rx: "2", key: "1e6viu" }]
 ];
-var Tv = createLucideIcon("tv", __iconNode35);
+var Tv = createLucideIcon("tv", __iconNode36);
 
 // node_modules/lucide-react/dist/esm/icons/users.mjs
-var __iconNode36 = [
+var __iconNode37 = [
   ["path", { d: "M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2", key: "1yyitq" }],
   ["path", { d: "M16 3.128a4 4 0 0 1 0 7.744", key: "16gr8j" }],
   ["path", { d: "M22 21v-2a4 4 0 0 0-3-3.87", key: "kshegd" }],
   ["circle", { cx: "9", cy: "7", r: "4", key: "nufk8" }]
 ];
-var Users = createLucideIcon("users", __iconNode36);
+var Users = createLucideIcon("users", __iconNode37);
 
 // node_modules/lucide-react/dist/esm/icons/x.mjs
-var __iconNode37 = [
+var __iconNode38 = [
   ["path", { d: "M18 6 6 18", key: "1bl5f8" }],
   ["path", { d: "m6 6 12 12", key: "d8bk6v" }]
 ];
-var X = createLucideIcon("x", __iconNode37);
+var X = createLucideIcon("x", __iconNode38);
 
 // index.tsx
 import { Fragment, jsx, jsxs } from "react/jsx-runtime";
@@ -2735,7 +2747,7 @@ var AnalyticsDashboard = ({ isAdmin, sessionInfo }) => {
   if (isLoading) return /* @__PURE__ */ jsx(Loader, { isLoading: true });
   if (error) return /* @__PURE__ */ jsx("div", { className: "text-red-500 font-bold p-8 text-center", children: error });
   if (!analyticsData) return null;
-  const { topUsers, topLibraries, topMovies, topShows, topMusic, topDevices, peakHours, totalPlaybacks } = analyticsData;
+  const { topUsers, topLibraries, topMovies, topShows, topMusic, topDevices, peakHours, totalPlaybacks, maxConcurrentStreams, maxDirectPlays, maxTranscodes } = analyticsData;
   const maxLibraryPlays = Math.max(...topLibraries.map((l) => l.plays), 1);
   const maxDevicePlays = Math.max(...topDevices.map((d) => d.plays), 1);
   const maxPeakHour = Math.max(...peakHours, 1);
@@ -2865,29 +2877,60 @@ var AnalyticsDashboard = ({ isAdmin, sessionInfo }) => {
           ] })
         ] }, user.id)) })
       ] }),
-      /* @__PURE__ */ jsx("div", { className: "flex flex-col gap-6 lg:col-span-1", children: /* @__PURE__ */ jsxs("div", { className: "bg-card/50 backdrop-blur-md rounded-xl p-4 md:p-6 shadow-xl border border-border", children: [
-        /* @__PURE__ */ jsxs("h2", { className: "text-xl font-bold text-text mb-4 uppercase tracking-wider flex items-center gap-2", children: [
-          /* @__PURE__ */ jsx(SquarePlay, { className: "text-plex w-5 h-5" }),
-          " Popular Libraries"
-        ] }),
-        /* @__PURE__ */ jsx("div", { className: "flex flex-col gap-5 mt-2", children: topLibraries.length === 0 ? /* @__PURE__ */ jsx("p", { className: "text-muted text-sm", children: "No data available." }) : topLibraries.map((lib, idx) => /* @__PURE__ */ jsxs("div", { className: "flex flex-col gap-2", children: [
-          /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-end", children: [
-            /* @__PURE__ */ jsxs("span", { className: "font-bold text-text flex items-center gap-2", children: [
-              /* @__PURE__ */ jsxs("span", { className: "text-muted text-xs", children: [
-                "#",
-                idx + 1
-              ] }),
-              " ",
-              lib.title
-            ] }),
-            /* @__PURE__ */ jsxs("span", { className: "text-xs text-muted font-mono", children: [
-              lib.plays,
-              " plays"
-            ] })
+      /* @__PURE__ */ jsxs("div", { className: "flex flex-col gap-6 lg:col-span-1", children: [
+        /* @__PURE__ */ jsxs("div", { className: "bg-card/50 backdrop-blur-md rounded-xl p-4 md:p-6 shadow-xl border border-border", children: [
+          /* @__PURE__ */ jsxs("h2", { className: "text-xl font-bold text-text mb-4 uppercase tracking-wider flex items-center gap-2", children: [
+            /* @__PURE__ */ jsx(SquarePlay, { className: "text-plex w-5 h-5" }),
+            " Popular Libraries"
           ] }),
-          /* @__PURE__ */ jsx("div", { className: "h-2 w-full bg-black/40 rounded-full overflow-hidden", children: /* @__PURE__ */ jsx("div", { className: "h-full bg-gradient-to-r from-plex to-[#e5a00d] rounded-full", style: { width: `${lib.plays / maxLibraryPlays * 100}%` } }) })
-        ] }, lib.id)) })
-      ] }) }),
+          /* @__PURE__ */ jsx("div", { className: "flex flex-col gap-5 mt-2", children: topLibraries.length === 0 ? /* @__PURE__ */ jsx("p", { className: "text-muted text-sm", children: "No data available." }) : topLibraries.map((lib, idx) => /* @__PURE__ */ jsxs("div", { className: "flex flex-col gap-2", children: [
+            /* @__PURE__ */ jsxs("div", { className: "flex justify-between items-end", children: [
+              /* @__PURE__ */ jsxs("span", { className: "font-bold text-text flex items-center gap-2", children: [
+                /* @__PURE__ */ jsxs("span", { className: "text-muted text-xs", children: [
+                  "#",
+                  idx + 1
+                ] }),
+                " ",
+                lib.title
+              ] }),
+              /* @__PURE__ */ jsxs("span", { className: "text-xs text-muted font-mono", children: [
+                lib.plays,
+                " plays"
+              ] })
+            ] }),
+            /* @__PURE__ */ jsx("div", { className: "h-2 w-full bg-black/40 rounded-full overflow-hidden", children: /* @__PURE__ */ jsx("div", { className: "h-full bg-gradient-to-r from-plex to-[#e5a00d] rounded-full", style: { width: `${lib.plays / maxLibraryPlays * 100}%` } }) })
+          ] }, lib.id)) })
+        ] }),
+        /* @__PURE__ */ jsxs("div", { className: "bg-card/50 backdrop-blur-md rounded-xl p-4 md:p-6 shadow-xl border border-border mt-6", children: [
+          /* @__PURE__ */ jsxs("h2", { className: "text-xl font-bold text-text mb-4 uppercase tracking-wider flex items-center gap-2", children: [
+            /* @__PURE__ */ jsx(Activity, { className: "text-plex w-5 h-5" }),
+            " All-Time Highs"
+          ] }),
+          /* @__PURE__ */ jsxs("div", { className: "flex flex-col gap-4", children: [
+            /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between p-3 bg-black/20 rounded-lg hover:bg-black/40 transition-colors border border-white/5", children: [
+              /* @__PURE__ */ jsxs("span", { className: "font-bold text-text flex items-center gap-2", children: [
+                /* @__PURE__ */ jsx(Users, { className: "w-4 h-4 text-plex" }),
+                " Concurrent Streams"
+              ] }),
+              /* @__PURE__ */ jsx("span", { className: "font-mono font-black text-plex text-lg", children: maxConcurrentStreams || 0 })
+            ] }),
+            /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between p-3 bg-black/20 rounded-lg hover:bg-black/40 transition-colors border border-white/5", children: [
+              /* @__PURE__ */ jsxs("span", { className: "font-bold text-text flex items-center gap-2", children: [
+                /* @__PURE__ */ jsx(Play, { className: "w-4 h-4 text-blue-400" }),
+                " Direct Plays"
+              ] }),
+              /* @__PURE__ */ jsx("span", { className: "font-mono font-black text-blue-400 text-lg", children: maxDirectPlays || 0 })
+            ] }),
+            /* @__PURE__ */ jsxs("div", { className: "flex items-center justify-between p-3 bg-black/20 rounded-lg hover:bg-black/40 transition-colors border border-white/5", children: [
+              /* @__PURE__ */ jsxs("span", { className: "font-bold text-text flex items-center gap-2", children: [
+                /* @__PURE__ */ jsx(Cpu, { className: "w-4 h-4 text-orange-400" }),
+                " Transcodes"
+              ] }),
+              /* @__PURE__ */ jsx("span", { className: "font-mono font-black text-orange-400 text-lg", children: maxTranscodes || 0 })
+            ] })
+          ] })
+        ] })
+      ] }),
       /* @__PURE__ */ jsxs("div", { className: "bg-card/50 backdrop-blur-md rounded-xl p-4 md:p-6 shadow-xl border border-border col-span-full", children: [
         /* @__PURE__ */ jsxs("div", { className: "flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4", children: [
           /* @__PURE__ */ jsxs("h2", { className: "text-xl font-bold text-text uppercase tracking-wider flex items-center gap-2", children: [
@@ -6446,6 +6489,14 @@ lucide-react/dist/esm/icons/log-out.mjs:
    *)
 
 lucide-react/dist/esm/icons/music.mjs:
+  (**
+   * @license lucide-react v1.21.0 - ISC
+   *
+   * This source code is licensed under the ISC license.
+   * See the LICENSE file in the root directory of this source tree.
+   *)
+
+lucide-react/dist/esm/icons/play.mjs:
   (**
    * @license lucide-react v1.21.0 - ISC
    *
