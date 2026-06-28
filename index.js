@@ -3980,14 +3980,38 @@ async function calculateAnalyticsStats() {
 
         log('Starting background calculation of Plex Analytics Stats...');
 
-        const limit = 15000;
-        const historyRes = await fetch(`${uri}/status/sessions/history/all?X-Plex-Token=${config.plexToken}&sort=viewedAt:desc&limit=${limit}`, { headers: { 'Accept': 'application/json' } }).then(r => r.json()).catch(() => null);
+        const pageSize = 5000;
+        const maxHistoryItems = 250000;
+        let historyItems = [];
+        let start = 0;
+
+        while (start < maxHistoryItems) {
+            const pageRes = await fetch(
+                `${uri}/status/sessions/history/all?X-Plex-Token=${config.plexToken}&sort=viewedAt:desc&X-Plex-Container-Start=${start}&X-Plex-Container-Size=${pageSize}`,
+                { headers: { 'Accept': 'application/json' } }
+            ).then(r => r.json()).catch(() => null);
+
+            const pageContainer = pageRes && pageRes.MediaContainer ? pageRes.MediaContainer : null;
+            const pageItems = pageContainer && Array.isArray(pageContainer.Metadata) ? pageContainer.Metadata : [];
+            if (pageItems.length === 0) break;
+
+            historyItems = historyItems.concat(pageItems);
+            start += pageItems.length;
+
+            const totalSize = Number(pageContainer.totalSize || 0);
+            if ((totalSize > 0 && start >= totalSize) || pageItems.length < pageSize) break;
+        }
+
+        if (historyItems.length >= maxHistoryItems) {
+            log(`Analytics history fetch reached safety cap (${maxHistoryItems}). Results may be truncated.`);
+        }
+
         const sectionsRes = await fetch(`${uri}/library/sections?X-Plex-Token=${config.plexToken}`, { headers: { 'Accept': 'application/json' } }).then(r => r.json()).catch(() => null);
         const accountsRes = await fetch(`${uri}/accounts?X-Plex-Token=${config.plexToken}`, { headers: { 'Accept': 'application/json' } }).then(r => r.json()).catch(() => null);
         const devicesRes = await fetch(`${uri}/devices?X-Plex-Token=${config.plexToken}`, { headers: { 'Accept': 'application/json' } }).then(r => r.json()).catch(() => null);
         const users = await loadFile(USERS_PATH, []);
 
-        if (!historyRes || !historyRes.MediaContainer || !historyRes.MediaContainer.Metadata) return;
+        if (!Array.isArray(historyItems) || historyItems.length === 0) return;
 
         const accountsMap = {};
         if (accountsRes && accountsRes.MediaContainer && accountsRes.MediaContainer.Account) {
@@ -4040,7 +4064,7 @@ async function calculateAnalyticsStats() {
             const peakHours = new Array(24).fill(0);
             let totalPlaybacks = 0;
 
-            historyRes.MediaContainer.Metadata.forEach(item => {
+            historyItems.forEach(item => {
                 if (cutoffDate > 0 && item.viewedAt < cutoffDate) return;
                 totalPlaybacks++;
 
@@ -4105,7 +4129,7 @@ async function calculateAnalyticsStats() {
                 }
             });
 
-            const topUsers = Object.values(userCounts).sort((a, b) => b.plays - a.plays).slice(0, 10);
+            const topUsers = Object.values(userCounts).sort((a, b) => b.plays - a.plays);
             const topLibraries = Object.values(libraryCounts).sort((a, b) => b.plays - a.plays).slice(0, 10);
             const topDevices = Object.values(deviceCounts).sort((a, b) => b.plays - a.plays).slice(0, 10);
 

@@ -3422,13 +3422,9 @@ const AnalyticsDashboard: React.FC<{ isAdmin: boolean, sessionInfo: any }> = ({ 
     const [searchQuery, setSearchQuery] = useState('');
     const [isSearching, setIsSearching] = useState(false);
     const [contentTab, setContentTab] = useState<'movies' | 'shows' | 'music'>('movies');
-    const [viewTab, setViewTab] = useState<'overview' | 'graphs'>(() => {
-        return (localStorage.getItem('analytics_view_tab') as 'overview' | 'graphs') || 'overview';
-    });
-
-    useEffect(() => {
-        localStorage.setItem('analytics_view_tab', viewTab);
-    }, [viewTab]);
+    const [viewerPage, setViewerPage] = useState(1);
+    const viewersPerPage = 10;
+    const [viewTab, setViewTab] = useState<'overview' | 'graphs'>('overview');
 
     useEffect(() => {
         if (!isAdmin) return;
@@ -3470,6 +3466,19 @@ const AnalyticsDashboard: React.FC<{ isAdmin: boolean, sessionInfo: any }> = ({ 
         fetchAnalytics();
     }, [days, isAdmin]);
 
+    const topUsersLength = analyticsData?.topUsers?.length || 0;
+    const totalViewerPages = Math.max(1, Math.ceil(topUsersLength / viewersPerPage));
+
+    useEffect(() => {
+        setViewerPage(1);
+    }, [days]);
+
+    useEffect(() => {
+        if (viewerPage > totalViewerPages) {
+            setViewerPage(totalViewerPages);
+        }
+    }, [viewerPage, totalViewerPages]);
+
     if (isLoading) return <Loader isLoading={true} />;
     if (error) return <div className="text-red-500 font-bold p-8 text-center">{error}</div>;
     if (!analyticsData) return null;
@@ -3478,6 +3487,8 @@ const AnalyticsDashboard: React.FC<{ isAdmin: boolean, sessionInfo: any }> = ({ 
     const maxLibraryPlays = Math.max(...topLibraries.map(l => l.plays), 1);
     const maxDevicePlays = Math.max(...topDevices.map(d => d.plays), 1);
     const maxPeakHour = Math.max(...peakHours, 1);
+    const viewerPageSafe = Math.min(viewerPage, totalViewerPages);
+    const pagedTopUsers = topUsers.slice((viewerPageSafe - 1) * viewersPerPage, viewerPageSafe * viewersPerPage);
 
     let activeContent = topMovies;
     if (contentTab === 'shows') activeContent = topShows;
@@ -3614,20 +3625,41 @@ const AnalyticsDashboard: React.FC<{ isAdmin: boolean, sessionInfo: any }> = ({ 
                                 )}
                             </div>
                             <div className="flex flex-col gap-4">
-                                {topUsers.length === 0 ? <p className="text-muted text-sm">No data available.</p> : topUsers.map((user, idx) => (
+                                {topUsers.length === 0 ? <p className="text-muted text-sm">No data available.</p> : pagedTopUsers.map((user, idx) => (
                                     <div key={user.id} onClick={() => { if (isAdmin) setSelectedUser({ id: user.id, username: user.username, thumb: user.thumb }); }} className={`flex items-center justify-between p-3 bg-black/20 rounded-lg transition-colors group ${isAdmin ? 'hover:bg-black/40 cursor-pointer hover:ring-1 hover:ring-plex' : ''}`}>
                                         <div className="flex items-center gap-4">
                                             <div className="relative">
                                                 <div className="w-10 h-10 rounded-full p-[2px] bg-gradient-to-r from-plex to-[#e5a00d]">
                                                     <img src={user.thumb ? (user.thumb.startsWith('http') ? user.thumb : `/api/plex/image?path=${encodeURIComponent(user.thumb)}&width=80&height=80`) : '/static/logo.png'} alt={user.username} className="w-full h-full rounded-full object-cover bg-card" onError={(e) => { (e.target as HTMLImageElement).src = '/static/logo.png'; }} />
                                                 </div>
-                                                <div className="absolute -top-2 -right-2 bg-plex text-black font-bold text-[10px] w-5 h-5 rounded-full flex items-center justify-center">#{idx + 1}</div>
+                                                <div className="absolute -top-2 -right-2 bg-plex text-black font-bold text-[10px] w-5 h-5 rounded-full flex items-center justify-center">#{((viewerPageSafe - 1) * viewersPerPage) + idx + 1}</div>
                                             </div>
                                             <span className="font-bold text-text group-hover:text-plex transition-colors">{user.username}</span>
                                         </div>
                                         <span className="font-mono text-plex font-bold">{user.plays} plays</span>
                                     </div>
                                 ))}
+                                {topUsers.length > viewersPerPage && (
+                                    <div className="flex items-center justify-between pt-2">
+                                        <button
+                                            onClick={() => setViewerPage(Math.max(1, viewerPageSafe - 1))}
+                                            disabled={viewerPageSafe === 1}
+                                            className="px-3 py-1.5 text-xs font-bold rounded-md border border-border bg-black/20 text-text disabled:opacity-40 disabled:cursor-not-allowed hover:bg-black/40 transition-colors"
+                                        >
+                                            Previous
+                                        </button>
+                                        <span className="text-xs text-muted font-semibold">
+                                            Page {viewerPageSafe} of {totalViewerPages}
+                                        </span>
+                                        <button
+                                            onClick={() => setViewerPage(Math.min(totalViewerPages, viewerPageSafe + 1))}
+                                            disabled={viewerPageSafe >= totalViewerPages}
+                                            className="px-3 py-1.5 text-xs font-bold rounded-md border border-border bg-black/20 text-text disabled:opacity-40 disabled:cursor-not-allowed hover:bg-black/40 transition-colors"
+                                        >
+                                            Next
+                                        </button>
+                                    </div>
+                                )}
                             </div>
                         </div>
 
