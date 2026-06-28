@@ -89,6 +89,7 @@ const STATUS_CONFIG_PATH = path.join(process.cwd(), 'status.json');
 const HEALTH_PATH = path.join(process.cwd(), 'subzero-health.json');
 const TRENDING_CACHE_PATH = path.join(process.cwd(), 'trending-cache.json');
 const ANALYTICS_CACHE_PATH = path.join(process.cwd(), 'analytics-cache.json');
+const KILL_RULES_PATH = path.join(process.cwd(), 'kill-rules.json');
 const PLEX_API = 'https://plex.tv/api';
 
 // --- Status App Global State ---
@@ -4326,6 +4327,98 @@ app.get('/api/plex/stats/trending', requireAuth, async (req, res) => {
     }
 });
 
+// --- Stream Kill Rules Engine ---
+function sessionMatchesCondition(session, condition) {
+    const { field, operator, value } = condition;
+    let sessionVal;
+
+    switch (field) {
+        case 'isTranscoding': sessionVal = session.isTranscoding ? 'true' : 'false'; break;
+        case 'videoResolution': sessionVal = (session.resolution || '').toString().toLowerCase(); break;
+        case 'user': sessionVal = (session.user || '').toLowerCase(); break;
+        case 'bandwidth': sessionVal = Math.round((session.bandwidth || 0) / 1000); break; // in Mbps
+        case 'playerProduct': sessionVal = (session.playerProduct || '').toLowerCase(); break;
+        case 'state': sessionVal = (session.state || '').toLowerCase(); break;
+        case 'mediaType': sessionVal = (session.type || '').toLowerCase(); break;
+        case 'sessionLocation': sessionVal = (session.sessionLocation || '').toLowerCase(); break;
+        case 'playerTitle': sessionVal = (session.playerTitle || '').toLowerCase(); break;
+        case 'videoCodec': sessionVal = (session.videoCodec || '').toLowerCase(); break;
+        case 'audioCodec': sessionVal = (session.audioCodec || '').toLowerCase(); break;
+        case 'transcodeVideoDecision': sessionVal = (session.transcodeVideoDecision || '').toLowerCase(); break;
+        default: return false;
+    }
+
+    const compareVal = field === 'bandwidth' ? parseFloat(value) : (value || '').toString().toLowerCase();
+
+    switch (operator) {
+        case 'equals': return String(sessionVal) === String(compareVal);
+        case 'not_equals': return String(sessionVal) !== String(compareVal);
+        case 'contains': return String(sessionVal).includes(String(compareVal));
+        case 'not_contains': return !String(sessionVal).includes(String(compareVal));
+        case 'greater_than': return parseFloat(sessionVal) > parseFloat(compareVal);
+        case 'less_than': return parseFloat(sessionVal) < parseFloat(compareVal);
+        default: return false;
+    }
+}
+
+async function evaluateKillRules(config, uri, sessions) {
+    if (!sessions || sessions.length === 0) return;
+    const rules = await loadFile(KILL_RULES_PATH, []);
+    const enabledRules = rules.filter(r => r.enabled !== false);
+    if (enabledRules.length === 0) return;
+
+    for (const session of sessions) {
+        for (const rule of enabledRules) {
+            const { conditions, conditionLogic = 'AND', killMessage, name } = rule;
+            if (!conditions || conditions.length === 0) continue;
+
+            let matched;
+            if (conditionLogic === 'OR') {
+                matched = conditions.some(c => sessionMatchesCondition(session, c));
+            } else {
+                matched = conditions.every(c => sessionMatchesCondition(session, c));
+            }
+
+            if (matched && session.sessionId) {
+                const msg = killMessage || `Your stream has been stopped by the server administrator (Rule: ${name || 'Unnamed'}).`;
+                try {
+                    const killRes = await fetch(`${uri}/status/sessions/terminate?sessionId=${encodeURIComponent(session.sessionId)}&reason=${encodeURIComponent(msg)}&X-Plex-Token=${config.plexToken}`, {
+                        method: 'GET', headers: { 'Accept': 'application/json' }
+                    });
+                    if (killRes.ok || killRes.status === 204) {
+                        log(`[KillRules] Terminated session for "${session.user || 'Unknown'}" via rule "${name || 'Unnamed'}". Reason: ${msg}`);
+                        await appendAuditLog('stream_killed_by_rule', null, null, { user: session.user, rule: name, reason: msg });
+                    }
+                } catch (e) {
+                    log(`[KillRules] Error terminating session: ${e.message}`);
+                }
+                break; // One rule match per session is enough
+            }
+        }
+    }
+}
+
+// Rules API
+app.get('/api/kill-rules', requireAdmin, async (req, res) => {
+    try {
+        const rules = await loadFile(KILL_RULES_PATH, []);
+        res.json(rules);
+    } catch (e) {
+        res.status(500).json({ error: 'Failed to load rules' });
+    }
+});
+
+app.post('/api/kill-rules', requireAdmin, async (req, res) => {
+    try {
+        const rules = req.body;
+        if (!Array.isArray(rules)) return res.status(400).json({ error: 'Rules must be an array' });
+        await saveFile(KILL_RULES_PATH, rules);
+        res.json({ success: true });
+    } catch (e) {
+        res.status(500).json({ error: 'Failed to save rules' });
+    }
+});
+
 // Monitor Plex sessions to track high watermarks
 async function monitorConcurrentSessions() {
     try {
@@ -4339,6 +4432,31 @@ async function monitorConcurrentSessions() {
 
         if (sessionsRes && sessionsRes.MediaContainer) {
             const currentStreams = sessionsRes.MediaContainer.size || 0;
+
+            // Evaluate kill rules against live sessions
+            if (sessionsRes.MediaContainer.Metadata) {
+                const sessionObjs = sessionsRes.MediaContainer.Metadata.map(m => {
+                    const isTranscode = !!(m.TranscodeSession || (m.Media && m.Media[0] && m.Media[0].Part && m.Media[0].Part[0] && m.Media[0].Part[0].Stream && m.Media[0].Part[0].Stream.some(s => s.decision === 'transcode')));
+                    const player = m.Player || {};
+                    const session = m.Session || {};
+                    return {
+                        sessionId: session.id || m.sessionKey,
+                        user: m.User ? m.User.title : 'Unknown',
+                        isTranscoding: isTranscode,
+                        resolution: m.Media && m.Media[0] ? m.Media[0].videoResolution : null,
+                        bandwidth: (session && session.bandwidth) || (m.Media && m.Media[0] && m.Media[0].bitrate) || 0,
+                        playerProduct: player.product || '',
+                        playerTitle: player.title || '',
+                        state: player.state || 'playing',
+                        type: m.type || '',
+                        sessionLocation: session.location || 'lan',
+                        videoCodec: m.Media && m.Media[0] ? m.Media[0].videoCodec : '',
+                        audioCodec: m.Media && m.Media[0] ? m.Media[0].audioCodec : '',
+                        transcodeVideoDecision: m.TranscodeSession ? m.TranscodeSession.videoDecision : 'directplay',
+                    };
+                });
+                await evaluateKillRules(config, uri, sessionObjs);
+            }
             let currentDirect = 0;
             let currentTranscodes = 0;
 
