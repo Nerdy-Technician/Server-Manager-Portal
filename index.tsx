@@ -1936,8 +1936,11 @@ const UserAnalyticsModal: React.FC<{ userId: string, username: string, thumb: st
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                                     {data.recentHistory.length === 0 ? <p className="text-muted text-sm col-span-full">No recent history.</p> : data.recentHistory.map((h: any, i: number) => (
                                         <a key={i} href={h.plexUrl} target="_blank" rel="noreferrer" className="flex items-center gap-3 bg-white/5 border border-white/5 p-2 rounded-lg hover:bg-white/10 transition-colors">
-                                            <div className="w-10 h-14 bg-black/40 rounded overflow-hidden flex-shrink-0">
-                                                {h.thumbUrl ? <img src={h.thumbUrl} className="w-full h-full object-cover" /> : <Film className="w-full h-full p-2 opacity-50" />}
+                                            <div className={`${h.type === 'track' ? 'w-12 h-12' : 'w-10 h-14'} bg-black/40 rounded overflow-hidden flex-shrink-0`}>
+                                                {h.thumbUrl && <img src={h.thumbUrl} className="w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextElementSibling?.classList.remove('hidden'); }} />}
+                                                  <div className={`w-full h-full p-2 opacity-50 flex items-center justify-center ${h.thumbUrl ? 'hidden' : ''}`}>
+                                                      {h.type === 'track' ? <Music className="w-full h-full" /> : <Film className="w-full h-full" />}
+                                                  </div>
                                             </div>
                                             <div className="flex flex-col overflow-hidden">
                                                 <span className="font-bold text-sm text-text truncate">{h.title}</span>
@@ -2162,8 +2165,11 @@ const PersonalAnalyticsDashboard: React.FC<{ username: string, thumb: string | n
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                                     {data.recentHistory.length === 0 ? <p className="text-muted text-sm col-span-full">No recent history.</p> : data.recentHistory.map((h: any, i: number) => (
                                         <a key={i} href={h.plexUrl} target="_blank" rel="noreferrer" className="flex items-center gap-3 bg-white/5 border border-white/5 p-2 rounded-lg hover:bg-white/10 transition-colors">
-                                            <div className="w-10 h-14 bg-black/40 rounded overflow-hidden flex-shrink-0">
-                                                {h.thumbUrl ? <img src={h.thumbUrl} className="w-full h-full object-cover" /> : <Film className="w-full h-full p-2 opacity-50" />}
+                                            <div className={`${h.type === 'track' ? 'w-12 h-12' : 'w-10 h-14'} bg-black/40 rounded overflow-hidden flex-shrink-0`}>
+                                                {h.thumbUrl && <img src={h.thumbUrl} className="w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextElementSibling?.classList.remove('hidden'); }} />}
+                                                  <div className={`w-full h-full p-2 opacity-50 flex items-center justify-center ${h.thumbUrl ? 'hidden' : ''}`}>
+                                                      {h.type === 'track' ? <Music className="w-full h-full" /> : <Film className="w-full h-full" />}
+                                                  </div>
                                             </div>
                                             <div className="flex flex-col overflow-hidden">
                                                 <span className="font-bold text-sm text-text truncate">{h.title}</span>

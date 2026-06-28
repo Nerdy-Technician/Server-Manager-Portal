@@ -3123,10 +3123,11 @@ app.get('/api/plex/analytics/me', requireAuth, async (req, res) => {
 
             if (recentHistory.length < 200) {
                 recentHistory.push({
-                    title: item.type === 'episode' ? (item.grandparentTitle || item.parentTitle || item.title) : item.title,
-                    episodeTitle: item.type === 'episode' ? item.title : null,
+                    title: item.type === 'episode' ? (item.grandparentTitle || item.parentTitle || item.title) : item.type === 'track' ? (item.parentTitle || item.grandparentTitle || item.title) : item.title,
+                    episodeTitle: item.type === 'episode' || item.type === 'track' ? item.title : null,
                     viewedAt: item.viewedAt,
-                    thumb: item.type === 'episode' ? (item.grandparentThumb || item.parentThumb || item.thumb) : item.thumb,
+                    thumb: item.type === 'episode' ? (item.grandparentThumb || item.parentThumb || item.thumb) : item.type === 'track' ? (item.parentThumb || item.grandparentThumb || item.thumb) : item.thumb,
+                    type: item.type,
                     plexUrl: `https://app.plex.tv/desktop/#!/server/${config.serverIdentifier}/details?key=${encodeURIComponent(item.key)}`
                 });
             }
@@ -3137,17 +3138,17 @@ app.get('/api/plex/analytics/me', requireAuth, async (req, res) => {
                 libraryCounts[item.librarySectionID].plays++;
             }
 
-            const contentKey = item.type === 'episode' ? (item.grandparentKey || item.parentKey || item.ratingKey) : item.ratingKey;
-            const contentTitle = item.type === 'episode' ? (item.grandparentTitle || item.parentTitle || item.title) : item.title;
-            const contentThumb = item.type === 'episode' ? (item.grandparentThumb || item.parentThumb || item.thumb) : item.thumb;
-            const contentArt = item.type === 'episode' ? (item.grandparentArt || item.parentArt || item.art) : item.art;
+            const contentKey = item.type === 'episode' ? (item.grandparentKey || item.parentKey || item.ratingKey) : item.type === 'track' ? (item.parentKey || item.grandparentKey || item.ratingKey) : item.ratingKey;
+                const contentTitle = item.type === 'episode' ? (item.grandparentTitle || item.parentTitle || item.title) : item.type === 'track' ? (item.parentTitle || item.grandparentTitle || item.title) : item.title;
+                const contentThumb = item.type === 'episode' ? (item.grandparentThumb || item.parentThumb || item.thumb) : item.type === 'track' ? (item.parentThumb || item.grandparentThumb || item.thumb) : item.thumb;
+                const contentArt = item.type === 'episode' ? (item.grandparentArt || item.parentArt || item.art) : item.type === 'track' ? (item.parentArt || item.grandparentArt || item.art) : item.art;
 
             if (contentKey) {
                 if (!contentCounts[contentKey]) {
                     contentCounts[contentKey] = {
                         key: contentKey,
                         title: contentTitle,
-                        type: item.type === 'episode' ? 'show' : item.type,
+                        type: item.type === 'episode' ? 'show' : item.type === 'track' ? 'track' : item.type,
                         thumb: contentThumb,
                         art: contentArt,
                         plays: 0,
@@ -3407,10 +3408,11 @@ app.get('/api/plex/analytics/user/:id', requireAdmin, async (req, res) => {
             // Recent history
             if (recentHistory.length < 50) {
                 recentHistory.push({
-                    title: item.type === 'episode' ? (item.grandparentTitle || item.parentTitle || item.title) : item.title,
-                    episodeTitle: item.type === 'episode' ? item.title : null,
+                    title: item.type === 'episode' ? (item.grandparentTitle || item.parentTitle || item.title) : item.type === 'track' ? (item.parentTitle || item.grandparentTitle || item.title) : item.title,
+                    episodeTitle: item.type === 'episode' || item.type === 'track' ? item.title : null,
                     viewedAt: item.viewedAt,
-                    thumb: item.type === 'episode' ? (item.grandparentThumb || item.parentThumb || item.thumb) : item.thumb,
+                    thumb: item.type === 'episode' ? (item.grandparentThumb || item.parentThumb || item.thumb) : item.type === 'track' ? (item.parentThumb || item.grandparentThumb || item.thumb) : item.thumb,
+                    type: item.type,
                     plexUrl: `https://app.plex.tv/desktop/#!/server/${config.serverIdentifier}/details?key=${encodeURIComponent(item.key)}`
                 });
             }
@@ -3423,17 +3425,17 @@ app.get('/api/plex/analytics/user/:id', requireAdmin, async (req, res) => {
             }
 
             // Content aggregation
-            const contentKey = item.type === 'episode' ? (item.grandparentKey || item.parentKey || item.ratingKey) : item.ratingKey;
-            const contentTitle = item.type === 'episode' ? (item.grandparentTitle || item.parentTitle || item.title) : item.title;
-            const contentThumb = item.type === 'episode' ? (item.grandparentThumb || item.parentThumb || item.thumb) : item.thumb;
-            const contentArt = item.type === 'episode' ? (item.grandparentArt || item.parentArt || item.art) : item.art;
+            const contentKey = item.type === 'episode' ? (item.grandparentKey || item.parentKey || item.ratingKey) : item.type === 'track' ? (item.parentKey || item.grandparentKey || item.ratingKey) : item.ratingKey;
+                const contentTitle = item.type === 'episode' ? (item.grandparentTitle || item.parentTitle || item.title) : item.type === 'track' ? (item.parentTitle || item.grandparentTitle || item.title) : item.title;
+                const contentThumb = item.type === 'episode' ? (item.grandparentThumb || item.parentThumb || item.thumb) : item.type === 'track' ? (item.parentThumb || item.grandparentThumb || item.thumb) : item.thumb;
+                const contentArt = item.type === 'episode' ? (item.grandparentArt || item.parentArt || item.art) : item.type === 'track' ? (item.parentArt || item.grandparentArt || item.art) : item.art;
 
             if (contentKey) {
                 if (!contentCounts[contentKey]) {
                     contentCounts[contentKey] = {
                         key: contentKey,
                         title: contentTitle,
-                        type: item.type === 'episode' ? 'show' : item.type,
+                        type: item.type === 'episode' ? 'show' : item.type === 'track' ? 'track' : item.type,
                         thumb: contentThumb,
                         art: contentArt,
                         plays: 0,
@@ -4039,10 +4041,9 @@ async function calculateAnalyticsStats() {
                     libraryCounts[item.librarySectionID].plays++;
                 }
 
-                const contentKey = item.type === 'episode' ? (item.grandparentKey || item.parentKey || item.ratingKey) : item.ratingKey;
-                const contentTitle = item.type === 'episode' ? (item.grandparentTitle || item.parentTitle || item.title) : item.title;
-                const contentThumb = item.type === 'episode' ? (item.grandparentThumb || item.parentThumb || item.thumb) : item.thumb;
-                
+                const contentKey = item.type === 'episode' ? (item.grandparentKey || item.parentKey || item.ratingKey) : item.type === 'track' ? (item.parentKey || item.grandparentKey || item.ratingKey) : item.ratingKey;
+                const contentTitle = item.type === 'episode' ? (item.grandparentTitle || item.parentTitle || item.title) : item.type === 'track' ? (item.parentTitle || item.grandparentTitle || item.title) : item.title;
+                const contentThumb = item.type === 'episode' ? (item.grandparentThumb || item.parentThumb || item.thumb) : item.type === 'track' ? (item.parentThumb || item.grandparentThumb || item.thumb) : item.thumb;
                 if (contentKey) {
                     let targetDict = null;
                     if (item.type === 'movie') targetDict = contentCountsMovies;
@@ -4054,7 +4055,7 @@ async function calculateAnalyticsStats() {
                         targetDict[contentKey] = {
                             key: contentKey,
                             title: contentTitle,
-                            type: item.type === 'episode' ? 'show' : item.type,
+                            type: item.type === 'episode' ? 'show' : item.type === 'track' ? 'track' : item.type,
                             thumb: contentThumb,
                             plays: 0,
                             plexUrl: `https://app.plex.tv/desktop/#!/server/${config.serverIdentifier}/details?key=${encodeURIComponent('/library/metadata/' + contentKey.split('/').pop())}`
