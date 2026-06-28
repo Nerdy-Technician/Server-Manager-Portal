@@ -2925,7 +2925,7 @@ app.post('/api/announcements/push', requireAdmin, async (req, res) => {
     }
 });
 
-app.get('/api/tautulli/stats', requireAdmin, async (req, res) => {
+app.get('/api/tautulli/stats', requireAuth, async (req, res) => {
     try {
         const config = await loadFile(CONFIG_PATH, null);
         if (!config || !config.tautulliUrl || !config.tautulliApiKey) {
@@ -2992,7 +2992,7 @@ app.get('/api/tautulli/stats', requireAdmin, async (req, res) => {
     }
 });
 
-app.get('/api/tautulli/graphs', requireAdmin, async (req, res) => {
+app.get('/api/tautulli/graphs', requireAuth, async (req, res) => {
     try {
         const config = await loadFile(CONFIG_PATH, null);
         if (!config || !config.tautulliUrl || !config.tautulliApiKey) {
@@ -3030,6 +3030,12 @@ app.get('/api/tautulli/graphs', requireAdmin, async (req, res) => {
         results.forEach(r => {
             payload[r.cmd] = r.data;
         });
+        if (!req.user?.isAdmin && payload.get_plays_by_top_10_users && Array.isArray(payload.get_plays_by_top_10_users.series)) {
+            payload.get_plays_by_top_10_users.series = payload.get_plays_by_top_10_users.series.map((series, index) => ({
+                ...series,
+                name: `Viewer ${index + 1}`
+            }));
+        }
 
         return res.json(payload);
     } catch (e) {

@@ -3431,12 +3431,6 @@ const AnalyticsDashboard: React.FC<{ isAdmin: boolean, sessionInfo: any }> = ({ 
     }, [viewTab]);
 
     useEffect(() => {
-        if (!isAdmin && viewTab === 'graphs') {
-            setViewTab('overview');
-        }
-    }, [isAdmin, viewTab]);
-
-    useEffect(() => {
         if (!isAdmin) return;
         const fetchUsers = async () => {
             try {
@@ -3501,11 +3495,9 @@ const AnalyticsDashboard: React.FC<{ isAdmin: boolean, sessionInfo: any }> = ({ 
                         <button onClick={() => setViewTab('overview')} className={`px-4 py-2 rounded-md text-sm font-bold uppercase tracking-wider transition-colors flex items-center gap-2 ${viewTab === 'overview' ? 'bg-plex text-white shadow-lg' : 'text-muted hover:text-white'}`}>
                             <Activity className="w-4 h-4" /> Overview
                         </button>
-                        {isAdmin && (
-                            <button onClick={() => setViewTab('graphs')} className={`px-4 py-2 rounded-md text-sm font-bold uppercase tracking-wider transition-colors flex items-center gap-2 ${viewTab === 'graphs' ? 'bg-plex text-white shadow-lg' : 'text-muted hover:text-white'}`}>
-                                <LucideLineChart className="w-4 h-4" /> Graphs
-                            </button>
-                        )}
+                        <button onClick={() => setViewTab('graphs')} className={`px-4 py-2 rounded-md text-sm font-bold uppercase tracking-wider transition-colors flex items-center gap-2 ${viewTab === 'graphs' ? 'bg-plex text-white shadow-lg' : 'text-muted hover:text-white'}`}>
+                            <LucideLineChart className="w-4 h-4" /> Graphs
+                        </button>
                     </div>
                 </div>
                 {viewTab === 'overview' && (
@@ -3527,7 +3519,7 @@ const AnalyticsDashboard: React.FC<{ isAdmin: boolean, sessionInfo: any }> = ({ 
                 )}
             </div>
 
-            {viewTab === 'graphs' && isAdmin && <TautulliGraphsTab />}
+            {viewTab === 'graphs' && <TautulliGraphsTab />}
 
             {viewTab === 'overview' && (
                 <>
