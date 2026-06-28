@@ -374,7 +374,7 @@ const checkAndSendNotifications = async (config) => {
                                 </table>
                             </div>
 
-                            <p>To ensure uninterrupted streaming of your favorite movies and shows, please get in touch with the server owner to renew your subscription before the expiry date.</p>
+                            <p>To ensure uninterrupted streaming of your favorite movies and shows, please get in touch with the server owner to renew your access before the expiry date.</p>
                             
                             <div style="text-align: center; margin: 35px 0 15px 0;">
                                 <a href="${config.contactUrl || 'mailto:' + (config.smtpFrom || config.smtpUser)}" style="background-color: #e5a00d; color: #ffffff; text-decoration: none; padding: 14px 35px; font-weight: bold; border-radius: 6px; display: inline-block; font-size: 16px; box-shadow: 0 4px 6px rgba(229, 160, 13, 0.2);">Request Extension</a>
@@ -382,7 +382,7 @@ const checkAndSendNotifications = async (config) => {
                         </div>
                         <div style="background-color: #f7fafc; padding: 20px 30px; border-top: 1px solid #edf2f7; text-align: center; font-size: 12px; color: #a0aec0;">
                             <p style="margin: 0 0 5px 0;">Automated alert from the Plex Expiry Service.</p>
-                            <p style="margin: 0;">Please contact the administrator for any billing or subscription queries.</p>
+                            <p style="margin: 0;">Please contact the administrator for any access queries.</p>
                         </div>
                     </div>
                 </div>
@@ -800,7 +800,7 @@ const sendExpiryEmail = async (config, user, hasLogo) => {
 const sendAdjustmentEmail = async (config, user, hasLogo) => {
     if (!user.email) return false;
 
-    const subject = `[Plex Server] Your subscription has been updated`;
+    const subject = `[Plex Server] Your access has been updated`;
     const days = getDaysUntilExpiry(user.expiryDate);
     const html = `
         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f6f9; padding: 30px; color: #333333; line-height: 1.6;">
@@ -810,9 +810,9 @@ const sendAdjustmentEmail = async (config, user, hasLogo) => {
                     <h1 style="color: #ffffff; margin: 0; font-size: 26px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;">PLEX SERVER</h1>
                 </div>
                 <div style="padding: 30px 40px;">
-                    <h2 style="color: #282A2D; font-size: 20px; margin-top: 0; font-weight: 600;">Subscription Updated</h2>
+                    <h2 style="color: #282A2D; font-size: 20px; margin-top: 0; font-weight: 600;">Access Updated</h2>
                     <p>Hello <strong>${user.username}</strong>,</p>
-                    <p>Your subscription to the Plex media server has been successfully updated. Here are your new account details:</p>
+                    <p>Your access to the Plex media server has been successfully updated. Here are your new account details:</p>
                     
                     <div style="background-color: #fcf8f2; border-left: 4px solid #e5a00d; padding: 20px; margin: 25px 0; border-radius: 6px;">
                         <table style="width: 100%; border-collapse: collapse; font-size: 15px;">
@@ -1232,7 +1232,8 @@ app.get('/api/config', requireAdmin, async (req, res) => {
                 hideStreamUsers: config.hideStreamUsers === true ? 'anonymous' : (config.hideStreamUsers || 'false'),
                 navOrder: config.navOrder || ['home', 'discover', 'users', 'status', 'logs', 'analytics', 'mediastack', 'request', 'settings', 'logout'],
                 defaultLibraryIds: config.defaultLibraryIds || null,
-                use24HourClock: !!config.use24HourClock
+                use24HourClock: !!config.use24HourClock,
+                allowTemporaryAccess: !!config.allowTemporaryAccess
             },
         });
     } else {
@@ -1271,7 +1272,8 @@ app.get('/api/config', requireAdmin, async (req, res) => {
                 hideStreamUsers: 'false',
                 navOrder: ['home', 'discover', 'users', 'status', 'logs', 'analytics', 'mediastack', 'request', 'settings', 'logout'],
                 defaultLibraryIds: null,
-                use24HourClock: false
+                use24HourClock: false,
+                allowTemporaryAccess: false
             },
         });
     }
@@ -1284,7 +1286,7 @@ app.post('/api/config', async (req, res) => {
         newsletterFrequency, newsletterDay, publicDomain, requestUrl, contactUrl,
         sonarrUrl, sonarrApiKey, radarrUrl, radarrApiKey, tautulliUrl, tautulliApiKey,
         inactiveCleanupEnabled, inactiveCleanupDays,
-        primaryColor, customLogoUrl, referralEnabled, referralTrialDays, referralRewardDays, announcement, navOrder, hideStreamUsers, defaultLibraryIds, use24HourClock
+        primaryColor, customLogoUrl, referralEnabled, referralTrialDays, referralRewardDays, announcement, navOrder, hideStreamUsers, defaultLibraryIds, use24HourClock, allowTemporaryAccess
     } = req.body;
 
     if (!token || !serverIdentifier) {
@@ -1346,7 +1348,8 @@ app.post('/api/config', async (req, res) => {
         hideStreamUsers: hideStreamUsers === true ? 'anonymous' : (hideStreamUsers === false ? 'false' : (hideStreamUsers || 'false')),
         navOrder: Array.isArray(navOrder) ? navOrder : existingConfig.navOrder || ['home', 'discover', 'users', 'status', 'logs', 'analytics', 'mediastack', 'request', 'settings', 'logout'],
         defaultLibraryIds: Array.isArray(defaultLibraryIds) ? defaultLibraryIds : null,
-        use24HourClock: !!use24HourClock
+        use24HourClock: !!use24HourClock,
+        allowTemporaryAccess: !!allowTemporaryAccess
     };
     await saveFile(CONFIG_PATH, config);
     log('Configuration saved successfully.');
@@ -1363,7 +1366,8 @@ app.get('/api/config/public', async (req, res) => {
             announcement: config.announcement || '',
             referralEnabled: !!config.referralEnabled,
             appVersion: appVersion,
-            use24HourClock: !!config.use24HourClock
+            use24HourClock: !!config.use24HourClock,
+            allowTemporaryAccess: !!config.allowTemporaryAccess
         });
     } catch (error) {
         res.json({
@@ -1372,7 +1376,8 @@ app.get('/api/config/public', async (req, res) => {
             announcement: '',
             referralEnabled: false,
             appVersion: appVersion,
-            use24HourClock: false
+            use24HourClock: false,
+            allowTemporaryAccess: false
         });
     }
 });
@@ -2523,6 +2528,10 @@ app.post('/api/users/:id/revoke', requireAdmin, async (req, res) => {
 app.post('/api/users/request-invite', requireAuth, async (req, res) => {
     const config = await loadFile(CONFIG_PATH, null);
     if (!config || !config.serverIdentifier) return res.status(400).json({ error: 'App not configured.' });
+    
+    if (!config.allowTemporaryAccess) {
+        return res.status(403).json({ error: 'New registrations are currently disabled.' });
+    }
     
     let users = await loadFile(USERS_PATH, []);
     const existingUser = users.find(u => u.email === req.user.email || u.username === req.user.username);

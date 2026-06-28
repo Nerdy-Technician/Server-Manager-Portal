@@ -810,6 +810,7 @@ const SettingsDashboard: React.FC = () => {
     const [announcement, setAnnouncement] = useState('');
     const [isPushingAnnouncement, setIsPushingAnnouncement] = useState(false);
     const [use24HourClock, setUse24HourClock] = useState(initialSettings.use24HourClock || false);
+    const [allowTemporaryAccess, setAllowTemporaryAccess] = useState(initialSettings.allowTemporaryAccess || false);
     const [navOrder, setNavOrder] = useState<string[]>(['home', 'discover', 'status', 'logs', 'analytics', 'mediastack', 'request', 'settings', 'logout']);
     const [logoFile, setLogoFile] = useState<File | null>(null);
     const [tasks, setTasks] = useState<any[]>([]);
@@ -894,6 +895,7 @@ const SettingsDashboard: React.FC = () => {
             setHideStreamUsers(initialSettings.hideStreamUsers === true ? 'anonymous' : (initialSettings.hideStreamUsers || 'false'));
             if (initialSettings.defaultLibraryIds) setDefaultLibraryIds(initialSettings.defaultLibraryIds);
             if (initialSettings.use24HourClock !== undefined) setUse24HourClock(!!initialSettings.use24HourClock);
+            if (initialSettings.allowTemporaryAccess !== undefined) setAllowTemporaryAccess(!!initialSettings.allowTemporaryAccess);
             setTestRecipient('');
             setServers([]);
         }
@@ -988,7 +990,8 @@ const SettingsDashboard: React.FC = () => {
             navOrder,
             hideStreamUsers,
             defaultLibraryIds,
-            use24HourClock
+            use24HourClock,
+            allowTemporaryAccess
         });
         document.documentElement.style.setProperty('--color-plex', hexToRgb(primaryColor));
     };
@@ -1147,8 +1150,8 @@ const SettingsDashboard: React.FC = () => {
 
                             {libraries.length > 0 && (
                                 <div className="mb-4 mt-4">
-                                    <label className="block mb-2 font-medium">Default Trial/Automated Libraries</label>
-                                    <small className="block mb-2 text-muted">Libraries to share automatically when users request a trial or link their account. Leave empty to share ALL libraries.</small>
+                                    <label className="block mb-2 font-medium">Default Temporary Access/Automated Libraries</label>
+                                    <small className="block mb-2 text-muted">Libraries to share automatically when users request temporary access or link their account. Leave empty to share ALL libraries.</small>
                                     <div className="flex flex-wrap gap-3 p-4 bg-black/10 rounded-lg border border-border">
                                         {libraries.map(lib => {
                                             const isSelected = defaultLibraryIds.includes(lib.id);
@@ -1491,6 +1494,16 @@ const SettingsDashboard: React.FC = () => {
                                     <span className="text-sm font-medium cursor-pointer select-none hover:text-plex transition-colors" onClick={() => setUse24HourClock(!use24HourClock)}>Use 24-Hour Clock across the Portal</span>
                                 </div>
                             </div>
+                            
+                            <div className="mb-4">
+                                <label>Public Access</label>
+                                <div className="flex items-center gap-2 mt-2">
+                                    <button type="button" onClick={() => setAllowTemporaryAccess(!allowTemporaryAccess)} className={`relative inline-flex items-center h-6 rounded-full w-11 transition-colors flex-shrink-0 cursor-pointer ${allowTemporaryAccess ? 'bg-plex' : 'bg-border'}`}>
+                                        <span className={`inline-block w-4 h-4 transform bg-white rounded-full shadow-sm transition-transform ${allowTemporaryAccess ? 'translate-x-6' : 'translate-x-1'}`} />
+                                    </button>
+                                    <span className="text-sm font-medium cursor-pointer select-none hover:text-plex transition-colors" onClick={() => setAllowTemporaryAccess(!allowTemporaryAccess)}>Allow Temporary Access (Public Sign-ups)</span>
+                                </div>
+                            </div>
 
                             <h3 className="text-xl font-bold text-plex mb-4 border-b border-border pb-2 mt-8">Announcements</h3>
                             <div className="mb-4">
@@ -1521,7 +1534,7 @@ const SettingsDashboard: React.FC = () => {
                             <div className={`transition-all ${!referralEnabled ? 'opacity-50 pointer-events-none' : ''}`}>
                                 <div className="flex gap-4">
                                     <div className="flex-1">
-                                        <label>Referred User Trial Days</label>
+                                        <label>Referred User Temporary Access Days</label>
                                         <input type="number" min="0" className="w-full p-3 rounded-lg border border-border bg-background text-text outline-none focus:border-plex transition-all" value={referralTrialDays} onChange={e => setReferralTrialDays(Number(e.target.value))} />
                                     </div>
                                     <div className="flex-1">
@@ -1732,7 +1745,7 @@ const StatusMonitorSettings: React.FC<{ config: any; onChange: (cfg: any) => voi
 
 const BroadcastSettingsTab: React.FC<{ selectedUserIds: string[]; users: User[]; }> = ({ selectedUserIds, users }) => {
     const [subject, setSubject] = useState('Big updates to the Plex Server! 🚀');
-    const [body, setBody] = useState(`🎬 <b>Hey everyone! Big updates to the Plex Server!</b> 🚀<br><br>If you have any friends or family who want to check out the server, I’m currently offering a <b>3-Day Free Trial</b> with instant access to the entire library! 🍿<br>✅ No bank details needed<br>✅ No purchase required<br>✅ Instant, automated setup<br><br>We also just launched a brand new <b>User Portal</b> (https://yourdomain.com) packed with awesome features for everyone:<br>🕒 <b>Account Status:</b> Easily check exactly how many days you have left until your account expires.<br>🟢 <b>Server Health:</b> View live 24/7 uptime stats for all server services.<br>📊 <b>Live Library Stats:</b> See exact, live counts of our massive library.<br><br>Feel free to share the link (https://yourdomain.com) with anyone who might be interested! 👇`);
+    const [body, setBody] = useState(`🎬 <b>Hey everyone! Big updates to the Plex Server!</b> 🚀<br><br>If you have any friends or family who want to check out the server, I’m currently offering a <b>3-Day Temporary Access</b> pass with instant access to the entire library! 🍿<br>✅ No bank details needed<br>✅ No purchase required<br>✅ Instant, automated setup<br><br>We also just launched a brand new <b>User Portal</b> (https://yourdomain.com) packed with awesome features for everyone:<br>🕒 <b>Account Status:</b> Easily check exactly how many days you have left until your account expires.<br>🟢 <b>Server Health:</b> View live 24/7 uptime stats for all server services.<br>📊 <b>Live Library Stats:</b> See exact, live counts of our massive library.<br><br>Feel free to share the link (https://yourdomain.com) with anyone who might be interested! 👇`);
     const [recipientFilter, setRecipientFilter] = useState<'all' | 'active' | 'trial' | 'expiring' | 'expired' | 'selected' | 'custom'>('all');
     const [customSelectedUserIds, setCustomSelectedUserIds] = useState<string[]>([]);
     const [isSending, setIsSending] = useState(false);
@@ -1782,7 +1795,7 @@ const BroadcastSettingsTab: React.FC<{ selectedUserIds: string[]; users: User[];
                     options={[
                         { label: 'All Users', value: 'all' },
                         { label: 'Active Users Only', value: 'active' },
-                        { label: 'Trial Users Only', value: 'trial' },
+                        { label: 'Temporary Access Users Only', value: 'trial' },
                         { label: 'Expiring Soon (Next 7 Days)', value: 'expiring' },
                         { label: 'Expired Users', value: 'expired' },
                         ...(selectedUserIds.length > 0 ? [{ label: `Selected Users (${selectedUserIds.length})`, value: 'selected' }] : []),
@@ -3501,7 +3514,7 @@ const LogsDashboard: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
                         <div className="flex items-center justify-between gap-4 mb-4">
                             <div>
                                 <h2 className="text-lg font-bold text-text">Deleted User Blocklist</h2>
-                                <p className="text-muted text-xs mt-1">Deleted users are logged out and blocked from claiming another trial.</p>
+                                <p className="text-muted text-xs mt-1">Deleted users are logged out and blocked from requesting temporary access again.</p>
                             </div>
                             <span className="px-3 py-1 rounded-full bg-red-500/10 text-red-400 border border-red-500/20 text-xs font-bold">{deletedUsers.length}</span>
                         </div>
@@ -4367,24 +4380,28 @@ const Login: React.FC<{ onLoginSuccess: () => void, publicConfig?: any }> = ({ o
     }
 
     return (
-        <div className="w-full max-w-6xl mx-auto flex flex-col items-center justify-center min-h-[80vh] px-4 pt-12 md:pt-20">
+        <div className="w-full mx-auto flex flex-col items-center justify-center min-h-[80vh] px-4 pt-12 md:pt-20">
             <Loader isLoading={isLoading} />
-            <div className="w-full max-w-6xl mx-auto bg-card rounded-2xl shadow-2xl border-t-[6px] border-plex flex flex-col-reverse md:flex-row relative z-10 overflow-hidden">
-                <div className="flex-1 p-4 md:p-8 lg:p-12 flex flex-col justify-center">
-                    <h1 className="text-3xl md:text-4xl font-bold text-plex mb-4">Welcome to {publicInfo.serverName}</h1>
-                    <p className="text-muted text-sm md:text-base leading-relaxed mb-6">The ultimate Plex experience. Get instant access to our entire library with a <strong>3-Day Free Trial</strong>.</p>
+            <div className={`w-full mx-auto bg-card rounded-2xl shadow-2xl border-t-[6px] border-plex flex flex-col-reverse md:flex-row relative z-10 overflow-hidden ${publicConfig?.allowTemporaryAccess !== false ? 'max-w-6xl' : 'max-w-2xl'}`}>
+                {publicConfig?.allowTemporaryAccess !== false && (
+                    <>
+                        <div className="flex-1 p-4 md:p-8 lg:p-12 flex flex-col justify-center">
+                            <h1 className="text-3xl md:text-4xl font-bold text-plex mb-4">Welcome to {publicInfo.serverName}</h1>
+                            <p className="text-muted text-sm md:text-base leading-relaxed mb-6">The ultimate Plex experience. Get instant access to our entire library with a <strong>3-Day Temporary Access</strong>.</p>
 
-                    <LivePlexStats />
+                            <LivePlexStats />
 
-                    <p className="text-xs text-muted mt-2 mb-4 text-center">You'll need a free Plex account to continue. You can create one securely on the next screen.</p>
-                    <button className="w-full py-4 bg-plex text-background rounded-lg font-bold text-lg hover:bg-plex-hover transition-colors shadow-lg" onClick={handlePlexLogin} disabled={isLoading}>
-                        Claim Free Trial
-                    </button>
-                </div>
+                            <p className="text-xs text-muted mt-2 mb-4 text-center">You'll need a free Plex account to continue. You can create one securely on the next screen.</p>
+                            <button className="w-full py-4 bg-plex text-background rounded-lg font-bold text-lg hover:bg-plex-hover transition-colors shadow-lg" onClick={handlePlexLogin} disabled={isLoading}>
+                                Request Temporary Access
+                            </button>
+                        </div>
 
-                <div className="hidden md:block w-px bg-white/5 my-12"></div>
+                        <div className="hidden md:block w-px bg-white/5 my-12"></div>
+                    </>
+                )}
 
-                <div className="flex-1 p-4 md:p-8 lg:p-12 flex flex-col justify-center bg-white/[0.02]">
+                <div className={`flex-1 p-4 md:p-8 lg:p-12 flex flex-col justify-center bg-white/[0.02] ${publicConfig?.allowTemporaryAccess === false ? 'w-full' : ''}`}>
                     <div className="text-center">
                         <div className="w-full flex justify-center mb-8">
                             <div className="relative">
@@ -4397,10 +4414,16 @@ const Login: React.FC<{ onLoginSuccess: () => void, publicConfig?: any }> = ({ o
                             </div>
                         </div>
                         <h2 className="text-2xl font-bold text-text mb-4">Already on our server?</h2>
-                        <p className="text-muted text-sm mb-8">Manage your existing subscription or re-link your account.</p>
+                        <p className="text-muted text-sm mb-8">Manage your existing access or re-link your account.</p>
                         <button className="w-full py-4 bg-border text-text rounded-lg font-bold hover:bg-white/10 transition-colors border border-white/10" onClick={handlePlexLogin} disabled={isLoading}>
                             Login with Plex
                         </button>
+
+                        {publicConfig?.allowTemporaryAccess === false && (
+                            <div className="mt-8 border-t border-white/5 pt-8">
+                                <LivePlexStats />
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
@@ -5485,11 +5508,11 @@ const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onLogout: 
                             <div className="bg-card border border-border rounded-2xl p-6 shadow-xl flex flex-col justify-center md:h-[240px]">
                                 <div className="flex flex-col gap-4">
                                     <div>
-                                        <p className="text-muted text-xs uppercase tracking-widest font-semibold mb-3">Subscription Status</p>
+                                        <p className="text-muted text-xs uppercase tracking-widest font-semibold mb-3">Access Status</p>
                                         <div className="flex flex-wrap items-center gap-3">
                                             <span className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-black border uppercase tracking-wider shadow-sm ${isRevoked ? 'bg-red-500/10 border-red-500/30 text-red-400' : isExpiringSoon ? 'bg-yellow-500/10 border-yellow-500/30 text-yellow-400' : 'bg-green-500/10 border-green-500/30 text-green-400'}`}>
                                                 <span className={`w-2 h-2 rounded-full animate-pulse ${isRevoked ? 'bg-red-400' : isExpiringSoon ? 'bg-yellow-400' : 'bg-green-400'}`} />
-                                                {user.plexAccessStatus}{user.isTrial && ' · Trial'}
+                                                {user.plexAccessStatus}{user.isTrial && ' · Temp Access'}
                                             </span>
                                             {user.expiryDate ? (
                                                 <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold bg-white/5 border border-white/10 text-text shadow-sm">
@@ -5531,7 +5554,7 @@ const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onLogout: 
                         ) : (
                             <div className="flex items-center gap-3 text-muted text-sm bg-card p-6 rounded-2xl border border-border shadow-lg">
                                 <div className="w-5 h-5 rounded-full border-2 border-plex border-t-transparent animate-spin flex-shrink-0" />
-                                Setting up your 3-Day Free Trial...
+                                Setting up your 3-Day Temporary Access...
                             </div>
                         )
                     )}
@@ -5553,7 +5576,7 @@ const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onLogout: 
                     {publicConfig?.referralEnabled && user && !sessionInfo.session.isAdmin && (
                         <div className="bg-card border border-border rounded-2xl p-4 md:p-6 shadow-lg">
                             <p className="text-plex font-bold text-base mb-1">🎁 Invite Friends</p>
-                            <p className="text-muted text-sm leading-relaxed mb-4">Share this link. They get a free trial, and you get reward days!</p>
+                            <p className="text-muted text-sm leading-relaxed mb-4">Share this link. They get temporary access, and you get reward days!</p>
                             <div className="flex flex-col gap-2">
                                 <input type="text" readOnly value={`${window.location.origin}/?ref=${user.id}`} className="w-full p-3 rounded-lg border border-border bg-background text-text text-sm outline-none" />
                                 <button onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/?ref=${user.id}`); setToast({ id: 99, message: 'Copied to clipboard!', type: 'success' }); }} className="w-full py-2.5 bg-plex text-background rounded-lg font-bold hover:bg-plex-hover transition-colors shadow-md">Copy Link</button>
@@ -5585,8 +5608,8 @@ const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onLogout: 
                             <div className="bg-card border border-border rounded-2xl p-6 shadow-lg flex flex-col">
                                 {user?.isTrial ? (
                                     <div className="mb-5 flex-shrink-0">
-                                        <p className="text-plex font-bold text-base mb-1">🍿 Enjoying your Free Trial?</p>
-                                        <p className="text-muted text-sm leading-relaxed">Once your 3-day trial ends, you'll lose access. Get in touch with the admin to extend your access!</p>
+                                        <p className="text-plex font-bold text-base mb-1">🍿 Enjoying your Temporary Access?</p>
+                                        <p className="text-muted text-sm leading-relaxed">Once your 3-day access ends, you'll lose access. Get in touch with the admin to extend your access!</p>
                                     </div>
                                 ) : (
                                     <div className="mb-5 flex-shrink-0">

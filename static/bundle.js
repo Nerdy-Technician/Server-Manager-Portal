@@ -49400,6 +49400,7 @@ var SettingsDashboard = () => {
   const [announcement, setAnnouncement] = (0, import_react61.useState)("");
   const [isPushingAnnouncement, setIsPushingAnnouncement] = (0, import_react61.useState)(false);
   const [use24HourClock, setUse24HourClock] = (0, import_react61.useState)(initialSettings.use24HourClock || false);
+  const [allowTemporaryAccess, setAllowTemporaryAccess] = (0, import_react61.useState)(initialSettings.allowTemporaryAccess || false);
   const [navOrder, setNavOrder] = (0, import_react61.useState)(["home", "discover", "status", "logs", "analytics", "mediastack", "request", "settings", "logout"]);
   const [logoFile, setLogoFile] = (0, import_react61.useState)(null);
   const [tasks, setTasks] = (0, import_react61.useState)([]);
@@ -49479,6 +49480,7 @@ var SettingsDashboard = () => {
       setHideStreamUsers(initialSettings.hideStreamUsers === true ? "anonymous" : initialSettings.hideStreamUsers || "false");
       if (initialSettings.defaultLibraryIds) setDefaultLibraryIds(initialSettings.defaultLibraryIds);
       if (initialSettings.use24HourClock !== void 0) setUse24HourClock(!!initialSettings.use24HourClock);
+      if (initialSettings.allowTemporaryAccess !== void 0) setAllowTemporaryAccess(!!initialSettings.allowTemporaryAccess);
       setTestRecipient("");
       setServers([]);
     }
@@ -49566,7 +49568,8 @@ var SettingsDashboard = () => {
       navOrder,
       hideStreamUsers,
       defaultLibraryIds,
-      use24HourClock
+      use24HourClock,
+      allowTemporaryAccess
     });
     document.documentElement.style.setProperty("--color-plex", hexToRgb(primaryColor));
   };
@@ -49708,8 +49711,8 @@ var SettingsDashboard = () => {
             /* @__PURE__ */ (0, import_jsx_runtime.jsx)("small", { children: "How often to check for expired users in the background." })
           ] }),
           libraries.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "mb-4 mt-4", children: [
-            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("label", { className: "block mb-2 font-medium", children: "Default Trial/Automated Libraries" }),
-            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("small", { className: "block mb-2 text-muted", children: "Libraries to share automatically when users request a trial or link their account. Leave empty to share ALL libraries." }),
+            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("label", { className: "block mb-2 font-medium", children: "Default Temporary Access/Automated Libraries" }),
+            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("small", { className: "block mb-2 text-muted", children: "Libraries to share automatically when users request temporary access or link their account. Leave empty to share ALL libraries." }),
             /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "flex flex-wrap gap-3 p-4 bg-black/10 rounded-lg border border-border", children: libraries.map((lib) => {
               const isSelected = defaultLibraryIds.includes(lib.id);
               return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("label", { className: `flex items-center gap-2 px-3 py-1.5 rounded-lg cursor-pointer transition-all border shadow-sm select-none ${isSelected ? "bg-plex/10 border-plex text-plex font-bold" : "bg-background border-border/50 text-muted hover:border-white/20 hover:text-text font-medium"}`, children: [
@@ -50024,6 +50027,13 @@ var SettingsDashboard = () => {
               /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "text-sm font-medium cursor-pointer select-none hover:text-plex transition-colors", onClick: () => setUse24HourClock(!use24HourClock), children: "Use 24-Hour Clock across the Portal" })
             ] })
           ] }),
+          /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "mb-4", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("label", { children: "Public Access" }),
+            /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "flex items-center gap-2 mt-2", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { type: "button", onClick: () => setAllowTemporaryAccess(!allowTemporaryAccess), className: `relative inline-flex items-center h-6 rounded-full w-11 transition-colors flex-shrink-0 cursor-pointer ${allowTemporaryAccess ? "bg-plex" : "bg-border"}`, children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: `inline-block w-4 h-4 transform bg-white rounded-full shadow-sm transition-transform ${allowTemporaryAccess ? "translate-x-6" : "translate-x-1"}` }) }),
+              /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "text-sm font-medium cursor-pointer select-none hover:text-plex transition-colors", onClick: () => setAllowTemporaryAccess(!allowTemporaryAccess), children: "Allow Temporary Access (Public Sign-ups)" })
+            ] })
+          ] }),
           /* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", { className: "text-xl font-bold text-plex mb-4 border-b border-border pb-2 mt-8", children: "Announcements" }),
           /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "mb-4", children: [
             /* @__PURE__ */ (0, import_jsx_runtime.jsx)("label", { children: "Portal Announcement Banner" }),
@@ -50051,7 +50061,7 @@ var SettingsDashboard = () => {
           ] }),
           /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: `transition-all ${!referralEnabled ? "opacity-50 pointer-events-none" : ""}`, children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "flex gap-4", children: [
             /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "flex-1", children: [
-              /* @__PURE__ */ (0, import_jsx_runtime.jsx)("label", { children: "Referred User Trial Days" }),
+              /* @__PURE__ */ (0, import_jsx_runtime.jsx)("label", { children: "Referred User Temporary Access Days" }),
               /* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", { type: "number", min: "0", className: "w-full p-3 rounded-lg border border-border bg-background text-text outline-none focus:border-plex transition-all", value: referralTrialDays, onChange: (e) => setReferralTrialDays(Number(e.target.value)) })
             ] }),
             /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "flex-1", children: [
@@ -50253,7 +50263,7 @@ var StatusMonitorSettings = ({ config, onChange, appConfirm: appConfirm2, fetchC
 };
 var BroadcastSettingsTab = ({ selectedUserIds, users }) => {
   const [subject, setSubject] = (0, import_react61.useState)("Big updates to the Plex Server! \u{1F680}");
-  const [body, setBody] = (0, import_react61.useState)(`\u{1F3AC} <b>Hey everyone! Big updates to the Plex Server!</b> \u{1F680}<br><br>If you have any friends or family who want to check out the server, I\u2019m currently offering a <b>3-Day Free Trial</b> with instant access to the entire library! \u{1F37F}<br>\u2705 No bank details needed<br>\u2705 No purchase required<br>\u2705 Instant, automated setup<br><br>We also just launched a brand new <b>User Portal</b> (https://yourdomain.com) packed with awesome features for everyone:<br>\u{1F552} <b>Account Status:</b> Easily check exactly how many days you have left until your account expires.<br>\u{1F7E2} <b>Server Health:</b> View live 24/7 uptime stats for all server services.<br>\u{1F4CA} <b>Live Library Stats:</b> See exact, live counts of our massive library.<br><br>Feel free to share the link (https://yourdomain.com) with anyone who might be interested! \u{1F447}`);
+  const [body, setBody] = (0, import_react61.useState)(`\u{1F3AC} <b>Hey everyone! Big updates to the Plex Server!</b> \u{1F680}<br><br>If you have any friends or family who want to check out the server, I\u2019m currently offering a <b>3-Day Temporary Access</b> pass with instant access to the entire library! \u{1F37F}<br>\u2705 No bank details needed<br>\u2705 No purchase required<br>\u2705 Instant, automated setup<br><br>We also just launched a brand new <b>User Portal</b> (https://yourdomain.com) packed with awesome features for everyone:<br>\u{1F552} <b>Account Status:</b> Easily check exactly how many days you have left until your account expires.<br>\u{1F7E2} <b>Server Health:</b> View live 24/7 uptime stats for all server services.<br>\u{1F4CA} <b>Live Library Stats:</b> See exact, live counts of our massive library.<br><br>Feel free to share the link (https://yourdomain.com) with anyone who might be interested! \u{1F447}`);
   const [recipientFilter, setRecipientFilter] = (0, import_react61.useState)("all");
   const [customSelectedUserIds, setCustomSelectedUserIds] = (0, import_react61.useState)([]);
   const [isSending, setIsSending] = (0, import_react61.useState)(false);
@@ -50300,7 +50310,7 @@ var BroadcastSettingsTab = ({ selectedUserIds, users }) => {
           options: [
             { label: "All Users", value: "all" },
             { label: "Active Users Only", value: "active" },
-            { label: "Trial Users Only", value: "trial" },
+            { label: "Temporary Access Users Only", value: "trial" },
             { label: "Expiring Soon (Next 7 Days)", value: "expiring" },
             { label: "Expired Users", value: "expired" },
             ...selectedUserIds.length > 0 ? [{ label: `Selected Users (${selectedUserIds.length})`, value: "selected" }] : [],
@@ -51775,7 +51785,7 @@ var LogsDashboard = ({ onLogout }) => {
         /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "flex items-center justify-between gap-4 mb-4", children: [
           /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
             /* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", { className: "text-lg font-bold text-text", children: "Deleted User Blocklist" }),
-            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { className: "text-muted text-xs mt-1", children: "Deleted users are logged out and blocked from claiming another trial." })
+            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { className: "text-muted text-xs mt-1", children: "Deleted users are logged out and blocked from requesting temporary access again." })
           ] }),
           /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "px-3 py-1 rounded-full bg-red-500/10 text-red-400 border border-red-500/20 text-xs font-bold", children: deletedUsers.length })
         ] }),
@@ -52544,25 +52554,27 @@ var Login = ({ onLoginSuccess, publicConfig }) => {
   if (publicInfo.isConfigured === null) {
     return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Loader, { isLoading: true });
   }
-  return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "w-full max-w-6xl mx-auto flex flex-col items-center justify-center min-h-[80vh] px-4 pt-12 md:pt-20", children: [
+  return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "w-full mx-auto flex flex-col items-center justify-center min-h-[80vh] px-4 pt-12 md:pt-20", children: [
     /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Loader, { isLoading }),
-    /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "w-full max-w-6xl mx-auto bg-card rounded-2xl shadow-2xl border-t-[6px] border-plex flex flex-col-reverse md:flex-row relative z-10 overflow-hidden", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "flex-1 p-4 md:p-8 lg:p-12 flex flex-col justify-center", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("h1", { className: "text-3xl md:text-4xl font-bold text-plex mb-4", children: [
-          "Welcome to ",
-          publicInfo.serverName
+    /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: `w-full mx-auto bg-card rounded-2xl shadow-2xl border-t-[6px] border-plex flex flex-col-reverse md:flex-row relative z-10 overflow-hidden ${publicConfig?.allowTemporaryAccess !== false ? "max-w-6xl" : "max-w-2xl"}`, children: [
+      publicConfig?.allowTemporaryAccess !== false && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
+        /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "flex-1 p-4 md:p-8 lg:p-12 flex flex-col justify-center", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("h1", { className: "text-3xl md:text-4xl font-bold text-plex mb-4", children: [
+            "Welcome to ",
+            publicInfo.serverName
+          ] }),
+          /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", { className: "text-muted text-sm md:text-base leading-relaxed mb-6", children: [
+            "The ultimate Plex experience. Get instant access to our entire library with a ",
+            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", { children: "3-Day Temporary Access" }),
+            "."
+          ] }),
+          /* @__PURE__ */ (0, import_jsx_runtime.jsx)(LivePlexStats, {}),
+          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { className: "text-xs text-muted mt-2 mb-4 text-center", children: "You'll need a free Plex account to continue. You can create one securely on the next screen." }),
+          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { className: "w-full py-4 bg-plex text-background rounded-lg font-bold text-lg hover:bg-plex-hover transition-colors shadow-lg", onClick: handlePlexLogin, disabled: isLoading, children: "Request Temporary Access" })
         ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", { className: "text-muted text-sm md:text-base leading-relaxed mb-6", children: [
-          "The ultimate Plex experience. Get instant access to our entire library with a ",
-          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", { children: "3-Day Free Trial" }),
-          "."
-        ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime.jsx)(LivePlexStats, {}),
-        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { className: "text-xs text-muted mt-2 mb-4 text-center", children: "You'll need a free Plex account to continue. You can create one securely on the next screen." }),
-        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { className: "w-full py-4 bg-plex text-background rounded-lg font-bold text-lg hover:bg-plex-hover transition-colors shadow-lg", onClick: handlePlexLogin, disabled: isLoading, children: "Claim Free Trial" })
+        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "hidden md:block w-px bg-white/5 my-12" })
       ] }),
-      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "hidden md:block w-px bg-white/5 my-12" }),
-      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "flex-1 p-4 md:p-8 lg:p-12 flex flex-col justify-center bg-white/[0.02]", children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "text-center", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: `flex-1 p-4 md:p-8 lg:p-12 flex flex-col justify-center bg-white/[0.02] ${publicConfig?.allowTemporaryAccess === false ? "w-full" : ""}`, children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "text-center", children: [
         /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "w-full flex justify-center mb-8", children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "relative", children: [
           /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 bg-plex rounded-full blur-[50px] opacity-20 pointer-events-none" }),
           publicConfig?.customLogoUrl || publicInfo.thumb ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("img", { src: publicConfig?.customLogoUrl || publicInfo.thumb, alt: "Server Logo", className: "w-32 h-32 object-cover rounded-full border-2 border-plex drop-shadow-[0_0_15px_rgba(229,160,13,0.25)] relative z-10", onError: (e) => {
@@ -52571,8 +52583,9 @@ var Login = ({ onLoginSuccess, publicConfig }) => {
           } }) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("img", { src: "/static/logo.png", alt: "Server Logo", className: "w-40 object-contain drop-shadow-[0_0_15px_rgba(229,160,13,0.25)] relative z-10", onError: (e) => e.currentTarget.style.display = "none" })
         ] }) }),
         /* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", { className: "text-2xl font-bold text-text mb-4", children: "Already on our server?" }),
-        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { className: "text-muted text-sm mb-8", children: "Manage your existing subscription or re-link your account." }),
-        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { className: "w-full py-4 bg-border text-text rounded-lg font-bold hover:bg-white/10 transition-colors border border-white/10", onClick: handlePlexLogin, disabled: isLoading, children: "Login with Plex" })
+        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { className: "text-muted text-sm mb-8", children: "Manage your existing access or re-link your account." }),
+        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { className: "w-full py-4 bg-border text-text rounded-lg font-bold hover:bg-white/10 transition-colors border border-white/10", onClick: handlePlexLogin, disabled: isLoading, children: "Login with Plex" }),
+        publicConfig?.allowTemporaryAccess === false && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "mt-8 border-t border-white/5 pt-8", children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(LivePlexStats, {}) })
       ] }) })
     ] }),
     /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "mt-4 w-full max-w-5xl mx-auto", children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(PublicUptimeBanner, {}) }),
@@ -53584,12 +53597,12 @@ var UserDashboard = ({ sessionInfo, publicConfig, onLogout, refreshSession, onVi
           ] })
         ] }) : user ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "bg-card border border-border rounded-2xl p-6 shadow-xl flex flex-col justify-center md:h-[240px]", children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "flex flex-col gap-4", children: [
           /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
-            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { className: "text-muted text-xs uppercase tracking-widest font-semibold mb-3", children: "Subscription Status" }),
+            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { className: "text-muted text-xs uppercase tracking-widest font-semibold mb-3", children: "Access Status" }),
             /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "flex flex-wrap items-center gap-3", children: [
               /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { className: `inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-black border uppercase tracking-wider shadow-sm ${isRevoked ? "bg-red-500/10 border-red-500/30 text-red-400" : isExpiringSoon ? "bg-yellow-500/10 border-yellow-500/30 text-yellow-400" : "bg-green-500/10 border-green-500/30 text-green-400"}`, children: [
                 /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: `w-2 h-2 rounded-full animate-pulse ${isRevoked ? "bg-red-400" : isExpiringSoon ? "bg-yellow-400" : "bg-green-400"}` }),
                 user.plexAccessStatus,
-                user.isTrial && " \xB7 Trial"
+                user.isTrial && " \xB7 Temp Access"
               ] }),
               user.expiryDate ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { className: "inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold bg-white/5 border border-white/10 text-text shadow-sm", children: [
                 /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Calendar, { size: 14, className: "text-muted" }),
@@ -53611,7 +53624,7 @@ var UserDashboard = ({ sessionInfo, publicConfig, onLogout, refreshSession, onVi
           ] })
         ] }) }) : /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "flex items-center gap-3 text-muted text-sm bg-card p-6 rounded-2xl border border-border shadow-lg", children: [
           /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "w-5 h-5 rounded-full border-2 border-plex border-t-transparent animate-spin flex-shrink-0" }),
-          "Setting up your 3-Day Free Trial..."
+          "Setting up your 3-Day Temporary Access..."
         ] }),
         publicConfig?.announcement && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "bg-plex/10 border border-plex/30 rounded-2xl p-4 md:p-6 shadow-lg", children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "flex items-start gap-3", children: [
           /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "text-xl mt-0.5", children: "\u{1F4E2}" }),
@@ -53622,7 +53635,7 @@ var UserDashboard = ({ sessionInfo, publicConfig, onLogout, refreshSession, onVi
         ] }) }),
         publicConfig?.referralEnabled && user && !sessionInfo.session.isAdmin && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "bg-card border border-border rounded-2xl p-4 md:p-6 shadow-lg", children: [
           /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { className: "text-plex font-bold text-base mb-1", children: "\u{1F381} Invite Friends" }),
-          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { className: "text-muted text-sm leading-relaxed mb-4", children: "Share this link. They get a free trial, and you get reward days!" }),
+          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { className: "text-muted text-sm leading-relaxed mb-4", children: "Share this link. They get temporary access, and you get reward days!" }),
           /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "flex flex-col gap-2", children: [
             /* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", { type: "text", readOnly: true, value: `${window.location.origin}/?ref=${user.id}`, className: "w-full p-3 rounded-lg border border-border bg-background text-text text-sm outline-none" }),
             /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { onClick: () => {
@@ -53652,8 +53665,8 @@ var UserDashboard = ({ sessionInfo, publicConfig, onLogout, refreshSession, onVi
           ] }),
           !sessionInfo?.session?.isAdmin && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "bg-card border border-border rounded-2xl p-6 shadow-lg flex flex-col", children: [
             user?.isTrial ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "mb-5 flex-shrink-0", children: [
-              /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { className: "text-plex font-bold text-base mb-1", children: "\u{1F37F} Enjoying your Free Trial?" }),
-              /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { className: "text-muted text-sm leading-relaxed", children: "Once your 3-day trial ends, you'll lose access. Get in touch with the admin to extend your access!" })
+              /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { className: "text-plex font-bold text-base mb-1", children: "\u{1F37F} Enjoying your Temporary Access?" }),
+              /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { className: "text-muted text-sm leading-relaxed", children: "Once your 3-day access ends, you'll lose access. Get in touch with the admin to extend your access!" })
             ] }) : /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "mb-5 flex-shrink-0", children: [
               /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { className: "text-text font-bold text-base mb-1", children: "\u{1F4AC} Need Help?" }),
               /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { className: "text-muted text-sm leading-relaxed", children: "Contact the admin to extend your access, report an issue, or get support." })
