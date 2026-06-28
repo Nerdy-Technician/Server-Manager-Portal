@@ -3452,7 +3452,12 @@ app.get('/api/plex/analytics/user/:id', requireAdmin, async (req, res) => {
         });
 
         const topLibraries = Object.values(libraryCounts).sort((a, b) => b.plays - a.plays).slice(0, 5);
-        const topWatched = Object.values(contentCounts).filter(c => c.type !== 'track').sort((a, b) => b.plays - a.plays).slice(0, 6).map(c => {
+        const topMovies = Object.values(contentCounts).filter(c => c.type === 'movie').sort((a, b) => b.plays - a.plays).slice(0, 6).map(c => {
+            if (c.thumb) c.thumbUrl = `/api/plex/image?path=${encodeURIComponent(c.thumb)}`;
+            if (c.art) c.artUrl = `/api/plex/image?path=${encodeURIComponent(c.art)}`;
+            return c;
+        });
+        const topShows = Object.values(contentCounts).filter(c => c.type === 'show').sort((a, b) => b.plays - a.plays).slice(0, 6).map(c => {
             if (c.thumb) c.thumbUrl = `/api/plex/image?path=${encodeURIComponent(c.thumb)}`;
             if (c.art) c.artUrl = `/api/plex/image?path=${encodeURIComponent(c.art)}`;
             return c;
@@ -3466,7 +3471,8 @@ app.get('/api/plex/analytics/user/:id', requireAdmin, async (req, res) => {
         res.json({
             totalPlays,
             topLibraries,
-            topWatched,
+            topMovies,
+            topShows,
             topMusic,
             recentHistory: recentHistory.map(h => {
                 if (h.thumb) h.thumbUrl = `/api/plex/image?path=${encodeURIComponent(h.thumb)}`;
