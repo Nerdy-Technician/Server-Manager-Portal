@@ -77,7 +77,7 @@ All discover items display Plex backdrop artwork, play counts, and viewer counts
 
 - **Invite Link System** — Generate shareable invite links with a configurable max-use limit and custom duration. Users claim access via a branded landing page that automatically adds them to your Plex server
 - **Plex OAuth** — Secure login via official Plex.tv authentication. No passwords stored
-- **Automated Free Trials** — Auto-grant configurable trial periods (e.g., 3 days) to all new users
+- **Automated Temporary Access** — Auto-grant configurable temporary access periods (e.g., 3 days) to all new users
 - **Access Expiry** — Set hard expiry dates per user. The system automatically removes Plex server access when time is up
 - **Inactivity Cleanup** — Automatically remove users who haven't streamed in a configurable number of days, with per-user exemptions available
 - **Grace Period Notifications** — Warn users via email before their access expires
@@ -91,7 +91,7 @@ Beautiful, responsive HTML emails sent automatically:
 | Email Type | Trigger |
 |---|---|
 | **Welcome** | Immediately when a user joins |
-| **Trial Warning** | When a trial user is approaching expiry |
+| **Temporary Access Warning** | When a temporary access user is approaching expiry |
 | **Access Expired** | When a user's access is automatically removed |
 | **Inactivity Warning** | Before an inactive user is purged |
 | **Weekly/Monthly Newsletter** | Scheduled email featuring newly added Movies, TV Shows, and Music |
@@ -189,7 +189,7 @@ npm start
 - Navigate to `http://localhost:2121`
 - Log in with your **Plex Admin account**
 - The app will auto-detect you as the server owner and grant Admin access
-- Go to **Settings** in the sidebar to configure your Plex token, SMTP, trial settings, and scheduled tasks
+- Go to **Settings** in the sidebar to configure your Plex token, SMTP, temporary access settings, and scheduled tasks
 
 ---
 
@@ -201,7 +201,7 @@ All configuration is managed through the **Settings UI** in the browser. Key opt
 |---|---|
 | Plex Token | Your Plex admin token for API access |
 | Plex Server URL | Local or remote address of your Plex server |
-| Trial Duration | Number of days new users get for free |
+| Temporary Access Duration | Number of days new users get for free |
 | Inactivity Threshold | Days of inactivity before auto-removal |
 | SMTP Settings | Host, port, username, password, from address |
 | Newsletter Schedule | Weekly or monthly, with day/time selection |
