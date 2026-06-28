@@ -88,6 +88,7 @@ const EMAIL_LOG_PATH = path.join(process.cwd(), 'email_log.json');
 const STATUS_CONFIG_PATH = path.join(process.cwd(), 'status.json');
 const HEALTH_PATH = path.join(process.cwd(), 'subzero-health.json');
 const TRENDING_CACHE_PATH = path.join(process.cwd(), 'trending-cache.json');
+const ANALYTICS_CACHE_PATH = path.join(process.cwd(), 'analytics-cache.json');
 const PLEX_API = 'https://plex.tv/api';
 
 // --- Status App Global State ---
