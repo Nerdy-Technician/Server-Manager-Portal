@@ -3032,174 +3032,22 @@ app.get('/api/tautulli/graphs', requireAdmin, async (req, res) => {
 
 app.get('/api/plex/analytics', requireAdmin, async (req, res) => {
     try {
-        const config = await loadFile(CONFIG_PATH, null);
-        if (!config || !config.plexToken || !config.serverIdentifier) return res.status(503).json({ error: 'Plex not configured' });
-
-        const uri = await getPlexConnectionUri(config);
-        if (!uri) return res.status(503).json({ error: 'Cannot connect to Plex' });
-
-        const limit = req.query.days === 'all' ? 999999 : 5000;
-        const cacheKey = `plex_analytics_data_${limit}`;
-        const cachedData = await withCache(cacheKey, 120000, async () => {
-            const historyRes = await fetch(`${uri}/status/sessions/history/all?X-Plex-Token=${config.plexToken}&sort=viewedAt:desc&limit=${limit}`, { headers: { 'Accept': 'application/json' } }).then(r => r.json()).catch(() => null);
-            const sectionsRes = await fetch(`${uri}/library/sections?X-Plex-Token=${config.plexToken}`, { headers: { 'Accept': 'application/json' } }).then(r => r.json()).catch(() => null);
-            const accountsRes = await fetch(`${uri}/accounts?X-Plex-Token=${config.plexToken}`, { headers: { 'Accept': 'application/json' } }).then(r => r.json()).catch(() => null);
-            const devicesRes = await fetch(`${uri}/devices?X-Plex-Token=${config.plexToken}`, { headers: { 'Accept': 'application/json' } }).then(r => r.json()).catch(() => null);
-            const users = await loadFile(USERS_PATH, []);
-            return { historyRes, sectionsRes, accountsRes, devicesRes, users };
-        });
-        const { historyRes, sectionsRes, accountsRes, devicesRes, users } = cachedData;
-
-        if (!historyRes || !historyRes.MediaContainer || !historyRes.MediaContainer.Metadata) {
-            return res.json({ topUsers: [], topLibraries: [], topMovies: [], topShows: [], topMusic: [], topDevices: [], peakHours: new Array(24).fill(0), totalPlaybacks: 0 });
-        }
-
-        const accountsMap = {};
-        if (accountsRes && accountsRes.MediaContainer && accountsRes.MediaContainer.Account) {
-            accountsRes.MediaContainer.Account.forEach(acc => accountsMap[acc.id] = { name: acc.name, thumb: acc.thumb });
-        }
-
-        const sectionsMap = {};
-        if (sectionsRes && sectionsRes.MediaContainer && sectionsRes.MediaContainer.Directory) {
-            sectionsRes.MediaContainer.Directory.forEach(s => sectionsMap[s.key] = s.title);
-        }
-
-        const devicesMap = {};
-        if (devicesRes && devicesRes.MediaContainer && devicesRes.MediaContainer.Device) {
-            devicesRes.MediaContainer.Device.forEach(d => devicesMap[d.id] = d.name || d.platform || 'Unknown Device');
-        }
-
-        let cutoffDate = 0;
-        if (req.query.days && req.query.days !== 'all') {
-            const days = parseInt(req.query.days, 10) || 30;
-            cutoffDate = Math.floor(Date.now() / 1000) - (days * 24 * 60 * 60);
-        } else if (!req.query.days) {
-            cutoffDate = Math.floor(Date.now() / 1000) - (30 * 24 * 60 * 60);
-        }
-
-        const userCounts = {};
-        const libraryCounts = {};
-
-        const contentCountsMovies = {};
-        const contentCountsShows = {};
-        const contentCountsMusic = {};
-
-        const deviceCounts = {};
-        const peakHours = new Array(24).fill(0);
-        let totalPlaybacks = 0;
-
-        historyRes.MediaContainer.Metadata.forEach(item => {
-            if (cutoffDate > 0 && item.viewedAt < cutoffDate) return;
-            totalPlaybacks++;
-
-            // Peak Hours aggregation
-            if (item.viewedAt) {
-                const hour = new Date(item.viewedAt * 1000).getHours();
-                peakHours[hour]++;
-            }
-
-            // Device aggregation
-            let deviceName = 'Unknown Platform';
-            if (item.deviceID && devicesMap[item.deviceID]) deviceName = devicesMap[item.deviceID];
-            else if (item.Player && item.Player.product) deviceName = item.Player.product;
-            else if (item.client) deviceName = item.client; // fallback
-
-            if (!deviceCounts[deviceName]) deviceCounts[deviceName] = { name: deviceName, plays: 0 };
-            deviceCounts[deviceName].plays++;
-
-            // User aggregation
-            if (item.accountID) {
-                const userFromDb = users.find(u => u.id === String(item.accountID));
-                const accountFromPlex = accountsMap[item.accountID];
-                let username = `User ${item.accountID}`;
-                let thumb = null;
-
-                if (userFromDb) {
-                    username = userFromDb.username;
-                    thumb = userFromDb.thumb;
-                } else if (accountFromPlex) {
-                    username = accountFromPlex.name;
-                    thumb = accountFromPlex.thumb;
-                }
-
-                if (!userCounts[item.accountID]) userCounts[item.accountID] = { id: item.accountID, username, thumb, plays: 0 };
-                userCounts[item.accountID].plays++;
-            }
-
-            // Library aggregation
-            if (item.librarySectionID) {
-                const libTitle = sectionsMap[item.librarySectionID] || `Library ${item.librarySectionID}`;
-                if (!libraryCounts[item.librarySectionID]) libraryCounts[item.librarySectionID] = { id: item.librarySectionID, title: libTitle, plays: 0 };
-                libraryCounts[item.librarySectionID].plays++;
-            }
-
-            // Content aggregation
-            const contentKey = item.type === 'episode' ? (item.grandparentKey || item.parentKey || item.ratingKey) : item.ratingKey;
-            const contentTitle = item.type === 'episode' ? (item.grandparentTitle || item.parentTitle || item.title) : item.title;
-            const contentThumb = item.type === 'episode' ? (item.grandparentThumb || item.parentThumb || item.thumb) : item.thumb;
-
-            if (contentKey) {
-                let targetDict = null;
-                if (item.type === 'movie') targetDict = contentCountsMovies;
-                else if (item.type === 'episode') targetDict = contentCountsShows;
-                else if (item.type === 'track') targetDict = contentCountsMusic;
-                else targetDict = contentCountsMovies; // fallback
-
-                if (!targetDict[contentKey]) {
-                    targetDict[contentKey] = {
-                        key: contentKey,
-                        title: contentTitle,
-                        type: item.type === 'episode' ? 'show' : item.type,
-                        thumb: contentThumb,
-                        plays: 0,
-                        plexUrl: `https://app.plex.tv/desktop/#!/server/${config.serverIdentifier}/details?key=${encodeURIComponent('/library/metadata/' + contentKey.split('/').pop())}`
-                    };
-                }
-                targetDict[contentKey].plays++;
-            }
-        });
-
-        const topUsers = Object.values(userCounts).sort((a, b) => b.plays - a.plays).slice(0, 10);
-        const topLibraries = Object.values(libraryCounts).sort((a, b) => b.plays - a.plays).slice(0, 10);
-        const topDevices = Object.values(deviceCounts).sort((a, b) => b.plays - a.plays).slice(0, 10);
-
-        const fetchRichMetadata = async (c) => {
-            if (c.thumb) {
-                c.thumbUrl = `/api/plex/image?path=${encodeURIComponent(c.thumb)}`;
-            }
-            try {
-                const metadataId = c.key.split('/').pop();
-                const metaRes = await fetch(`${uri}/library/metadata/${metadataId}?X-Plex-Token=${config.plexToken}`, { headers: { 'Accept': 'application/json' } }).then(r => r.json()).catch(() => null);
-                if (metaRes && metaRes.MediaContainer && metaRes.MediaContainer.Metadata && metaRes.MediaContainer.Metadata.length > 0) {
-                    const meta = metaRes.MediaContainer.Metadata[0];
-                    c.summary = meta.summary || '';
-                    c.year = meta.year || '';
-                    c.rating = meta.rating || meta.audienceRating || '';
-                    c.contentRating = meta.contentRating || '';
-                    c.duration = meta.duration || 0;
-                    c.genres = meta.Genre ? meta.Genre.map(g => g.tag) : [];
-                }
-            } catch (e) { }
-            return c;
-        };
-
-        const topMovies = await Promise.all(Object.values(contentCountsMovies).sort((a, b) => b.plays - a.plays).slice(0, 10).map(fetchRichMetadata));
-        const topShows = await Promise.all(Object.values(contentCountsShows).sort((a, b) => b.plays - a.plays).slice(0, 10).map(fetchRichMetadata));
-        const topMusic = await Promise.all(Object.values(contentCountsMusic).sort((a, b) => b.plays - a.plays).slice(0, 10).map(fetchRichMetadata));
-
+        const statsData = await loadFile(ANALYTICS_CACHE_PATH, {});
+        const reqDays = req.query.days || 30;
+        const data = statsData[reqDays] || statsData[30] || { topUsers: [], topLibraries: [], topMovies: [], topShows: [], topMusic: [], topDevices: [], peakHours: new Array(24).fill(0), totalPlaybacks: 0 };
+        
+        // attach max stats dynamically
         const stats = await loadFile(PLEX_STATS_CACHE_PATH, {});
-        const maxConcurrentStreams = stats.maxConcurrentStreams || 0;
-        const maxDirectPlays = stats.maxDirectPlays || 0;
-        const maxTranscodes = stats.maxTranscodes || 0;
+        data.maxConcurrentStreams = stats.maxConcurrentStreams || 0;
+        data.maxDirectPlays = stats.maxDirectPlays || 0;
+        data.maxTranscodes = stats.maxTranscodes || 0;
 
-        res.json({ topUsers, topLibraries, topMovies, topShows, topMusic, topDevices, peakHours, totalPlaybacks, maxConcurrentStreams, maxDirectPlays, maxTranscodes });
+        res.json(data);
     } catch (e) {
         log(`Error fetching analytics: ${e.message}`);
         res.status(500).json({ error: 'Analytics error' });
     }
-});
-
-app.get('/api/plex/analytics/me', requireAuth, async (req, res) => {
+});\n\napp.get('/api/plex/analytics/me', requireAuth, async (req, res) => {
     try {
         const config = await loadFile(CONFIG_PATH, null);
         if (!config || !config.plexToken || !config.serverIdentifier) return res.status(503).json({ error: 'Plex not configured' });
@@ -4077,7 +3925,161 @@ app.get('/api/media-stack/trending', requireAuth, async (req, res) => {
 
 // (Endpoints moved up before wildcard route)
 
-async function calculateTrendingStats() {
+async function calculateAnalyticsStats() {
+    try {
+        const config = await loadFile(CONFIG_PATH, null);
+        if (!config || !config.plexToken || !config.serverIdentifier) return;
+        
+        const uri = await getPlexConnectionUri(config);
+        if (!uri) return;
+
+        log('Starting background calculation of Plex Analytics Stats...');
+
+        const limit = 15000;
+        const historyRes = await fetch(`${uri}/status/sessions/history/all?X-Plex-Token=${config.plexToken}&sort=viewedAt:desc&limit=${limit}`, { headers: { 'Accept': 'application/json' } }).then(r => r.json()).catch(() => null);
+        const sectionsRes = await fetch(`${uri}/library/sections?X-Plex-Token=${config.plexToken}`, { headers: { 'Accept': 'application/json' } }).then(r => r.json()).catch(() => null);
+        const accountsRes = await fetch(`${uri}/accounts?X-Plex-Token=${config.plexToken}`, { headers: { 'Accept': 'application/json' } }).then(r => r.json()).catch(() => null);
+        const devicesRes = await fetch(`${uri}/devices?X-Plex-Token=${config.plexToken}`, { headers: { 'Accept': 'application/json' } }).then(r => r.json()).catch(() => null);
+        const users = await loadFile(USERS_PATH, []);
+
+        if (!historyRes || !historyRes.MediaContainer || !historyRes.MediaContainer.Metadata) return;
+
+        const accountsMap = {};
+        if (accountsRes && accountsRes.MediaContainer && accountsRes.MediaContainer.Account) {
+            accountsRes.MediaContainer.Account.forEach(acc => accountsMap[acc.id] = { name: acc.name, thumb: acc.thumb });
+        }
+
+        const sectionsMap = {};
+        if (sectionsRes && sectionsRes.MediaContainer && sectionsRes.MediaContainer.Directory) {
+            sectionsRes.MediaContainer.Directory.forEach(s => sectionsMap[s.key] = s.title);
+        }
+
+        const devicesMap = {};
+        if (devicesRes && devicesRes.MediaContainer && devicesRes.MediaContainer.Device) {
+            devicesRes.MediaContainer.Device.forEach(d => devicesMap[d.id] = d.name || d.platform || 'Unknown Device');
+        }
+
+        const fetchRichMetadata = async (c) => {
+            if (c.thumb) c.thumbUrl = `/api/plex/image?path=${encodeURIComponent(c.thumb)}`;
+            try {
+                const metadataId = c.key.split('/').pop();
+                const metaRes = await fetch(`${uri}/library/metadata/${metadataId}?X-Plex-Token=${config.plexToken}`, { headers: { 'Accept': 'application/json' } }).then(r => r.json()).catch(() => null);
+                if (metaRes && metaRes.MediaContainer && metaRes.MediaContainer.Metadata && metaRes.MediaContainer.Metadata.length > 0) {
+                    const meta = metaRes.MediaContainer.Metadata[0];
+                    c.summary = meta.summary || '';
+                    c.year = meta.year || '';
+                    c.rating = meta.rating || meta.audienceRating || '';
+                    c.contentRating = meta.contentRating || '';
+                    c.duration = meta.duration || 0;
+                    c.genres = meta.Genre ? meta.Genre.map(g => g.tag) : [];
+                }
+            } catch (e) {}
+            return c;
+        };
+
+        const timeframes = [1, 7, 30, 60, 90, 180, 365, 1825, 'all'];
+        const statsData = {};
+
+        for (const days of timeframes) {
+            let cutoffDate = 0;
+            if (days !== 'all') {
+                cutoffDate = Math.floor(Date.now() / 1000) - (days * 24 * 60 * 60);
+            }
+
+            const userCounts = {};
+            const libraryCounts = {};
+            const contentCountsMovies = {};
+            const contentCountsShows = {};
+            const contentCountsMusic = {};
+            const deviceCounts = {};
+            const peakHours = new Array(24).fill(0);
+            let totalPlaybacks = 0;
+
+            historyRes.MediaContainer.Metadata.forEach(item => {
+                if (cutoffDate > 0 && item.viewedAt < cutoffDate) return;
+                totalPlaybacks++;
+
+                if (item.viewedAt) {
+                    const hour = new Date(item.viewedAt * 1000).getHours();
+                    peakHours[hour]++;
+                }
+
+                let deviceName = 'Unknown Platform';
+                if (item.deviceID && devicesMap[item.deviceID]) deviceName = devicesMap[item.deviceID];
+                else if (item.Player && item.Player.product) deviceName = item.Player.product;
+                else if (item.client) deviceName = item.client; 
+                
+                if (!deviceCounts[deviceName]) deviceCounts[deviceName] = { name: deviceName, plays: 0 };
+                deviceCounts[deviceName].plays++;
+
+                if (item.accountID) {
+                    const userFromDb = users.find(u => u.id === String(item.accountID));
+                    const accountFromPlex = accountsMap[item.accountID];
+                    let username = `User ${item.accountID}`;
+                    let thumb = null;
+
+                    if (userFromDb) {
+                        username = userFromDb.username;
+                        thumb = userFromDb.thumb;
+                    } else if (accountFromPlex) {
+                        username = accountFromPlex.name;
+                        thumb = accountFromPlex.thumb;
+                    }
+
+                    if (!userCounts[item.accountID]) userCounts[item.accountID] = { id: item.accountID, username, thumb, plays: 0 };
+                    userCounts[item.accountID].plays++;
+                }
+
+                if (item.librarySectionID) {
+                    const libTitle = sectionsMap[item.librarySectionID] || `Library ${item.librarySectionID}`;
+                    if (!libraryCounts[item.librarySectionID]) libraryCounts[item.librarySectionID] = { id: item.librarySectionID, title: libTitle, plays: 0 };
+                    libraryCounts[item.librarySectionID].plays++;
+                }
+
+                const contentKey = item.type === 'episode' ? (item.grandparentKey || item.parentKey || item.ratingKey) : item.ratingKey;
+                const contentTitle = item.type === 'episode' ? (item.grandparentTitle || item.parentTitle || item.title) : item.title;
+                const contentThumb = item.type === 'episode' ? (item.grandparentThumb || item.parentThumb || item.thumb) : item.thumb;
+                
+                if (contentKey) {
+                    let targetDict = null;
+                    if (item.type === 'movie') targetDict = contentCountsMovies;
+                    else if (item.type === 'episode') targetDict = contentCountsShows;
+                    else if (item.type === 'track') targetDict = contentCountsMusic;
+                    else targetDict = contentCountsMovies; 
+
+                    if (!targetDict[contentKey]) {
+                        targetDict[contentKey] = {
+                            key: contentKey,
+                            title: contentTitle,
+                            type: item.type === 'episode' ? 'show' : item.type,
+                            thumb: contentThumb,
+                            plays: 0,
+                            plexUrl: `https://app.plex.tv/desktop/#!/server/${config.serverIdentifier}/details?key=${encodeURIComponent('/library/metadata/' + contentKey.split('/').pop())}`
+                        };
+                    }
+                    targetDict[contentKey].plays++;
+                }
+            });
+
+            const topUsers = Object.values(userCounts).sort((a, b) => b.plays - a.plays).slice(0, 10);
+            const topLibraries = Object.values(libraryCounts).sort((a, b) => b.plays - a.plays).slice(0, 10);
+            const topDevices = Object.values(deviceCounts).sort((a, b) => b.plays - a.plays).slice(0, 10);
+
+            const topMovies = await Promise.all(Object.values(contentCountsMovies).sort((a, b) => b.plays - a.plays).slice(0, 10).map(fetchRichMetadata));
+            const topShows = await Promise.all(Object.values(contentCountsShows).sort((a, b) => b.plays - a.plays).slice(0, 10).map(fetchRichMetadata));
+            const topMusic = await Promise.all(Object.values(contentCountsMusic).sort((a, b) => b.plays - a.plays).slice(0, 10).map(fetchRichMetadata));
+
+            statsData[days] = { topUsers, topLibraries, topMovies, topShows, topMusic, topDevices, peakHours, totalPlaybacks };
+        }
+
+        await saveFile(ANALYTICS_CACHE_PATH, statsData);
+        log('Successfully calculated and cached Plex Analytics Stats.');
+
+    } catch (e) {
+        log(`Error calculating analytics stats: ${e.message}`);
+    }
+}
+\n\nasync function calculateTrendingStats() {
     try {
         const config = await loadFile(CONFIG_PATH, null);
         if (!config || !config.plexToken || !config.serverIdentifier) return;
@@ -4381,5 +4383,5 @@ app.listen(PORT, async () => {
 
     // Setup Trending Stats Aggregator
     setTimeout(calculateTrendingStats, 10000); // Run once shortly after startup
-    setInterval(calculateTrendingStats, 12 * 60 * 60 * 1000); // Every 12 hours
+    setInterval(calculateTrendingStats, 12 * 60 * 60 * 1000);\n    setTimeout(calculateAnalyticsStats, 15000);\n    setInterval(calculateAnalyticsStats, 30 * 60 * 1000); // Every 12 hours
 });

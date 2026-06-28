@@ -3143,7 +3143,7 @@ const AnalyticsDashboard: React.FC<{ isAdmin: boolean, sessionInfo: any }> = ({ 
                                 value={days}
                                 onChange={(val) => setDays(val as string)}
                                 options={[
-                                    { label: 'Last 1 Day', value: '1' },
+                                    { label: 'Last 24 Hours', value: '1' },
                                     { label: 'Last 7 Days', value: '7' },
                                     { label: 'Last 30 Days', value: '30' },
                                     { label: 'Last 60 Days', value: '60' },
