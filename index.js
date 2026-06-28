@@ -3533,9 +3533,68 @@ app.get('/style.css', (req, res) => {
     res.sendFile(path.join(process.cwd(), 'style.css'));
 });
 
+const escapeHtmlAttr = (value = '') => String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+
+const getRequestBaseUrl = (req) => {
+    const proto = (req.headers['x-forwarded-proto'] || req.protocol || 'http').toString().split(',')[0].trim();
+    const host = req.get('host');
+    return `${proto}://${host}`;
+};
+
+const buildSocialMetaTags = async (req) => {
+    const config = await loadFile(CONFIG_PATH, {});
+    const profile = await getAdminProfile(config);
+    const baseUrl = getRequestBaseUrl(req);
+    const pageUrl = `${baseUrl}${req.originalUrl || '/'}`;
+    const serverName = profile.serverName || 'Server Portal';
+    const serverId = config.serverIdentifier || 'unconfigured';
+    const description = `Live Plex portal for ${serverName} (${serverId}).`;
+    const title = `${serverName} Portal`;
+
+    let imageUrl = '';
+    const configuredImage = config.customLogoUrl || profile.thumb || '';
+    if (configuredImage) {
+        imageUrl = configuredImage.startsWith('http')
+            ? configuredImage
+            : `${baseUrl}/api/plex/image?path=${encodeURIComponent(configuredImage)}&width=1200&height=630`;
+    }
+
+    const tags = [
+        `<meta property="og:type" content="website" />`,
+        `<meta property="og:site_name" content="${escapeHtmlAttr(serverName)}" />`,
+        `<meta property="og:title" content="${escapeHtmlAttr(title)}" />`,
+        `<meta property="og:description" content="${escapeHtmlAttr(description)}" />`,
+        `<meta property="og:url" content="${escapeHtmlAttr(pageUrl)}" />`,
+        ...(imageUrl ? [`<meta property="og:image" content="${escapeHtmlAttr(imageUrl)}" />`] : []),
+        `<meta name="twitter:card" content="${imageUrl ? 'summary_large_image' : 'summary'}" />`,
+        `<meta name="twitter:title" content="${escapeHtmlAttr(title)}" />`,
+        `<meta name="twitter:description" content="${escapeHtmlAttr(description)}" />`,
+        ...(imageUrl ? [`<meta name="twitter:image" content="${escapeHtmlAttr(imageUrl)}" />`] : []),
+        `<meta name="description" content="${escapeHtmlAttr(description)}" />`
+    ].join('\n    ');
+
+    return { title, tags };
+};
+
 // Serve the main index.html for any other GET request
-app.get(['/', '/portal', '/status', '/admin', '/users', '/dashboard', '/settings', '/analytics', '/logs', '/mediastack', '/auth/*', '/invite/*'], (req, res) => {
-    res.sendFile(path.join(process.cwd(), 'index.html'));
+app.get(['/', '/portal', '/status', '/admin', '/users', '/dashboard', '/settings', '/analytics', '/logs', '/mediastack', '/auth/*', '/invite/*'], async (req, res) => {
+    try {
+        const indexPath = path.join(process.cwd(), 'index.html');
+        const html = await fs.readFile(indexPath, 'utf8');
+        const socialMeta = await buildSocialMetaTags(req);
+        const updatedHtml = html
+            .replace(/<title>[\s\S]*?<\/title>/i, `<title>${escapeHtmlAttr(socialMeta.title)}</title>`)
+            .replace('</head>', `    ${socialMeta.tags}\n</head>`);
+        res.setHeader('Content-Type', 'text/html; charset=utf-8');
+        res.send(updatedHtml);
+    } catch (e) {
+        res.sendFile(path.join(process.cwd(), 'index.html'));
+    }
 });
 
 
