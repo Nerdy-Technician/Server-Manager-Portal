@@ -3412,9 +3412,6 @@ const TautulliGraphsTab: React.FC = () => {
 };
 
 const AnalyticsDashboard: React.FC<{ isAdmin: boolean, sessionInfo: any }> = ({ isAdmin, sessionInfo }) => {
-    if (!isAdmin) {
-        return <PersonalAnalyticsDashboard username={sessionInfo?.session?.username || 'User'} thumb={null} />;
-    }
     const [analyticsData, setAnalyticsData] = useState<{ topUsers: any[], topLibraries: any[], topMovies: any[], topShows: any[], topMusic: any[], topDevices: any[], peakHours: number[], totalPlaybacks: number, maxConcurrentStreams: number, maxDirectPlays: number, maxTranscodes: number } | null>(null);
     const [tautulliData, setTautulliData] = useState<{ streamsRecord: number, transcodeRecord: number, directPlayRecord: number, directStreamRecord: number, totalPlays: number, tvPlays: number, moviePlays: number, musicPlays: number, totalTimeStr: string } | null>(null);
     const [isLoading, setLoading] = useState(true);
@@ -3434,6 +3431,13 @@ const AnalyticsDashboard: React.FC<{ isAdmin: boolean, sessionInfo: any }> = ({ 
     }, [viewTab]);
 
     useEffect(() => {
+        if (!isAdmin && viewTab === 'graphs') {
+            setViewTab('overview');
+        }
+    }, [isAdmin, viewTab]);
+
+    useEffect(() => {
+        if (!isAdmin) return;
         const fetchUsers = async () => {
             try {
                 const usersData = await apiFetch('/api/users');
@@ -3452,11 +3456,15 @@ const AnalyticsDashboard: React.FC<{ isAdmin: boolean, sessionInfo: any }> = ({ 
                 const data = await apiFetch(`/api/plex/analytics?days=${days}`);
                 setAnalyticsData(data);
 
-                try {
-                    const tData = await apiFetch('/api/tautulli/stats');
-                    setTautulliData(tData);
-                } catch (e) {
-                    // Tautulli might not be configured, ignore error
+                if (isAdmin) {
+                    try {
+                        const tData = await apiFetch('/api/tautulli/stats');
+                        setTautulliData(tData);
+                    } catch (e) {
+                        // Tautulli might not be configured, ignore error
+                        setTautulliData(null);
+                    }
+                } else {
                     setTautulliData(null);
                 }
             } catch (err: any) {
@@ -3466,7 +3474,7 @@ const AnalyticsDashboard: React.FC<{ isAdmin: boolean, sessionInfo: any }> = ({ 
             }
         };
         fetchAnalytics();
-    }, [days]);
+    }, [days, isAdmin]);
 
     if (isLoading) return <Loader isLoading={true} />;
     if (error) return <div className="text-red-500 font-bold p-8 text-center">{error}</div>;
@@ -3493,9 +3501,11 @@ const AnalyticsDashboard: React.FC<{ isAdmin: boolean, sessionInfo: any }> = ({ 
                         <button onClick={() => setViewTab('overview')} className={`px-4 py-2 rounded-md text-sm font-bold uppercase tracking-wider transition-colors flex items-center gap-2 ${viewTab === 'overview' ? 'bg-plex text-white shadow-lg' : 'text-muted hover:text-white'}`}>
                             <Activity className="w-4 h-4" /> Overview
                         </button>
-                        <button onClick={() => setViewTab('graphs')} className={`px-4 py-2 rounded-md text-sm font-bold uppercase tracking-wider transition-colors flex items-center gap-2 ${viewTab === 'graphs' ? 'bg-plex text-white shadow-lg' : 'text-muted hover:text-white'}`}>
-                            <LucideLineChart className="w-4 h-4" /> Graphs
-                        </button>
+                        {isAdmin && (
+                            <button onClick={() => setViewTab('graphs')} className={`px-4 py-2 rounded-md text-sm font-bold uppercase tracking-wider transition-colors flex items-center gap-2 ${viewTab === 'graphs' ? 'bg-plex text-white shadow-lg' : 'text-muted hover:text-white'}`}>
+                                <LucideLineChart className="w-4 h-4" /> Graphs
+                            </button>
+                        )}
                     </div>
                 </div>
                 {viewTab === 'overview' && (
@@ -3517,7 +3527,7 @@ const AnalyticsDashboard: React.FC<{ isAdmin: boolean, sessionInfo: any }> = ({ 
                 )}
             </div>
 
-            {viewTab === 'graphs' && <TautulliGraphsTab />}
+            {viewTab === 'graphs' && isAdmin && <TautulliGraphsTab />}
 
             {viewTab === 'overview' && (
                 <>
@@ -3566,6 +3576,7 @@ const AnalyticsDashboard: React.FC<{ isAdmin: boolean, sessionInfo: any }> = ({ 
                         <div className="bg-card/50 backdrop-blur-md rounded-xl p-4 md:p-6 shadow-xl border border-border lg:col-span-2">
                             <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
                                 <h2 className="text-xl font-bold text-text uppercase tracking-wider flex items-center gap-2 whitespace-nowrap"><Users className="text-plex w-5 h-5" /> Top Viewers</h2>
+                                {isAdmin && (
                                 <div className="relative w-full sm:w-auto flex-grow max-w-[250px] z-50">
                                     <input
                                         type="text"
@@ -3608,10 +3619,11 @@ const AnalyticsDashboard: React.FC<{ isAdmin: boolean, sessionInfo: any }> = ({ 
                                         </div>
                                     )}
                                 </div>
+                                )}
                             </div>
                             <div className="flex flex-col gap-4">
                                 {topUsers.length === 0 ? <p className="text-muted text-sm">No data available.</p> : topUsers.map((user, idx) => (
-                                    <div key={user.id} onClick={() => setSelectedUser({ id: user.id, username: user.username, thumb: user.thumb })} className="flex items-center justify-between p-3 bg-black/20 rounded-lg hover:bg-black/40 transition-colors cursor-pointer group hover:ring-1 hover:ring-plex">
+                                    <div key={user.id} onClick={() => { if (isAdmin) setSelectedUser({ id: user.id, username: user.username, thumb: user.thumb }); }} className={`flex items-center justify-between p-3 bg-black/20 rounded-lg transition-colors group ${isAdmin ? 'hover:bg-black/40 cursor-pointer hover:ring-1 hover:ring-plex' : ''}`}>
                                         <div className="flex items-center gap-4">
                                             <div className="relative">
                                                 <div className="w-10 h-10 rounded-full p-[2px] bg-gradient-to-r from-plex to-[#e5a00d]">
@@ -3778,7 +3790,7 @@ const AnalyticsDashboard: React.FC<{ isAdmin: boolean, sessionInfo: any }> = ({ 
                     </div>
                 </>
             )}
-            {selectedUser && (
+            {isAdmin && selectedUser && (
                 <UserAnalyticsModal
                     userId={selectedUser.id}
                     username={selectedUser.username}

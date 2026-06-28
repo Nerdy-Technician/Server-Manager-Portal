@@ -2663,6 +2663,8 @@ app.get('/api/public/info', async (req, res) => {
         const config = await loadFile(CONFIG_PATH, {});
         const profile = await getAdminProfile(config);
         const isConfigured = !!(config && config.plexToken && config.serverIdentifier);
+        const contactWhatsApp = config.contactWhatsApp || '';
+        const contactEmail = config.contactEmail || '';
         res.json({ ...profile, isConfigured, requestUrl: config.requestUrl || 'https://yourdomain.com', contactWhatsApp, contactEmail });
     } catch (e) {
         res.json({ thumb: null, serverName: 'Server Portal', isConfigured: false, requestUrl: 'https://yourdomain.com' });
@@ -3036,11 +3038,17 @@ app.get('/api/tautulli/graphs', requireAdmin, async (req, res) => {
     }
 });
 
-app.get('/api/plex/analytics', requireAdmin, async (req, res) => {
+app.get('/api/plex/analytics', requireAuth, async (req, res) => {
     try {
         const statsData = await loadFile(ANALYTICS_CACHE_PATH, {});
         const reqDays = req.query.days || 30;
-        const data = statsData[reqDays] || statsData[30] || { topUsers: [], topLibraries: [], topMovies: [], topShows: [], topMusic: [], topDevices: [], peakHours: new Array(24).fill(0), totalPlaybacks: 0 };
+        const cachedData = statsData[reqDays] || statsData[30] || { topUsers: [], topLibraries: [], topMovies: [], topShows: [], topMusic: [], topDevices: [], peakHours: new Array(24).fill(0), totalPlaybacks: 0 };
+        const shouldObfuscateUsernames = !req.user?.isAdmin;
+        const topUsers = (cachedData.topUsers || []).map((user, index) => ({
+            ...user,
+            username: shouldObfuscateUsernames ? `Viewer ${index + 1}` : (user.username || `User ${index + 1}`)
+        }));
+        const data = { ...cachedData, topUsers };
         
         // attach max stats dynamically
         const stats = await loadFile(PLEX_STATS_CACHE_PATH, {});
