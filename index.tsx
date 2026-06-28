@@ -1472,7 +1472,7 @@ const SettingsDashboard: React.FC = () => {
                         </div>
                     )}
 
-                    
+
                     {activeTab === 'contact' && (
                         <div className="mb-8">
                             <h3 className="text-xl font-bold text-plex mb-4 border-b border-border pb-2">Contact Details</h3>
@@ -1481,7 +1481,7 @@ const SettingsDashboard: React.FC = () => {
                             </p>
                             <div className="mb-4">
                                 <label htmlFor="contactWhatsApp">WhatsApp Number (Optional)</label>
-                                <input className="w-full p-3 rounded-lg border border-border bg-background text-text outline-none focus:border-plex focus:ring-1 focus:ring-plex transition-all" id="contactWhatsApp" type="text" value={contactWhatsApp} onChange={(e) => setContactWhatsApp(e.target.value)} placeholder="e.g. 447305697245" />
+                                <input className="w-full p-3 rounded-lg border border-border bg-background text-text outline-none focus:border-plex focus:ring-1 focus:ring-plex transition-all" id="contactWhatsApp" type="text" value={contactWhatsApp} onChange={(e) => setContactWhatsApp(e.target.value)} placeholder="e.g. 447303647923" />
                                 <small>Enter your phone number including country code, without any '+', spaces, or dashes. If left blank, the WhatsApp button will be hidden.</small>
                             </div>
                             <div className="mb-4">
@@ -1522,7 +1522,7 @@ const SettingsDashboard: React.FC = () => {
                                     <span className="text-sm font-medium cursor-pointer select-none hover:text-plex transition-colors" onClick={() => setUse24HourClock(!use24HourClock)}>Use 24-Hour Clock across the Portal</span>
                                 </div>
                             </div>
-                            
+
                             <div className="mb-4">
                                 <label>Public Access</label>
                                 <div className="flex items-center gap-2 mt-2">
@@ -1928,62 +1928,62 @@ const UserAnalyticsModal: React.FC<{ userId: string, username: string, thumb: st
                         <>
                             {/* Top row */}
                             <div>
-                                    <h3 className="text-lg font-bold text-text mb-4 uppercase tracking-wider flex items-center gap-2"><PlaySquare className="text-plex w-4 h-4" /> Favorite Libraries</h3>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-6">
-                                        {data.topLibraries.length === 0 ? <p className="text-muted text-sm col-span-full">No library data.</p> : data.topLibraries.map((lib: any, i: number) => (
-                                            <div key={lib.id} className="flex justify-between items-center bg-black/20 p-2 rounded border border-white/5">
-                                                <span className="font-bold text-sm text-text"><span className="text-muted mr-2">#{i + 1}</span>{lib.title}</span>
-                                                <span className="text-plex text-xs font-mono">{lib.plays} plays</span>
-                                            </div>
+                                <h3 className="text-lg font-bold text-text mb-4 uppercase tracking-wider flex items-center gap-2"><PlaySquare className="text-plex w-4 h-4" /> Favorite Libraries</h3>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-6">
+                                    {data.topLibraries.length === 0 ? <p className="text-muted text-sm col-span-full">No library data.</p> : data.topLibraries.map((lib: any, i: number) => (
+                                        <div key={lib.id} className="flex justify-between items-center bg-black/20 p-2 rounded border border-white/5">
+                                            <span className="font-bold text-sm text-text"><span className="text-muted mr-2">#{i + 1}</span>{lib.title}</span>
+                                            <span className="text-plex text-xs font-mono">{lib.plays} plays</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {data.topMovies && data.topMovies.length > 0 && (
+                                <div>
+                                    <h3 className="text-lg font-bold text-text mb-4 uppercase tracking-wider flex items-center gap-2"><Film className="text-plex w-4 h-4" /> Top Watched Movies</h3>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
+                                        {data.topMovies.map((c: any, i: number) => (
+                                            <a key={c.key} href={c.plexUrl} target="_blank" rel="noreferrer" className="flex items-center gap-3 bg-black/20 p-2 rounded border border-white/5 hover:bg-white/10 transition-colors">
+                                                <div className="w-8 h-12 bg-black/40 rounded overflow-hidden flex-shrink-0 relative">
+                                                    {c.thumbUrl && <img src={c.thumbUrl} className="w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextElementSibling?.classList.remove('hidden'); }} />}
+                                                    <div className={`absolute inset-0 w-full h-full p-2 opacity-50 flex items-center justify-center ${c.thumbUrl ? 'hidden' : ''}`}>
+                                                        <Film className="w-full h-full" />
+                                                    </div>
+                                                </div>
+                                                <div className="flex flex-col flex-grow overflow-hidden">
+                                                    <span className="font-bold text-sm text-text truncate">{c.title}</span>
+                                                    <span className="text-muted text-[10px] uppercase tracking-wider">{c.type}</span>
+                                                </div>
+                                                <span className="text-plex text-xs font-mono whitespace-nowrap">{c.plays} plays</span>
+                                            </a>
                                         ))}
                                     </div>
                                 </div>
+                            )}
 
-                                {data.topMovies && data.topMovies.length > 0 && (
-                                    <div>
-                                        <h3 className="text-lg font-bold text-text mb-4 uppercase tracking-wider flex items-center gap-2"><Film className="text-plex w-4 h-4" /> Top Watched Movies</h3>
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
-                                            {data.topMovies.map((c: any, i: number) => (
-                                                <a key={c.key} href={c.plexUrl} target="_blank" rel="noreferrer" className="flex items-center gap-3 bg-black/20 p-2 rounded border border-white/5 hover:bg-white/10 transition-colors">
-                                                    <div className="w-8 h-12 bg-black/40 rounded overflow-hidden flex-shrink-0 relative">
-                                                        {c.thumbUrl && <img src={c.thumbUrl} className="w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextElementSibling?.classList.remove('hidden'); }} />}
-                                                          <div className={`absolute inset-0 w-full h-full p-2 opacity-50 flex items-center justify-center ${c.thumbUrl ? 'hidden' : ''}`}>
-                                                              <Film className="w-full h-full" />
-                                                          </div>
+                            {data.topShows && data.topShows.length > 0 && (
+                                <div>
+                                    <h3 className="text-lg font-bold text-text mb-4 uppercase tracking-wider flex items-center gap-2"><TrendingUp className="text-plex w-4 h-4" /> Top Watched TV Shows</h3>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
+                                        {data.topShows.map((c: any, i: number) => (
+                                            <a key={c.key} href={c.plexUrl} target="_blank" rel="noreferrer" className="flex items-center gap-3 bg-black/20 p-2 rounded border border-white/5 hover:bg-white/10 transition-colors">
+                                                <div className="w-8 h-12 bg-black/40 rounded overflow-hidden flex-shrink-0 relative">
+                                                    {c.thumbUrl && <img src={c.thumbUrl} className="w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextElementSibling?.classList.remove('hidden'); }} />}
+                                                    <div className={`absolute inset-0 w-full h-full p-2 opacity-50 flex items-center justify-center ${c.thumbUrl ? 'hidden' : ''}`}>
+                                                        <Film className="w-full h-full" />
                                                     </div>
-                                                    <div className="flex flex-col flex-grow overflow-hidden">
-                                                        <span className="font-bold text-sm text-text truncate">{c.title}</span>
-                                                        <span className="text-muted text-[10px] uppercase tracking-wider">{c.type}</span>
-                                                    </div>
-                                                    <span className="text-plex text-xs font-mono whitespace-nowrap">{c.plays} plays</span>
-                                                </a>
-                                            ))}
-                                        </div>
+                                                </div>
+                                                <div className="flex flex-col flex-grow overflow-hidden">
+                                                    <span className="font-bold text-sm text-text truncate">{c.title}</span>
+                                                    <span className="text-muted text-[10px] uppercase tracking-wider">{c.type}</span>
+                                                </div>
+                                                <span className="text-plex text-xs font-mono whitespace-nowrap">{c.plays} plays</span>
+                                            </a>
+                                        ))}
                                     </div>
-                                )}
-
-                                {data.topShows && data.topShows.length > 0 && (
-                                    <div>
-                                        <h3 className="text-lg font-bold text-text mb-4 uppercase tracking-wider flex items-center gap-2"><TrendingUp className="text-plex w-4 h-4" /> Top Watched TV Shows</h3>
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
-                                            {data.topShows.map((c: any, i: number) => (
-                                                <a key={c.key} href={c.plexUrl} target="_blank" rel="noreferrer" className="flex items-center gap-3 bg-black/20 p-2 rounded border border-white/5 hover:bg-white/10 transition-colors">
-                                                    <div className="w-8 h-12 bg-black/40 rounded overflow-hidden flex-shrink-0 relative">
-                                                        {c.thumbUrl && <img src={c.thumbUrl} className="w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextElementSibling?.classList.remove('hidden'); }} />}
-                                                          <div className={`absolute inset-0 w-full h-full p-2 opacity-50 flex items-center justify-center ${c.thumbUrl ? 'hidden' : ''}`}>
-                                                              <Film className="w-full h-full" />
-                                                          </div>
-                                                    </div>
-                                                    <div className="flex flex-col flex-grow overflow-hidden">
-                                                        <span className="font-bold text-sm text-text truncate">{c.title}</span>
-                                                        <span className="text-muted text-[10px] uppercase tracking-wider">{c.type}</span>
-                                                    </div>
-                                                    <span className="text-plex text-xs font-mono whitespace-nowrap">{c.plays} plays</span>
-                                                </a>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
+                                </div>
+                            )}
                             {data.topMusic && data.topMusic.length > 0 && (
                                 <div>
                                     <h3 className="text-lg font-bold text-text mb-4 uppercase tracking-wider flex items-center gap-2"><Music className="text-plex w-4 h-4" /> Top Listened</h3>
@@ -2015,9 +2015,9 @@ const UserAnalyticsModal: React.FC<{ userId: string, username: string, thumb: st
                                         <a key={i} href={h.plexUrl} target="_blank" rel="noreferrer" className="flex items-center gap-3 bg-white/5 border border-white/5 p-2 rounded-lg hover:bg-white/10 transition-colors">
                                             <div className={`${h.type === 'track' ? 'w-12 h-12' : 'w-10 h-14'} bg-black/40 rounded overflow-hidden flex-shrink-0`}>
                                                 {h.thumbUrl && <img src={h.thumbUrl} className="w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextElementSibling?.classList.remove('hidden'); }} />}
-                                                  <div className={`w-full h-full p-2 opacity-50 flex items-center justify-center ${h.thumbUrl ? 'hidden' : ''}`}>
-                                                      {h.type === 'track' ? <Music className="w-full h-full" /> : <Film className="w-full h-full" />}
-                                                  </div>
+                                                <div className={`w-full h-full p-2 opacity-50 flex items-center justify-center ${h.thumbUrl ? 'hidden' : ''}`}>
+                                                    {h.type === 'track' ? <Music className="w-full h-full" /> : <Film className="w-full h-full" />}
+                                                </div>
                                             </div>
                                             <div className="flex flex-col overflow-hidden">
                                                 <span className="font-bold text-sm text-text truncate">{h.title}</span>
@@ -2207,62 +2207,62 @@ const PersonalAnalyticsDashboard: React.FC<{ username: string, thumb: string | n
                     ) : (
                         <>
                             <div>
-                                    <h3 className="text-lg font-bold text-text mb-4 uppercase tracking-wider flex items-center gap-2"><PlaySquare className="text-plex w-4 h-4" /> Favorite Libraries</h3>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-6">
-                                        {data.topLibraries.length === 0 ? <p className="text-muted text-sm col-span-full">No library data.</p> : data.topLibraries.map((lib: any, i: number) => (
-                                            <div key={lib.id} className="flex justify-between items-center bg-black/20 p-2 rounded border border-white/5">
-                                                <span className="font-bold text-sm text-text"><span className="text-muted mr-2">#{i + 1}</span>{lib.title}</span>
-                                                <span className="text-plex text-xs font-mono">{lib.plays} plays</span>
-                                            </div>
+                                <h3 className="text-lg font-bold text-text mb-4 uppercase tracking-wider flex items-center gap-2"><PlaySquare className="text-plex w-4 h-4" /> Favorite Libraries</h3>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-6">
+                                    {data.topLibraries.length === 0 ? <p className="text-muted text-sm col-span-full">No library data.</p> : data.topLibraries.map((lib: any, i: number) => (
+                                        <div key={lib.id} className="flex justify-between items-center bg-black/20 p-2 rounded border border-white/5">
+                                            <span className="font-bold text-sm text-text"><span className="text-muted mr-2">#{i + 1}</span>{lib.title}</span>
+                                            <span className="text-plex text-xs font-mono">{lib.plays} plays</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {data.topMovies && data.topMovies.length > 0 && (
+                                <div>
+                                    <h3 className="text-lg font-bold text-text mb-4 uppercase tracking-wider flex items-center gap-2"><Film className="text-plex w-4 h-4" /> Top Watched Movies</h3>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
+                                        {data.topMovies.map((c: any, i: number) => (
+                                            <a key={c.key} href={c.plexUrl} target="_blank" rel="noreferrer" className="flex items-center gap-3 bg-black/20 p-2 rounded border border-white/5 hover:bg-white/10 transition-colors">
+                                                <div className="w-8 h-12 bg-black/40 rounded overflow-hidden flex-shrink-0 relative">
+                                                    {c.thumbUrl && <img src={c.thumbUrl} className="w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextElementSibling?.classList.remove('hidden'); }} />}
+                                                    <div className={`absolute inset-0 w-full h-full p-2 opacity-50 flex items-center justify-center ${c.thumbUrl ? 'hidden' : ''}`}>
+                                                        <Film className="w-full h-full" />
+                                                    </div>
+                                                </div>
+                                                <div className="flex flex-col flex-grow overflow-hidden">
+                                                    <span className="font-bold text-sm text-text truncate">{c.title}</span>
+                                                    <span className="text-muted text-[10px] uppercase tracking-wider">{c.type}</span>
+                                                </div>
+                                                <span className="text-plex text-xs font-mono whitespace-nowrap">{c.plays} plays</span>
+                                            </a>
                                         ))}
                                     </div>
                                 </div>
+                            )}
 
-                                {data.topMovies && data.topMovies.length > 0 && (
-                                    <div>
-                                        <h3 className="text-lg font-bold text-text mb-4 uppercase tracking-wider flex items-center gap-2"><Film className="text-plex w-4 h-4" /> Top Watched Movies</h3>
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
-                                            {data.topMovies.map((c: any, i: number) => (
-                                                <a key={c.key} href={c.plexUrl} target="_blank" rel="noreferrer" className="flex items-center gap-3 bg-black/20 p-2 rounded border border-white/5 hover:bg-white/10 transition-colors">
-                                                    <div className="w-8 h-12 bg-black/40 rounded overflow-hidden flex-shrink-0 relative">
-                                                        {c.thumbUrl && <img src={c.thumbUrl} className="w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextElementSibling?.classList.remove('hidden'); }} />}
-                                                          <div className={`absolute inset-0 w-full h-full p-2 opacity-50 flex items-center justify-center ${c.thumbUrl ? 'hidden' : ''}`}>
-                                                              <Film className="w-full h-full" />
-                                                          </div>
+                            {data.topShows && data.topShows.length > 0 && (
+                                <div>
+                                    <h3 className="text-lg font-bold text-text mb-4 uppercase tracking-wider flex items-center gap-2"><TrendingUp className="text-plex w-4 h-4" /> Top Watched TV Shows</h3>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
+                                        {data.topShows.map((c: any, i: number) => (
+                                            <a key={c.key} href={c.plexUrl} target="_blank" rel="noreferrer" className="flex items-center gap-3 bg-black/20 p-2 rounded border border-white/5 hover:bg-white/10 transition-colors">
+                                                <div className="w-8 h-12 bg-black/40 rounded overflow-hidden flex-shrink-0 relative">
+                                                    {c.thumbUrl && <img src={c.thumbUrl} className="w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextElementSibling?.classList.remove('hidden'); }} />}
+                                                    <div className={`absolute inset-0 w-full h-full p-2 opacity-50 flex items-center justify-center ${c.thumbUrl ? 'hidden' : ''}`}>
+                                                        <Film className="w-full h-full" />
                                                     </div>
-                                                    <div className="flex flex-col flex-grow overflow-hidden">
-                                                        <span className="font-bold text-sm text-text truncate">{c.title}</span>
-                                                        <span className="text-muted text-[10px] uppercase tracking-wider">{c.type}</span>
-                                                    </div>
-                                                    <span className="text-plex text-xs font-mono whitespace-nowrap">{c.plays} plays</span>
-                                                </a>
-                                            ))}
-                                        </div>
+                                                </div>
+                                                <div className="flex flex-col flex-grow overflow-hidden">
+                                                    <span className="font-bold text-sm text-text truncate">{c.title}</span>
+                                                    <span className="text-muted text-[10px] uppercase tracking-wider">{c.type}</span>
+                                                </div>
+                                                <span className="text-plex text-xs font-mono whitespace-nowrap">{c.plays} plays</span>
+                                            </a>
+                                        ))}
                                     </div>
-                                )}
-
-                                {data.topShows && data.topShows.length > 0 && (
-                                    <div>
-                                        <h3 className="text-lg font-bold text-text mb-4 uppercase tracking-wider flex items-center gap-2"><TrendingUp className="text-plex w-4 h-4" /> Top Watched TV Shows</h3>
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
-                                            {data.topShows.map((c: any, i: number) => (
-                                                <a key={c.key} href={c.plexUrl} target="_blank" rel="noreferrer" className="flex items-center gap-3 bg-black/20 p-2 rounded border border-white/5 hover:bg-white/10 transition-colors">
-                                                    <div className="w-8 h-12 bg-black/40 rounded overflow-hidden flex-shrink-0 relative">
-                                                        {c.thumbUrl && <img src={c.thumbUrl} className="w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextElementSibling?.classList.remove('hidden'); }} />}
-                                                          <div className={`absolute inset-0 w-full h-full p-2 opacity-50 flex items-center justify-center ${c.thumbUrl ? 'hidden' : ''}`}>
-                                                              <Film className="w-full h-full" />
-                                                          </div>
-                                                    </div>
-                                                    <div className="flex flex-col flex-grow overflow-hidden">
-                                                        <span className="font-bold text-sm text-text truncate">{c.title}</span>
-                                                        <span className="text-muted text-[10px] uppercase tracking-wider">{c.type}</span>
-                                                    </div>
-                                                    <span className="text-plex text-xs font-mono whitespace-nowrap">{c.plays} plays</span>
-                                                </a>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
+                                </div>
+                            )}
                             {data.topMusic && data.topMusic.length > 0 && (
                                 <div>
                                     <h3 className="text-lg font-bold text-text mb-4 uppercase tracking-wider flex items-center gap-2"><Music className="text-plex w-4 h-4" /> Top Listened</h3>
@@ -2285,17 +2285,17 @@ const PersonalAnalyticsDashboard: React.FC<{ username: string, thumb: string | n
                                     </div>
                                 </div>
                             )}
-                                    <div>
+                            <div>
 
-                                    <h3 className="text-lg font-bold text-text mb-4 uppercase tracking-wider flex items-center gap-2"><Activity className="text-plex w-4 h-4" /> Recent Watch History</h3>
+                                <h3 className="text-lg font-bold text-text mb-4 uppercase tracking-wider flex items-center gap-2"><Activity className="text-plex w-4 h-4" /> Recent Watch History</h3>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                                     {data.recentHistory.length === 0 ? <p className="text-muted text-sm col-span-full">No recent history.</p> : data.recentHistory.map((h: any, i: number) => (
                                         <a key={i} href={h.plexUrl} target="_blank" rel="noreferrer" className="flex items-center gap-3 bg-white/5 border border-white/5 p-2 rounded-lg hover:bg-white/10 transition-colors">
                                             <div className={`${h.type === 'track' ? 'w-12 h-12' : 'w-10 h-14'} bg-black/40 rounded overflow-hidden flex-shrink-0`}>
                                                 {h.thumbUrl && <img src={h.thumbUrl} className="w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextElementSibling?.classList.remove('hidden'); }} />}
-                                                  <div className={`w-full h-full p-2 opacity-50 flex items-center justify-center ${h.thumbUrl ? 'hidden' : ''}`}>
-                                                      {h.type === 'track' ? <Music className="w-full h-full" /> : <Film className="w-full h-full" />}
-                                                  </div>
+                                                <div className={`w-full h-full p-2 opacity-50 flex items-center justify-center ${h.thumbUrl ? 'hidden' : ''}`}>
+                                                    {h.type === 'track' ? <Music className="w-full h-full" /> : <Film className="w-full h-full" />}
+                                                </div>
                                             </div>
                                             <div className="flex flex-col overflow-hidden">
                                                 <span className="font-bold text-sm text-text truncate">{h.title}</span>
@@ -2879,12 +2879,12 @@ const TautulliGraphsTab: React.FC = () => {
         return null;
     }
 
-    const { 
-        get_plays_by_date, 
-        get_plays_by_dayofweek, 
-        get_plays_by_hourofday, 
-        get_plays_by_stream_type, 
-        get_plays_by_stream_resolution, 
+    const {
+        get_plays_by_date,
+        get_plays_by_dayofweek,
+        get_plays_by_hourofday,
+        get_plays_by_stream_type,
+        get_plays_by_stream_resolution,
         get_plays_by_top_10_platforms,
         get_concurrent_streams_by_stream_type,
         get_plays_by_source_resolution,
@@ -2932,7 +2932,7 @@ const TautulliGraphsTab: React.FC = () => {
     const dailyData = parseDateData(get_plays_by_date);
     const dayOfWeekData = parseDateData(get_plays_by_dayofweek);
     const hourOfDayData = parseDateData(get_plays_by_hourofday);
-    
+
     const streamTypeData = parseDateData(get_plays_by_stream_type);
     const streamTypeKeys = getSeriesKeys(get_plays_by_stream_type);
 
@@ -3222,7 +3222,7 @@ const AnalyticsDashboard: React.FC<{ isAdmin: boolean, sessionInfo: any }> = ({ 
             try {
                 const data = await apiFetch(`/api/plex/analytics?days=${days}`);
                 setAnalyticsData(data);
-                
+
                 try {
                     const tData = await apiFetch('/api/tautulli/stats');
                     setTautulliData(tData);
@@ -3260,294 +3260,294 @@ const AnalyticsDashboard: React.FC<{ isAdmin: boolean, sessionInfo: any }> = ({ 
                         <BarChart3 className="w-8 h-8 text-plex" />
                         Advanced Analytics
                     </h1>
-                        <div className="flex bg-black/40 rounded-lg p-1 border border-white/5 w-fit mt-4">
-                            <button onClick={() => setViewTab('overview')} className={`px-4 py-2 rounded-md text-sm font-bold uppercase tracking-wider transition-colors flex items-center gap-2 ${viewTab === 'overview' ? 'bg-plex text-white shadow-lg' : 'text-muted hover:text-white'}`}>
-                                <Activity className="w-4 h-4" /> Overview
-                            </button>
-                            <button onClick={() => setViewTab('graphs')} className={`px-4 py-2 rounded-md text-sm font-bold uppercase tracking-wider transition-colors flex items-center gap-2 ${viewTab === 'graphs' ? 'bg-plex text-white shadow-lg' : 'text-muted hover:text-white'}`}>
-                                <LucideLineChart className="w-4 h-4" /> Graphs
-                            </button>
-                        </div>
+                    <div className="flex bg-black/40 rounded-lg p-1 border border-white/5 w-fit mt-4">
+                        <button onClick={() => setViewTab('overview')} className={`px-4 py-2 rounded-md text-sm font-bold uppercase tracking-wider transition-colors flex items-center gap-2 ${viewTab === 'overview' ? 'bg-plex text-white shadow-lg' : 'text-muted hover:text-white'}`}>
+                            <Activity className="w-4 h-4" /> Overview
+                        </button>
+                        <button onClick={() => setViewTab('graphs')} className={`px-4 py-2 rounded-md text-sm font-bold uppercase tracking-wider transition-colors flex items-center gap-2 ${viewTab === 'graphs' ? 'bg-plex text-white shadow-lg' : 'text-muted hover:text-white'}`}>
+                            <LucideLineChart className="w-4 h-4" /> Graphs
+                        </button>
                     </div>
-                    {viewTab === 'overview' && (
-                        <div className="w-48">
-                            <CustomSelect
-                                value={days}
-                                onChange={(val) => setDays(val as string)}
-                                options={[
-                                    { label: 'Last 24 Hours', value: '1' },
-                                    { label: 'Last 7 Days', value: '7' },
-                                    { label: 'Last 30 Days', value: '30' },
-                                    { label: 'Last 60 Days', value: '60' },
-                                    { label: 'Last 1 Year', value: '365' },
-                                    { label: 'Last 5 Years', value: '1825' },
-                                    { label: 'All Time', value: 'all' }
-                                ]}
-                            />
-                        </div>
-                    )}
                 </div>
-
-                {viewTab === 'graphs' && <TautulliGraphsTab />}
-                
                 {viewTab === 'overview' && (
-                    <>
-                        {/* High Level Stats Overview */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                <div className="bg-card/50 backdrop-blur-md rounded-xl p-6 shadow-xl border border-border flex items-center gap-4">
-                    <div className="bg-plex/10 p-4 rounded-full">
-                        <PlaySquare className="text-plex w-8 h-8" />
+                    <div className="w-48">
+                        <CustomSelect
+                            value={days}
+                            onChange={(val) => setDays(val as string)}
+                            options={[
+                                { label: 'Last 24 Hours', value: '1' },
+                                { label: 'Last 7 Days', value: '7' },
+                                { label: 'Last 30 Days', value: '30' },
+                                { label: 'Last 60 Days', value: '60' },
+                                { label: 'Last 1 Year', value: '365' },
+                                { label: 'Last 5 Years', value: '1825' },
+                                { label: 'All Time', value: 'all' }
+                            ]}
+                        />
                     </div>
-                    <div>
-                        <p className="text-muted text-sm uppercase tracking-wider font-bold mb-1">Total Playbacks</p>
-                        <p className="text-2xl font-black text-text"><CountUp end={totalPlaybacks} /></p>
-                    </div>
-                </div>
-                <div className="bg-card/50 backdrop-blur-md rounded-xl p-6 shadow-xl border border-border flex items-center gap-4">
-                    <div className="bg-plex/10 p-4 rounded-full">
-                        <Users className="text-plex w-8 h-8" />
-                    </div>
-                    <div>
-                        <p className="text-muted text-sm uppercase tracking-wider font-bold mb-1">Unique Viewers</p>
-                        <p className="text-lg font-bold text-text truncate max-w-[150px]" title={String(topUsers.length)}>{topUsers.length}</p>
-                    </div>
-                </div>
-                <div className="bg-card/50 backdrop-blur-md rounded-xl p-6 shadow-xl border border-border flex items-center gap-4 col-span-1 sm:col-span-2">
-                    <div className="w-full h-full flex flex-col justify-center">
-                        <p className="text-muted text-sm uppercase tracking-wider font-bold mb-2 flex items-center gap-2"><Clock className="w-4 h-4 text-plex" /> Peak Viewing Hours</p>
-                        <div className="flex items-end gap-1 h-12 w-full mt-auto">
-                            {peakHours.map((val, idx) => (
-                                <div key={idx} className="flex-1 bg-plex opacity-20 hover:opacity-80 transition-opacity rounded-t-sm relative group" style={{ height: `${Math.max((val / maxPeakHour) * 100, 5)}%` }}>
-                                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 bg-black/80 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-10">
-                                        {idx === 0 ? '12 AM' : idx < 12 ? `${idx} AM` : idx === 12 ? '12 PM' : `${idx - 12} PM`}: {val} plays
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                        <div className="flex justify-between text-[10px] text-muted mt-1 font-mono">
-                            <span>12am</span><span>6am</span><span>12pm</span><span>6pm</span><span>11pm</span>
-                        </div>
-                    </div>
-                </div>
+                )}
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {viewTab === 'graphs' && <TautulliGraphsTab />}
 
-                {/* Top Users Card */}
-                <div className="bg-card/50 backdrop-blur-md rounded-xl p-4 md:p-6 shadow-xl border border-border lg:col-span-2">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
-                        <h2 className="text-xl font-bold text-text uppercase tracking-wider flex items-center gap-2 whitespace-nowrap"><Users className="text-plex w-5 h-5" /> Top Viewers</h2>
-                        <div className="relative w-full sm:w-auto flex-grow max-w-[250px] z-50">
-                            <input
-                                type="text"
-                                placeholder="Search all users..."
-                                value={searchQuery}
-                                onChange={(e) => {
-                                    setSearchQuery(e.target.value);
-                                    setIsSearching(e.target.value.length > 0);
-                                }}
-                                onFocus={() => {
-                                    if (searchQuery.length > 0) setIsSearching(true);
-                                }}
-                                onBlur={() => setTimeout(() => setIsSearching(false), 200)}
-                                className="w-full bg-black/40 border border-border rounded-lg px-3 py-2 text-sm text-text focus:outline-none focus:border-plex focus:ring-1 focus:ring-plex transition-all placeholder-muted/50"
-                            />
-                            {isSearching && searchQuery.length > 0 && (
-                                <div className="absolute top-full left-0 right-0 mt-2 bg-[#1e2329] border border-border rounded-lg shadow-2xl z-[100] max-h-60 overflow-y-auto custom-scrollbar">
-                                    {allUsers.filter(u => u.username.toLowerCase().includes(searchQuery.toLowerCase())).length > 0 ? (
-                                        allUsers.filter(u => u.username.toLowerCase().includes(searchQuery.toLowerCase())).map(u => (
-                                            <div
-                                                key={u.id}
-                                                className="px-3 py-2.5 hover:bg-white/10 cursor-pointer flex items-center gap-3 border-b border-white/5 last:border-0 transition-colors"
-                                                onClick={() => {
-                                                    setSelectedUser({ id: u.id, username: u.username, thumb: u.thumb || null });
-                                                    setSearchQuery('');
-                                                    setIsSearching(false);
-                                                }}
-                                            >
-                                                {u.thumb ? (
-                                                    <img src={u.thumb.startsWith('http') ? u.thumb : `/api/plex/image?path=${encodeURIComponent(u.thumb)}&width=32&height=32`} className="w-8 h-8 rounded-full object-cover border border-border flex-shrink-0" />
-                                                ) : (
-                                                    <div className="w-8 h-8 rounded-full bg-border flex items-center justify-center text-[10px] font-bold border border-border/50 flex-shrink-0">{u.username.substring(0, 2).toUpperCase()}</div>
-                                                )}
-                                                <span className="text-sm font-medium text-text truncate">{u.username}</span>
+            {viewTab === 'overview' && (
+                <>
+                    {/* High Level Stats Overview */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                        <div className="bg-card/50 backdrop-blur-md rounded-xl p-6 shadow-xl border border-border flex items-center gap-4">
+                            <div className="bg-plex/10 p-4 rounded-full">
+                                <PlaySquare className="text-plex w-8 h-8" />
+                            </div>
+                            <div>
+                                <p className="text-muted text-sm uppercase tracking-wider font-bold mb-1">Total Playbacks</p>
+                                <p className="text-2xl font-black text-text"><CountUp end={totalPlaybacks} /></p>
+                            </div>
+                        </div>
+                        <div className="bg-card/50 backdrop-blur-md rounded-xl p-6 shadow-xl border border-border flex items-center gap-4">
+                            <div className="bg-plex/10 p-4 rounded-full">
+                                <Users className="text-plex w-8 h-8" />
+                            </div>
+                            <div>
+                                <p className="text-muted text-sm uppercase tracking-wider font-bold mb-1">Unique Viewers</p>
+                                <p className="text-lg font-bold text-text truncate max-w-[150px]" title={String(topUsers.length)}>{topUsers.length}</p>
+                            </div>
+                        </div>
+                        <div className="bg-card/50 backdrop-blur-md rounded-xl p-6 shadow-xl border border-border flex items-center gap-4 col-span-1 sm:col-span-2">
+                            <div className="w-full h-full flex flex-col justify-center">
+                                <p className="text-muted text-sm uppercase tracking-wider font-bold mb-2 flex items-center gap-2"><Clock className="w-4 h-4 text-plex" /> Peak Viewing Hours</p>
+                                <div className="flex items-end gap-1 h-12 w-full mt-auto">
+                                    {peakHours.map((val, idx) => (
+                                        <div key={idx} className="flex-1 bg-plex opacity-20 hover:opacity-80 transition-opacity rounded-t-sm relative group" style={{ height: `${Math.max((val / maxPeakHour) * 100, 5)}%` }}>
+                                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 bg-black/80 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-10">
+                                                {idx === 0 ? '12 AM' : idx < 12 ? `${idx} AM` : idx === 12 ? '12 PM' : `${idx - 12} PM`}: {val} plays
                                             </div>
-                                        ))
-                                    ) : (
-                                        <div className="px-4 py-4 text-sm text-muted text-center italic">No users found</div>
+                                        </div>
+                                    ))}
+                                </div>
+                                <div className="flex justify-between text-[10px] text-muted mt-1 font-mono">
+                                    <span>12am</span><span>6am</span><span>12pm</span><span>6pm</span><span>11pm</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+                        {/* Top Users Card */}
+                        <div className="bg-card/50 backdrop-blur-md rounded-xl p-4 md:p-6 shadow-xl border border-border lg:col-span-2">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
+                                <h2 className="text-xl font-bold text-text uppercase tracking-wider flex items-center gap-2 whitespace-nowrap"><Users className="text-plex w-5 h-5" /> Top Viewers</h2>
+                                <div className="relative w-full sm:w-auto flex-grow max-w-[250px] z-50">
+                                    <input
+                                        type="text"
+                                        placeholder="Search all users..."
+                                        value={searchQuery}
+                                        onChange={(e) => {
+                                            setSearchQuery(e.target.value);
+                                            setIsSearching(e.target.value.length > 0);
+                                        }}
+                                        onFocus={() => {
+                                            if (searchQuery.length > 0) setIsSearching(true);
+                                        }}
+                                        onBlur={() => setTimeout(() => setIsSearching(false), 200)}
+                                        className="w-full bg-black/40 border border-border rounded-lg px-3 py-2 text-sm text-text focus:outline-none focus:border-plex focus:ring-1 focus:ring-plex transition-all placeholder-muted/50"
+                                    />
+                                    {isSearching && searchQuery.length > 0 && (
+                                        <div className="absolute top-full left-0 right-0 mt-2 bg-[#1e2329] border border-border rounded-lg shadow-2xl z-[100] max-h-60 overflow-y-auto custom-scrollbar">
+                                            {allUsers.filter(u => u.username.toLowerCase().includes(searchQuery.toLowerCase())).length > 0 ? (
+                                                allUsers.filter(u => u.username.toLowerCase().includes(searchQuery.toLowerCase())).map(u => (
+                                                    <div
+                                                        key={u.id}
+                                                        className="px-3 py-2.5 hover:bg-white/10 cursor-pointer flex items-center gap-3 border-b border-white/5 last:border-0 transition-colors"
+                                                        onClick={() => {
+                                                            setSelectedUser({ id: u.id, username: u.username, thumb: u.thumb || null });
+                                                            setSearchQuery('');
+                                                            setIsSearching(false);
+                                                        }}
+                                                    >
+                                                        {u.thumb ? (
+                                                            <img src={u.thumb.startsWith('http') ? u.thumb : `/api/plex/image?path=${encodeURIComponent(u.thumb)}&width=32&height=32`} className="w-8 h-8 rounded-full object-cover border border-border flex-shrink-0" />
+                                                        ) : (
+                                                            <div className="w-8 h-8 rounded-full bg-border flex items-center justify-center text-[10px] font-bold border border-border/50 flex-shrink-0">{u.username.substring(0, 2).toUpperCase()}</div>
+                                                        )}
+                                                        <span className="text-sm font-medium text-text truncate">{u.username}</span>
+                                                    </div>
+                                                ))
+                                            ) : (
+                                                <div className="px-4 py-4 text-sm text-muted text-center italic">No users found</div>
+                                            )}
+                                        </div>
                                     )}
                                 </div>
-                            )}
-                        </div>
-                    </div>
-                    <div className="flex flex-col gap-4">
-                        {topUsers.length === 0 ? <p className="text-muted text-sm">No data available.</p> : topUsers.map((user, idx) => (
-                            <div key={user.id} onClick={() => setSelectedUser({ id: user.id, username: user.username, thumb: user.thumb })} className="flex items-center justify-between p-3 bg-black/20 rounded-lg hover:bg-black/40 transition-colors cursor-pointer group hover:ring-1 hover:ring-plex">
-                                <div className="flex items-center gap-4">
-                                    <div className="relative">
-                                        <div className="w-10 h-10 rounded-full p-[2px] bg-gradient-to-r from-plex to-[#e5a00d]">
-                                            <img src={user.thumb ? (user.thumb.startsWith('http') ? user.thumb : `/api/plex/image?path=${encodeURIComponent(user.thumb)}&width=80&height=80`) : '/static/logo.png'} alt={user.username} className="w-full h-full rounded-full object-cover bg-card" onError={(e) => { (e.target as HTMLImageElement).src = '/static/logo.png'; }} />
-                                        </div>
-                                        <div className="absolute -top-2 -right-2 bg-plex text-black font-bold text-[10px] w-5 h-5 rounded-full flex items-center justify-center">#{idx + 1}</div>
-                                    </div>
-                                    <span className="font-bold text-text group-hover:text-plex transition-colors">{user.username}</span>
-                                </div>
-                                <span className="font-mono text-plex font-bold">{user.plays} plays</span>
                             </div>
-                        ))}
-                    </div>
-                </div>
-
-                {/* Top Devices & Libraries Container */}
-                <div className="flex flex-col gap-6 lg:col-span-1">
-                    {/* Popular Libraries Card */}
-                    <div className="bg-card/50 backdrop-blur-md rounded-xl p-4 md:p-6 shadow-xl border border-border">
-                        <h2 className="text-xl font-bold text-text mb-4 uppercase tracking-wider flex items-center gap-2"><PlaySquare className="text-plex w-5 h-5" /> Popular Libraries</h2>
-                        <div className="flex flex-col gap-5 mt-2">
-                            {topLibraries.length === 0 ? <p className="text-muted text-sm">No data available.</p> : topLibraries.map((lib, idx) => (
-                                <div key={lib.id} className="flex flex-col gap-2">
-                                    <div className="flex justify-between items-end">
-                                        <span className="font-bold text-text flex items-center gap-2"><span className="text-muted text-xs">#{idx + 1}</span> {lib.title}</span>
-                                        <span className="text-xs text-muted font-mono">{lib.plays} plays</span>
-                                    </div>
-                                    <div className="h-2 w-full bg-black/40 rounded-full overflow-hidden">
-                                        <div className="h-full bg-gradient-to-r from-plex to-[#e5a00d] rounded-full" style={{ width: `${(lib.plays / maxLibraryPlays) * 100}%` }}></div>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* Top Devices Card */}
-                    {topDevices && topDevices.length > 0 && (
-                        <div className="bg-card/50 backdrop-blur-md rounded-xl p-4 md:p-6 shadow-xl border border-border mt-6">
-                            <h2 className="text-xl font-bold text-text mb-4 uppercase tracking-wider flex items-center gap-2"><MonitorSmartphone className="text-plex w-5 h-5" /> Top Devices</h2>
                             <div className="flex flex-col gap-4">
-                                {topDevices.slice(0, 5).map((device: any, idx: number) => (
-                                    <div key={idx} className="flex flex-col gap-1.5">
-                                        <div className="flex justify-between items-end">
-                                            <span className="font-bold text-sm text-text truncate pr-2 flex items-center gap-2">
-                                                <span className="text-muted text-xs">#{idx + 1}</span> {device.name || 'Unknown Device'}
-                                            </span>
-                                            <span className="text-xs text-muted font-mono flex-shrink-0">{device.plays} plays</span>
+                                {topUsers.length === 0 ? <p className="text-muted text-sm">No data available.</p> : topUsers.map((user, idx) => (
+                                    <div key={user.id} onClick={() => setSelectedUser({ id: user.id, username: user.username, thumb: user.thumb })} className="flex items-center justify-between p-3 bg-black/20 rounded-lg hover:bg-black/40 transition-colors cursor-pointer group hover:ring-1 hover:ring-plex">
+                                        <div className="flex items-center gap-4">
+                                            <div className="relative">
+                                                <div className="w-10 h-10 rounded-full p-[2px] bg-gradient-to-r from-plex to-[#e5a00d]">
+                                                    <img src={user.thumb ? (user.thumb.startsWith('http') ? user.thumb : `/api/plex/image?path=${encodeURIComponent(user.thumb)}&width=80&height=80`) : '/static/logo.png'} alt={user.username} className="w-full h-full rounded-full object-cover bg-card" onError={(e) => { (e.target as HTMLImageElement).src = '/static/logo.png'; }} />
+                                                </div>
+                                                <div className="absolute -top-2 -right-2 bg-plex text-black font-bold text-[10px] w-5 h-5 rounded-full flex items-center justify-center">#{idx + 1}</div>
+                                            </div>
+                                            <span className="font-bold text-text group-hover:text-plex transition-colors">{user.username}</span>
                                         </div>
-                                        <div className="h-1.5 w-full bg-black/40 rounded-full overflow-hidden">
-                                            <div className="h-full bg-gradient-to-r from-blue-600 to-blue-400 rounded-full shadow-[0_0_8px_rgba(59,130,246,0.5)] transition-all duration-1000" style={{ width: `${(device.plays / Math.max(maxDevicePlays, 1)) * 100}%` }}></div>
-                                        </div>
+                                        <span className="font-mono text-plex font-bold">{user.plays} plays</span>
                                     </div>
                                 ))}
                             </div>
                         </div>
-                    )}
-                </div>
 
-                {/* Tautulli Insights Card */}
-                {tautulliData && (
-                    <div className="bg-card/50 backdrop-blur-md rounded-xl p-4 md:p-6 shadow-xl border border-border col-span-full relative overflow-hidden">
-                        <div className="absolute top-0 right-0 p-3 opacity-10 pointer-events-none">
-                            <Activity className="w-32 h-32 text-[#3b82f6]" />
-                        </div>
-                        <h2 className="text-xl font-bold text-text mb-6 uppercase tracking-wider flex items-center gap-2 relative z-10"><Activity className="text-[#3b82f6] w-5 h-5" /> Tautulli All-Time Insights</h2>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 relative z-10">
-                            <div className="flex flex-col p-4 bg-black/20 rounded-lg border border-white/5 shadow-inner">
-                                <span className="font-bold text-muted text-xs uppercase tracking-wider mb-2 flex items-center gap-2"><Users className="w-4 h-4 text-[#3b82f6]" /> Peak Streams</span>
-                                <span className="font-mono font-black text-[#3b82f6] text-3xl">{tautulliData.streamsRecord || 0}</span>
-                            </div>
-                            <div className="flex flex-col p-4 bg-black/20 rounded-lg border border-white/5 shadow-inner">
-                                <span className="font-bold text-muted text-xs uppercase tracking-wider mb-2 flex items-center gap-2"><Clock className="w-4 h-4 text-green-400" /> Watch Time</span>
-                                <span className="font-mono font-black text-green-400 text-sm xl:text-lg leading-tight mt-auto">{tautulliData.totalTimeStr || '0 hrs'}</span>
-                            </div>
-                            <div className="flex flex-col p-4 bg-black/20 rounded-lg border border-white/5 shadow-inner">
-                                <span className="font-bold text-muted text-xs uppercase tracking-wider mb-2 flex items-center gap-2"><PlaySquare className="w-4 h-4 text-purple-400" /> TV Shows Played</span>
-                                <span className="font-mono font-black text-purple-400 text-3xl">{tautulliData.tvPlays ? tautulliData.tvPlays.toLocaleString() : 0}</span>
-                            </div>
-                            <div className="flex flex-col p-4 bg-black/20 rounded-lg border border-white/5 shadow-inner">
-                                <span className="font-bold text-muted text-xs uppercase tracking-wider mb-2 flex items-center gap-2"><Film className="w-4 h-4 text-red-400" /> Movies Played</span>
-                                <span className="font-mono font-black text-red-400 text-3xl">{tautulliData.moviePlays ? tautulliData.moviePlays.toLocaleString() : 0}</span>
-                            </div>
-                            <div className="flex flex-col p-4 bg-black/20 rounded-lg border border-white/5 shadow-inner">
-                                <span className="font-bold text-muted text-xs uppercase tracking-wider mb-2 flex items-center gap-2"><Monitor className="w-4 h-4 text-cyan-400" /> Peak Direct Plays</span>
-                                <span className="font-mono font-black text-cyan-400 text-3xl">{tautulliData.directPlayRecord || 0}</span>
-                            </div>
-                            <div className="flex flex-col p-4 bg-black/20 rounded-lg border border-white/5 shadow-inner">
-                                <span className="font-bold text-muted text-xs uppercase tracking-wider mb-2 flex items-center gap-2"><Activity className="w-4 h-4 text-orange-400" /> Peak Direct Streams</span>
-                                <span className="font-mono font-black text-orange-400 text-3xl">{tautulliData.directStreamRecord || 0}</span>
-                            </div>
-                            <div className="flex flex-col p-4 bg-black/20 rounded-lg border border-white/5 shadow-inner">
-                                <span className="font-bold text-muted text-xs uppercase tracking-wider mb-2 flex items-center gap-2"><Settings className="w-4 h-4 text-rose-400" /> Peak Transcodes</span>
-                                <span className="font-mono font-black text-rose-400 text-3xl">{tautulliData.transcodeRecord || 0}</span>
-                            </div>
-                            <div className="flex flex-col p-4 bg-black/20 rounded-lg border border-white/5 shadow-inner">
-                                <span className="font-bold text-muted text-xs uppercase tracking-wider mb-2 flex items-center gap-2"><Music className="w-4 h-4 text-yellow-400" /> Music Played</span>
-                                <span className="font-mono font-black text-yellow-400 text-3xl">{tautulliData.musicPlays ? tautulliData.musicPlays.toLocaleString() : 0}</span>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {/* Trending Content Card */}
-                <div className="bg-card/50 backdrop-blur-md rounded-xl p-4 md:p-6 shadow-xl border border-border col-span-full">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
-                        <h2 className="text-xl font-bold text-text uppercase tracking-wider flex items-center gap-2"><TrendingUp className="text-plex w-5 h-5" /> Trending Content</h2>
-                        <div className="flex items-center gap-2 bg-black/30 p-1 rounded-lg border border-border">
-                            <button onClick={() => setContentTab('movies')} className={`px-4 py-1.5 rounded-md text-sm font-bold transition-all ${contentTab === 'movies' ? 'bg-plex text-black shadow-md' : 'text-muted hover:text-text hover:bg-white/5'}`}>Movies</button>
-                            <button onClick={() => setContentTab('shows')} className={`px-4 py-1.5 rounded-md text-sm font-bold transition-all ${contentTab === 'shows' ? 'bg-plex text-black shadow-md' : 'text-muted hover:text-text hover:bg-white/5'}`}>TV Shows</button>
-                            <button onClick={() => setContentTab('music')} className={`px-4 py-1.5 rounded-md text-sm font-bold transition-all ${contentTab === 'music' ? 'bg-plex text-black shadow-md' : 'text-muted hover:text-text hover:bg-white/5'}`}>Music</button>
-                        </div>
-                    </div>
-                    <div className="flex flex-col gap-4">
-                        {activeContent.length === 0 ? <p className="text-muted text-sm col-span-full">No data available.</p> : activeContent.slice(0, 10).map((item, idx) => (
-                            <a key={item.key} href={item.plexUrl} target="_blank" rel="noreferrer" className="flex flex-col sm:flex-row bg-black/20 rounded-xl overflow-hidden hover:bg-black/40 transition-all cursor-pointer group hover:ring-1 hover:ring-plex shadow-md">
-                                <div className="sm:w-32 lg:w-40 flex-shrink-0 aspect-[2/3] relative">
-                                    {item.thumbUrl ? (
-                                        <img src={item.thumbUrl} alt={item.title} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
-                                    ) : (
-                                        <div className="w-full h-full flex items-center justify-center bg-black/40"><Film className="w-8 h-8 opacity-50 text-muted" /></div>
-                                    )}
-                                    <div className="absolute top-2 left-2 bg-plex text-black font-bold text-xs px-2 py-1 rounded-md shadow-lg drop-shadow-md">#{idx + 1}</div>
-                                </div>
-                                <div className="p-4 sm:p-5 flex flex-col justify-between flex-grow">
-                                    <div>
-                                        <div className="flex items-start justify-between gap-2 mb-2">
-                                            <h3 className="text-lg sm:text-xl font-bold text-text group-hover:text-plex transition-colors line-clamp-1">{item.title}</h3>
-                                            <div className="flex items-center gap-1 bg-white/10 px-2 py-1 rounded-md text-xs font-mono text-plex flex-shrink-0 whitespace-nowrap shadow-sm">
-                                                <PlaySquare className="w-3 h-3" /> {item.plays} plays
+                        {/* Top Devices & Libraries Container */}
+                        <div className="flex flex-col gap-6 lg:col-span-1">
+                            {/* Popular Libraries Card */}
+                            <div className="bg-card/50 backdrop-blur-md rounded-xl p-4 md:p-6 shadow-xl border border-border">
+                                <h2 className="text-xl font-bold text-text mb-4 uppercase tracking-wider flex items-center gap-2"><PlaySquare className="text-plex w-5 h-5" /> Popular Libraries</h2>
+                                <div className="flex flex-col gap-5 mt-2">
+                                    {topLibraries.length === 0 ? <p className="text-muted text-sm">No data available.</p> : topLibraries.map((lib, idx) => (
+                                        <div key={lib.id} className="flex flex-col gap-2">
+                                            <div className="flex justify-between items-end">
+                                                <span className="font-bold text-text flex items-center gap-2"><span className="text-muted text-xs">#{idx + 1}</span> {lib.title}</span>
+                                                <span className="text-xs text-muted font-mono">{lib.plays} plays</span>
+                                            </div>
+                                            <div className="h-2 w-full bg-black/40 rounded-full overflow-hidden">
+                                                <div className="h-full bg-gradient-to-r from-plex to-[#e5a00d] rounded-full" style={{ width: `${(lib.plays / maxLibraryPlays) * 100}%` }}></div>
                                             </div>
                                         </div>
-                                        <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-xs text-muted mb-3 font-medium">
-                                            {item.year && <span>{item.year}</span>}
-                                            {item.year && (item.contentRating || item.rating || item.duration > 0 || (item.genres && item.genres.length > 0)) && <span className="opacity-50">&bull;</span>}
-                                            {item.contentRating && <span>{item.contentRating}</span>}
-                                            {item.contentRating && (item.rating || item.duration > 0 || (item.genres && item.genres.length > 0)) && <span className="opacity-50">&bull;</span>}
-                                            {item.duration > 0 && <span>{Math.round(item.duration / 60000)} min</span>}
-                                            {item.duration > 0 && item.rating && <span className="opacity-50">&bull;</span>}
-                                            {item.rating && (
-                                                <span className="flex items-center gap-1 text-yellow-500">
-                                                    <Star className="w-3 h-3 fill-current" /> {item.rating}
-                                                </span>
-                                            )}
-                                        </div>
-                                        <p className="text-sm text-text/80 line-clamp-2 sm:line-clamp-3 mb-3 leading-relaxed">
-                                            {item.summary || "No summary available."}
-                                        </p>
-                                    </div>
-                                    {item.genres && item.genres.length > 0 && (
-                                        <div className="flex flex-wrap gap-2 mt-auto">
-                                            {item.genres.slice(0, 4).map((g: string, i: number) => (
-                                                <span key={i} className="text-[10px] uppercase tracking-wider bg-white/5 border border-white/10 text-muted px-2 py-1 rounded-full shadow-sm">{g}</span>
-                                            ))}
-                                            {item.genres.length > 4 && (
-                                                <span className="text-[10px] uppercase tracking-wider bg-white/5 border border-white/10 text-muted px-2 py-1 rounded-full shadow-sm">+{item.genres.length - 4}</span>
-                                            )}
-                                        </div>
-                                    )}
+                                    ))}
                                 </div>
-                            </a>
-                        ))}
+                            </div>
+
+                            {/* Top Devices Card */}
+                            {topDevices && topDevices.length > 0 && (
+                                <div className="bg-card/50 backdrop-blur-md rounded-xl p-4 md:p-6 shadow-xl border border-border mt-6">
+                                    <h2 className="text-xl font-bold text-text mb-4 uppercase tracking-wider flex items-center gap-2"><MonitorSmartphone className="text-plex w-5 h-5" /> Top Devices</h2>
+                                    <div className="flex flex-col gap-4">
+                                        {topDevices.slice(0, 5).map((device: any, idx: number) => (
+                                            <div key={idx} className="flex flex-col gap-1.5">
+                                                <div className="flex justify-between items-end">
+                                                    <span className="font-bold text-sm text-text truncate pr-2 flex items-center gap-2">
+                                                        <span className="text-muted text-xs">#{idx + 1}</span> {device.name || 'Unknown Device'}
+                                                    </span>
+                                                    <span className="text-xs text-muted font-mono flex-shrink-0">{device.plays} plays</span>
+                                                </div>
+                                                <div className="h-1.5 w-full bg-black/40 rounded-full overflow-hidden">
+                                                    <div className="h-full bg-gradient-to-r from-blue-600 to-blue-400 rounded-full shadow-[0_0_8px_rgba(59,130,246,0.5)] transition-all duration-1000" style={{ width: `${(device.plays / Math.max(maxDevicePlays, 1)) * 100}%` }}></div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Tautulli Insights Card */}
+                        {tautulliData && (
+                            <div className="bg-card/50 backdrop-blur-md rounded-xl p-4 md:p-6 shadow-xl border border-border col-span-full relative overflow-hidden">
+                                <div className="absolute top-0 right-0 p-3 opacity-10 pointer-events-none">
+                                    <Activity className="w-32 h-32 text-[#3b82f6]" />
+                                </div>
+                                <h2 className="text-xl font-bold text-text mb-6 uppercase tracking-wider flex items-center gap-2 relative z-10"><Activity className="text-[#3b82f6] w-5 h-5" /> Tautulli All-Time Insights</h2>
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 relative z-10">
+                                    <div className="flex flex-col p-4 bg-black/20 rounded-lg border border-white/5 shadow-inner">
+                                        <span className="font-bold text-muted text-xs uppercase tracking-wider mb-2 flex items-center gap-2"><Users className="w-4 h-4 text-[#3b82f6]" /> Peak Streams</span>
+                                        <span className="font-mono font-black text-[#3b82f6] text-3xl">{tautulliData.streamsRecord || 0}</span>
+                                    </div>
+                                    <div className="flex flex-col p-4 bg-black/20 rounded-lg border border-white/5 shadow-inner">
+                                        <span className="font-bold text-muted text-xs uppercase tracking-wider mb-2 flex items-center gap-2"><Clock className="w-4 h-4 text-green-400" /> Watch Time</span>
+                                        <span className="font-mono font-black text-green-400 text-sm xl:text-lg leading-tight mt-auto">{tautulliData.totalTimeStr || '0 hrs'}</span>
+                                    </div>
+                                    <div className="flex flex-col p-4 bg-black/20 rounded-lg border border-white/5 shadow-inner">
+                                        <span className="font-bold text-muted text-xs uppercase tracking-wider mb-2 flex items-center gap-2"><PlaySquare className="w-4 h-4 text-purple-400" /> TV Shows Played</span>
+                                        <span className="font-mono font-black text-purple-400 text-3xl">{tautulliData.tvPlays ? tautulliData.tvPlays.toLocaleString() : 0}</span>
+                                    </div>
+                                    <div className="flex flex-col p-4 bg-black/20 rounded-lg border border-white/5 shadow-inner">
+                                        <span className="font-bold text-muted text-xs uppercase tracking-wider mb-2 flex items-center gap-2"><Film className="w-4 h-4 text-red-400" /> Movies Played</span>
+                                        <span className="font-mono font-black text-red-400 text-3xl">{tautulliData.moviePlays ? tautulliData.moviePlays.toLocaleString() : 0}</span>
+                                    </div>
+                                    <div className="flex flex-col p-4 bg-black/20 rounded-lg border border-white/5 shadow-inner">
+                                        <span className="font-bold text-muted text-xs uppercase tracking-wider mb-2 flex items-center gap-2"><Monitor className="w-4 h-4 text-cyan-400" /> Peak Direct Plays</span>
+                                        <span className="font-mono font-black text-cyan-400 text-3xl">{tautulliData.directPlayRecord || 0}</span>
+                                    </div>
+                                    <div className="flex flex-col p-4 bg-black/20 rounded-lg border border-white/5 shadow-inner">
+                                        <span className="font-bold text-muted text-xs uppercase tracking-wider mb-2 flex items-center gap-2"><Activity className="w-4 h-4 text-orange-400" /> Peak Direct Streams</span>
+                                        <span className="font-mono font-black text-orange-400 text-3xl">{tautulliData.directStreamRecord || 0}</span>
+                                    </div>
+                                    <div className="flex flex-col p-4 bg-black/20 rounded-lg border border-white/5 shadow-inner">
+                                        <span className="font-bold text-muted text-xs uppercase tracking-wider mb-2 flex items-center gap-2"><Settings className="w-4 h-4 text-rose-400" /> Peak Transcodes</span>
+                                        <span className="font-mono font-black text-rose-400 text-3xl">{tautulliData.transcodeRecord || 0}</span>
+                                    </div>
+                                    <div className="flex flex-col p-4 bg-black/20 rounded-lg border border-white/5 shadow-inner">
+                                        <span className="font-bold text-muted text-xs uppercase tracking-wider mb-2 flex items-center gap-2"><Music className="w-4 h-4 text-yellow-400" /> Music Played</span>
+                                        <span className="font-mono font-black text-yellow-400 text-3xl">{tautulliData.musicPlays ? tautulliData.musicPlays.toLocaleString() : 0}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Trending Content Card */}
+                        <div className="bg-card/50 backdrop-blur-md rounded-xl p-4 md:p-6 shadow-xl border border-border col-span-full">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
+                                <h2 className="text-xl font-bold text-text uppercase tracking-wider flex items-center gap-2"><TrendingUp className="text-plex w-5 h-5" /> Trending Content</h2>
+                                <div className="flex items-center gap-2 bg-black/30 p-1 rounded-lg border border-border">
+                                    <button onClick={() => setContentTab('movies')} className={`px-4 py-1.5 rounded-md text-sm font-bold transition-all ${contentTab === 'movies' ? 'bg-plex text-black shadow-md' : 'text-muted hover:text-text hover:bg-white/5'}`}>Movies</button>
+                                    <button onClick={() => setContentTab('shows')} className={`px-4 py-1.5 rounded-md text-sm font-bold transition-all ${contentTab === 'shows' ? 'bg-plex text-black shadow-md' : 'text-muted hover:text-text hover:bg-white/5'}`}>TV Shows</button>
+                                    <button onClick={() => setContentTab('music')} className={`px-4 py-1.5 rounded-md text-sm font-bold transition-all ${contentTab === 'music' ? 'bg-plex text-black shadow-md' : 'text-muted hover:text-text hover:bg-white/5'}`}>Music</button>
+                                </div>
+                            </div>
+                            <div className="flex flex-col gap-4">
+                                {activeContent.length === 0 ? <p className="text-muted text-sm col-span-full">No data available.</p> : activeContent.slice(0, 10).map((item, idx) => (
+                                    <a key={item.key} href={item.plexUrl} target="_blank" rel="noreferrer" className="flex flex-col sm:flex-row bg-black/20 rounded-xl overflow-hidden hover:bg-black/40 transition-all cursor-pointer group hover:ring-1 hover:ring-plex shadow-md">
+                                        <div className="sm:w-32 lg:w-40 flex-shrink-0 aspect-[2/3] relative">
+                                            {item.thumbUrl ? (
+                                                <img src={item.thumbUrl} alt={item.title} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                                            ) : (
+                                                <div className="w-full h-full flex items-center justify-center bg-black/40"><Film className="w-8 h-8 opacity-50 text-muted" /></div>
+                                            )}
+                                            <div className="absolute top-2 left-2 bg-plex text-black font-bold text-xs px-2 py-1 rounded-md shadow-lg drop-shadow-md">#{idx + 1}</div>
+                                        </div>
+                                        <div className="p-4 sm:p-5 flex flex-col justify-between flex-grow">
+                                            <div>
+                                                <div className="flex items-start justify-between gap-2 mb-2">
+                                                    <h3 className="text-lg sm:text-xl font-bold text-text group-hover:text-plex transition-colors line-clamp-1">{item.title}</h3>
+                                                    <div className="flex items-center gap-1 bg-white/10 px-2 py-1 rounded-md text-xs font-mono text-plex flex-shrink-0 whitespace-nowrap shadow-sm">
+                                                        <PlaySquare className="w-3 h-3" /> {item.plays} plays
+                                                    </div>
+                                                </div>
+                                                <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-xs text-muted mb-3 font-medium">
+                                                    {item.year && <span>{item.year}</span>}
+                                                    {item.year && (item.contentRating || item.rating || item.duration > 0 || (item.genres && item.genres.length > 0)) && <span className="opacity-50">&bull;</span>}
+                                                    {item.contentRating && <span>{item.contentRating}</span>}
+                                                    {item.contentRating && (item.rating || item.duration > 0 || (item.genres && item.genres.length > 0)) && <span className="opacity-50">&bull;</span>}
+                                                    {item.duration > 0 && <span>{Math.round(item.duration / 60000)} min</span>}
+                                                    {item.duration > 0 && item.rating && <span className="opacity-50">&bull;</span>}
+                                                    {item.rating && (
+                                                        <span className="flex items-center gap-1 text-yellow-500">
+                                                            <Star className="w-3 h-3 fill-current" /> {item.rating}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <p className="text-sm text-text/80 line-clamp-2 sm:line-clamp-3 mb-3 leading-relaxed">
+                                                    {item.summary || "No summary available."}
+                                                </p>
+                                            </div>
+                                            {item.genres && item.genres.length > 0 && (
+                                                <div className="flex flex-wrap gap-2 mt-auto">
+                                                    {item.genres.slice(0, 4).map((g: string, i: number) => (
+                                                        <span key={i} className="text-[10px] uppercase tracking-wider bg-white/5 border border-white/10 text-muted px-2 py-1 rounded-full shadow-sm">{g}</span>
+                                                    ))}
+                                                    {item.genres.length > 4 && (
+                                                        <span className="text-[10px] uppercase tracking-wider bg-white/5 border border-white/10 text-muted px-2 py-1 rounded-full shadow-sm">+{item.genres.length - 4}</span>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </a>
+                                ))}
+                            </div>
+                        </div>
                     </div>
-                </div>
-            </div>
-            </>
+                </>
             )}
             {selectedUser && (
                 <UserAnalyticsModal
@@ -4712,18 +4712,17 @@ const WrapUpModal: React.FC<{ metric: string; analytics: any; days: number | str
                                 <p className="text-left text-xs uppercase tracking-widest font-bold text-muted mb-3 border-b border-white/10 pb-2">Your Leaderboard Position</p>
                                 <div className="flex flex-col gap-1.5">
                                     {neighbourhood.map((u: any, i: number) => (
-                                        <div key={i} className={`flex items-center justify-between rounded-lg px-3 py-2.5 border transition-all ${
-                                            u.isMe
+                                        <div key={i} className={`flex items-center justify-between rounded-lg px-3 py-2.5 border transition-all ${u.isMe
                                                 ? 'bg-plex/15 border-plex/50 shadow-[0_0_12px_rgba(229,160,13,0.2)]'
                                                 : 'bg-white/5 border-white/5'
-                                        }`}>
+                                            }`}>
                                             <div className="flex items-center gap-3">
-                                                <span className={`font-black text-sm w-8 text-right ${ u.isMe ? 'text-plex' : 'text-gray-500' }`}>#{u.rank}</span>
-                                                <span className={`font-bold text-sm ${ u.isMe ? 'text-white' : 'text-gray-300' }`}>
+                                                <span className={`font-black text-sm w-8 text-right ${u.isMe ? 'text-plex' : 'text-gray-500'}`}>#{u.rank}</span>
+                                                <span className={`font-bold text-sm ${u.isMe ? 'text-white' : 'text-gray-300'}`}>
                                                     {u.isMe ? <span className="inline-flex items-center gap-1.5">{u.username} <span className="text-[9px] text-plex font-black uppercase tracking-widest bg-plex/20 px-1.5 py-0.5 rounded">You</span></span> : u.username}
                                                 </span>
                                             </div>
-                                            <span className={`text-xs font-black whitespace-nowrap ${ u.isMe ? 'text-plex' : 'text-gray-400' }`}>{u.plays} plays</span>
+                                            <span className={`text-xs font-black whitespace-nowrap ${u.isMe ? 'text-plex' : 'text-gray-400'}`}>{u.plays} plays</span>
                                         </div>
                                     ))}
                                 </div>
@@ -4836,14 +4835,14 @@ const WrapUpModal: React.FC<{ metric: string; analytics: any; days: number | str
                         ) : (
                             <Tv className="w-16 h-16 text-plex mb-6 drop-shadow-lg" />
                         )}
-                        
+
                         {analytics.topBinge?.summary && (
                             <div className="w-full mt-2 mb-4 bg-white/5 border border-white/5 rounded-lg p-4 text-left">
                                 <p className="text-gray-300 text-sm leading-relaxed">{analytics.topBinge.summary}</p>
                                 {analytics.topBinge.year && <span className="inline-block mt-3 text-xs font-black px-2 py-1 bg-black/40 rounded text-gray-400">{analytics.topBinge.year}</span>}
                             </div>
                         )}
-                        
+
                         {analytics.topShows && analytics.topShows.length > 1 ? (
                             <div className="w-full mt-2">
                                 <p className="text-left text-xs uppercase tracking-widest font-bold text-muted mb-3 border-b border-white/10 pb-2">Runner Ups</p>
@@ -4882,7 +4881,7 @@ const WrapUpModal: React.FC<{ metric: string; analytics: any; days: number | str
                         ) : (
                             <Clapperboard className="w-16 h-16 text-plex mb-6 drop-shadow-lg" />
                         )}
-                        
+
                         {analytics.topMovie?.summary && (
                             <div className="w-full mt-2 mb-4 bg-white/5 border border-white/5 rounded-lg p-4 text-left">
                                 {analytics.topMovie.tagline && <p className="italic text-plex text-xs mb-2 font-bold">"{analytics.topMovie.tagline}"</p>}
@@ -4890,7 +4889,7 @@ const WrapUpModal: React.FC<{ metric: string; analytics: any; days: number | str
                                 {analytics.topMovie.year && <span className="inline-block mt-3 text-xs font-black px-2 py-1 bg-black/40 rounded text-gray-400">{analytics.topMovie.year}</span>}
                             </div>
                         )}
-                        
+
                         {analytics.topMovies && analytics.topMovies.length > 1 ? (
                             <div className="w-full mt-2">
                                 <p className="text-left text-xs uppercase tracking-widest font-bold text-muted mb-3 border-b border-white/10 pb-2">Runner Ups</p>
@@ -4922,7 +4921,7 @@ const WrapUpModal: React.FC<{ metric: string; analytics: any; days: number | str
                         <Clock className="w-16 h-16 text-plex mb-4 drop-shadow-lg" />
                         <h2 className="text-3xl font-black text-white mb-2">{analytics.timeOfDay || 'Unknown'}</h2>
                         <p className="text-muted mb-6">You typically stream around {analytics.avgHour ? Math.round(analytics.avgHour) + ':00' : 'Unknown'}.</p>
-                        
+
                         <div className="w-full mt-2 mb-6">
                             <p className="text-left text-xs uppercase tracking-widest font-bold text-muted mb-3 border-b border-white/10 pb-2">24-Hour Heat Map</p>
                             <div className="w-full flex items-end justify-between h-24 gap-[2px] mt-4 px-1">
@@ -4932,11 +4931,11 @@ const WrapUpModal: React.FC<{ metric: string; analytics: any; days: number | str
                                     return (
                                         <div key={hour} className="flex flex-col items-center justify-end w-full h-full group relative">
                                             <div className={`w-full rounded-t-sm transition-all duration-500 relative flex items-end justify-center overflow-hidden
-                                                ${isTop ? 'bg-plex shadow-[0_0_10px_rgba(229,160,13,0.5)]' : 'bg-white/10 group-hover:bg-white/30'}`} 
+                                                ${isTop ? 'bg-plex shadow-[0_0_10px_rgba(229,160,13,0.5)]' : 'bg-white/10 group-hover:bg-white/30'}`}
                                                 style={{ height: `${Math.max(height, 2)}%` }}>
                                             </div>
                                             {hour % 6 === 0 && <span className="text-[8px] mt-1 font-bold text-muted absolute top-full pointer-events-none">{hour}h</span>}
-                                            
+
                                             <div className="absolute bottom-full mb-1 opacity-0 group-hover:opacity-100 bg-black/80 text-white text-[10px] px-1.5 py-0.5 rounded pointer-events-none whitespace-nowrap z-10 transition-opacity">
                                                 {count} plays at {hour}:00
                                             </div>
@@ -4972,7 +4971,7 @@ const WrapUpModal: React.FC<{ metric: string; analytics: any; days: number | str
                                 return (
                                     <div key={day} className="flex flex-col items-center justify-end w-full h-full group relative">
                                         <div className={`w-full rounded-t-md transition-all duration-500 relative flex items-end justify-center pb-1 overflow-hidden
-                                            ${isTop ? 'bg-gradient-to-t from-plex/80 to-plex shadow-[0_0_15px_rgba(229,160,13,0.3)]' : 'bg-gradient-to-t from-white/10 to-white/20 group-hover:from-white/20 group-hover:to-white/30'}`} 
+                                            ${isTop ? 'bg-gradient-to-t from-plex/80 to-plex shadow-[0_0_15px_rgba(229,160,13,0.3)]' : 'bg-gradient-to-t from-white/10 to-white/20 group-hover:from-white/20 group-hover:to-white/30'}`}
                                             style={{ height: `${Math.max(height, 8)}%` }}>
                                         </div>
                                         <span className={`text-[9px] mt-2 font-black uppercase tracking-wider ${isTop ? 'text-plex' : 'text-muted'}`}>{day}</span>
@@ -4992,7 +4991,7 @@ const WrapUpModal: React.FC<{ metric: string; analytics: any; days: number | str
                         <Layers className="w-16 h-16 text-plex mb-4 drop-shadow-lg shrink-0" />
                         <h2 className="text-3xl font-black text-white mb-2 line-clamp-1 shrink-0">{analytics.favoriteLibrary || 'None'}</h2>
                         <p className="text-muted mb-6 uppercase tracking-widest text-xs font-bold shrink-0">Library Breakdown</p>
-                        
+
                         <div className="w-full flex flex-col gap-3 overflow-y-auto pr-2 pb-2 custom-scrollbar">
                             {analytics.allLibraries?.map((lib: any, i: number) => {
                                 const percent = (lib.plays / maxLibPlays) * 100;
@@ -5026,10 +5025,10 @@ const WrapUpModal: React.FC<{ metric: string; analytics: any; days: number | str
                 const profileDesc = analytics.mediaPreference === 'Movie Buff'
                     ? 'You love the big screen experience. Movies are your go-to comfort.'
                     : analytics.mediaPreference === 'TV Show Binger'
-                    ? 'You\'re a serial binger — once you start a show, you see it through.'
-                    : analytics.mediaPreference === 'Music Lover'
-                    ? 'Music is your thing — you\'re always on the listening grind.'
-                    : 'You keep things varied. A bit of everything keeps it interesting.';
+                        ? 'You\'re a serial binger — once you start a show, you see it through.'
+                        : analytics.mediaPreference === 'Music Lover'
+                            ? 'Music is your thing — you\'re always on the listening grind.'
+                            : 'You keep things varied. A bit of everything keeps it interesting.';
 
                 return (
                     <div className="flex flex-col items-center justify-center text-center p-6">
@@ -5124,7 +5123,7 @@ const WrapUpModal: React.FC<{ metric: string; analytics: any; days: number | str
                         <Compass className="w-16 h-16 text-plex mb-4 drop-shadow-lg" />
                         <h2 className="text-3xl font-black text-white mb-2">{analytics.watchStyle || 'Unknown'}</h2>
                         <p className="text-muted mb-6 uppercase tracking-widest text-xs font-bold">Discovery vs Rewatch</p>
-                        
+
                         <div className="w-full relative h-4 rounded-full overflow-hidden flex shadow-inner bg-black/50 border border-white/10 mb-2 mt-2">
                             <div className="h-full bg-gradient-to-r from-plex to-orange-400 flex items-center justify-center transition-all duration-1000 shadow-[inset_0_0_20px_rgba(0,0,0,0.3)] relative overflow-hidden" style={{ width: `${((discoveryPlays) / Math.max(analytics.totalPlays || 1, 1)) * 100}%` }}>
                             </div>
@@ -5147,7 +5146,7 @@ const WrapUpModal: React.FC<{ metric: string; analytics: any; days: number | str
                                 <span className="text-[9px] text-plex/80 uppercase tracking-widest font-black">Unique Titles</span>
                             </div>
                         </div>
-                        
+
                         <p className="text-sm text-gray-300 italic bg-white/5 border border-white/10 rounded-lg px-4 py-3 w-full shadow-inner mb-4">
                             {analytics.watchStyle === 'Comfort Binger' ? 'You love returning to your favorite comfort shows.' :
                                 analytics.watchStyle === 'Loyal Fan' ? 'You stick around to finish what you start.' :
@@ -5184,7 +5183,7 @@ const WrapUpModal: React.FC<{ metric: string; analytics: any; days: number | str
                         <Coffee className="w-16 h-16 text-plex mb-4 drop-shadow-lg" />
                         <h2 className="text-3xl font-black text-white mb-2">{analytics.streamingHabit || 'Unknown'}</h2>
                         <p className="text-muted mb-8 uppercase tracking-widest text-xs font-bold">Weekday vs Weekend</p>
-                        
+
                         <div className="w-full relative h-16 rounded-2xl overflow-hidden flex shadow-inner bg-black/50 border border-white/10">
                             <div className="h-full bg-gradient-to-r from-blue-600 to-blue-400 flex items-center justify-center transition-all duration-1000 shadow-[inset_0_0_20px_rgba(0,0,0,0.3)] relative overflow-hidden group" style={{ width: `${((analytics.weekdayPlays || 0) / Math.max(analytics.totalPlays || 1, 1)) * 100}%` }}>
                                 {analytics.weekdayPlays > 0 && <span className="text-white font-black drop-shadow-md z-10 text-sm">WD</span>}
@@ -5750,19 +5749,19 @@ const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onLogout: 
                                 <div className="flex flex-col gap-3 mt-auto">
                                     {publicConfig.contactWhatsApp && (
                                         <a href={`https://wa.me/${publicConfig.contactWhatsApp}`} target="_blank" rel="noreferrer"
-                                        className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs transition-all border bg-[#25D366]/10 border-[#25D366]/30 text-[#25D366] hover:bg-[#25D366]/20">
+                                            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs transition-all border bg-[#25D366]/10 border-[#25D366]/30 text-[#25D366] hover:bg-[#25D366]/20">
                                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12.031 21.972c-1.63 0-3.21-.42-4.606-1.21l-5.111 1.34 1.36-4.972a9.92 9.92 0 0 1-1.34-4.978C2.334 6.64 6.685 2.28 12.031 2.28c5.344 0 9.697 4.36 9.697 9.872 0 5.512-4.353 9.82-9.697 9.82zm0-18.062c-4.47 0-8.115 3.65-8.115 8.13 0 1.48.39 2.92 1.12 4.19l-1.02 3.73 3.82-1a8.13 8.13 0 0 0 4.195 1.15c4.475 0 8.115-3.65 8.115-8.13s-3.64-8.07-8.115-8.07zm4.332 11.23c-.237-.12-1.405-.69-1.62-.77-.216-.08-.372-.12-.53.12-.158.24-.616.77-.754.93-.138.16-.276.18-.513.06-1.124-.55-2.062-1.28-2.812-2.19-.214-.26-.14-.4.08-.56.12-.08.27-.3.41-.45.14-.15.19-.25.28-.42.1-.17.05-.32 0-.44-.05-.12-.53-1.28-.73-1.75-.19-.46-.38-.4-.53-.41h-.45c-.16 0-.41.06-.63.3-.22.24-.85.83-.85 2.02 0 1.19.87 2.34.99 2.5.12.16 1.7 2.6 4.12 3.64 1.38.59 2.05.65 2.8.55.75-.1 1.4-.57 1.6-1.12.2-.55.2-.102.14-1.12-.06-.1-.22-.16-.46-.28z" /></svg>
                                             WhatsApp
                                         </a>
                                     )}
                                     {publicConfig.contactEmail && (
                                         <a href={`mailto:${publicConfig.contactEmail}`}
-                                        className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs transition-all border bg-white/5 border-white/10 text-text hover:bg-white/10">
+                                            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs transition-all border bg-white/5 border-white/10 text-text hover:bg-white/10">
                                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="16" x="2" y="4" rx="2" /><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" /></svg>
                                             Email
                                         </a>
                                     )}
-                                  </div>
+                                </div>
                             </div>
                         )}
 
@@ -6561,6 +6560,17 @@ const LibraryDashboard: React.FC<{ onBack: () => void, isAdmin?: boolean, public
         localStorage.setItem('discoverRecentLimit', String(recentLimit));
     }, [recentLimit]);
 
+    const fetchDashboardOnly = useCallback(async () => {
+        try {
+            const res = await apiFetch(`/api/plex/dashboard?limit=${recentLimit}`);
+            if (!res.error) {
+                setDashboardData(res);
+            }
+        } catch (err) {
+            // Ignore background polling errors
+        }
+    }, [recentLimit]);
+
     const fetchData = useCallback(async () => {
         try {
             const res = await apiFetch(`/api/plex/dashboard?limit=${recentLimit}`);
@@ -6580,9 +6590,9 @@ const LibraryDashboard: React.FC<{ onBack: () => void, isAdmin?: boolean, public
 
     useEffect(() => {
         fetchData();
-        const interval = setInterval(fetchData, 30000);
-        return () => clearInterval(interval);
-    }, [recentLimit]);
+        const liveInterval = setInterval(fetchDashboardOnly, 2500);
+        return () => clearInterval(liveInterval);
+    }, [fetchDashboardOnly, fetchData]);
 
     if (loading && !dashboardData) return <Loader isLoading={true} />;
 
@@ -6698,17 +6708,17 @@ const LibraryDashboard: React.FC<{ onBack: () => void, isAdmin?: boolean, public
                                             <div className="w-full h-5 bg-background/80 relative mt-auto z-10 overflow-hidden rounded-b-lg">
                                                 {/* Progress fill */}
                                                 <div className="h-full bg-plex absolute top-0 left-0 transition-all duration-1000 z-10" style={{ width: `${session.progress}%` }}></div>
-                                                
+
                                                 {/* Text visible on black background (white text) */}
-                                                <div 
+                                                <div
                                                     className="absolute inset-0 flex items-center justify-center text-[11px] font-bold text-white z-20 pointer-events-none whitespace-nowrap"
                                                     style={{ clipPath: `inset(0 0 0 ${session.progress}%)` }}
                                                 >
                                                     {progressBarText}
                                                 </div>
-                                                
+
                                                 {/* Text visible on yellow progress bar (black text) */}
-                                                <div 
+                                                <div
                                                     className="absolute inset-0 flex items-center justify-center text-[11px] font-bold text-black z-30 pointer-events-none whitespace-nowrap"
                                                     style={{ clipPath: `inset(0 ${100 - session.progress}% 0 0)` }}
                                                 >
