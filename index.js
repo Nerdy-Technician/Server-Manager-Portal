@@ -4129,6 +4129,19 @@ async function calculateAnalyticsStats() {
                 }
             });
 
+            // Ensure all known portal users appear in analytics, even with 0 plays.
+            users.forEach((u) => {
+                if (!u || !u.id) return;
+                if (!userCounts[u.id]) {
+                    userCounts[u.id] = {
+                        id: String(u.id),
+                        username: u.username || `User ${u.id}`,
+                        thumb: u.thumb || null,
+                        plays: 0
+                    };
+                }
+            });
+
             const topUsers = Object.values(userCounts).sort((a, b) => b.plays - a.plays);
             const topLibraries = Object.values(libraryCounts).sort((a, b) => b.plays - a.plays).slice(0, 10);
             const topDevices = Object.values(deviceCounts).sort((a, b) => b.plays - a.plays).slice(0, 10);
