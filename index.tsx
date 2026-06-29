@@ -1303,19 +1303,19 @@ const LibraryMaintenancePanel: React.FC<{ addToast: (m: string, t?: 'success' | 
                 </div>
             </div>
 
-            <div className="bg-black/20 border border-border rounded-xl p-3 text-xs text-muted">
+            <div className="bg-background/30 border border-white/5 rounded-xl p-3 text-xs text-muted">
                 Index: <span className="text-text font-semibold">{indexInfo?.itemCount || 0}</span> media items
                 {indexInfo?.generatedAt ? <> · Last build: <span className="text-text">{new Date(indexInfo.generatedAt).toLocaleString()}</span></> : null}
                 {' '}· Request records: <span className="text-text font-semibold">{indexInfo?.requestItemCount || 0}</span>
             </div>
 
-            <div className="bg-background border border-border rounded-xl p-4">
+            <div className="bg-card/50 backdrop-blur-md border border-white/5 rounded-xl p-4">
                 <p className="text-xs text-muted uppercase tracking-wider font-bold mb-3">Saved Filters</p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                     {rules.map((rule: any) => {
                         const preview = previewData.find((p: any) => p.ruleId === rule.id);
                         return (
-                            <div key={rule.id} className={`border rounded-lg p-3 transition-colors ${selectedRuleId === rule.id ? 'border-plex bg-plex/5' : 'border-border bg-black/20'}`}>
+                            <div key={rule.id} className={`border rounded-lg p-3 transition-colors ${selectedRuleId === rule.id ? 'border-plex bg-plex/5' : 'border-white/5 bg-background/30'}`}>
                                 <div className="flex items-start justify-between gap-2">
                                     <div>
                                         <p className="text-sm font-semibold text-text">{rule.name || 'Unnamed Rule'}</p>
@@ -1325,7 +1325,7 @@ const LibraryMaintenancePanel: React.FC<{ addToast: (m: string, t?: 'success' | 
                                         type="button"
                                         onClick={(e) => toggleRuleEnabled(rule.id, e)}
                                         disabled={togglingRuleId === rule.id}
-                                        className={`inline-flex items-center gap-2 px-2 py-1 rounded border text-[11px] font-semibold transition-colors disabled:opacity-60 ${rule.enabled !== false ? 'border-green-500/40 bg-green-500/10 text-green-300' : 'border-border bg-black/30 text-muted'}`}
+                                        className={`inline-flex items-center gap-2 px-2 py-1 rounded border text-[11px] font-semibold transition-colors disabled:opacity-60 ${rule.enabled !== false ? 'border-green-500/40 bg-green-500/10 text-green-300' : 'border-white/5 bg-background/30 text-muted'}`}
                                         title="Toggle filter enabled/disabled"
                                     >
                                         <span className={`relative inline-flex h-3.5 w-7 rounded-full transition-colors ${rule.enabled !== false ? 'bg-green-500/40' : 'bg-border'}`}>
@@ -1379,7 +1379,7 @@ const LibraryMaintenancePanel: React.FC<{ addToast: (m: string, t?: 'success' | 
             </div>
 
             {selectedRule && (
-                <div className="bg-background border border-border rounded-xl p-4 space-y-4 w-full">
+                <div className="bg-card/50 backdrop-blur-md border border-white/5 rounded-xl p-4 space-y-4 w-full">
                     <div className="flex items-end justify-between gap-3">
                         <div className="flex-1">
                             <label className="text-xs text-muted font-bold uppercase mb-1 block">Filter Name</label>
@@ -1440,7 +1440,7 @@ const LibraryMaintenancePanel: React.FC<{ addToast: (m: string, t?: 'success' | 
                         <button type="button" onClick={() => addCondition(selectedRule.id)} className="px-2 py-1 text-[11px] border border-border rounded-lg text-plex font-semibold">Add Filter Condition</button>
                     </div>
 
-                    <div className="bg-black/20 border border-border rounded-lg p-3">
+                    <div className="bg-background/30 border border-white/5 rounded-lg p-3">
                         <StyledCheckbox checked={pinCollectionOnDestructiveRun} onChange={setPinCollectionOnDestructiveRun} label="On destructive run, create collection and pin to home for all users" />
                     </div>
 
@@ -1455,7 +1455,7 @@ const LibraryMaintenancePanel: React.FC<{ addToast: (m: string, t?: 'success' | 
                 </div>
             )}
 
-            <div className="bg-background border border-border rounded-xl p-4">
+            <div className="bg-card/50 backdrop-blur-md border border-white/5 rounded-xl p-4">
                 <div className="flex items-center justify-between mb-3">
                     <h4 className="font-bold text-text">Matched Titles</h4>
                     <span className="text-xs px-2 py-1 rounded bg-plex/20 text-plex font-semibold">{selectedPreview?.totalMatches || 0} matches</span>
@@ -1465,7 +1465,7 @@ const LibraryMaintenancePanel: React.FC<{ addToast: (m: string, t?: 'success' | 
                 ) : (
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-7 xl:grid-cols-8 gap-3 max-h-[640px] overflow-y-auto custom-scrollbar pr-1">
                         {(selectedPreview?.sample || []).map((item: any) => (
-                            <div key={`${selectedRuleId}-${item.ratingKey}`} className="bg-black/20 border border-border rounded-lg overflow-hidden">
+                            <div key={`${selectedRuleId}-${item.ratingKey}`} className="bg-background/30 border border-white/5 rounded-lg overflow-hidden">
                                 <div className="aspect-[2/3] bg-black/40">
                                     {item.thumb ? (
                                         <img
@@ -9165,7 +9165,7 @@ const MaintenanceDashboard: React.FC = () => {
     }, [calendarEligibility, selectedCalendarDate]);
 
     const renderScaffoldPage = (title: string, description: string, bullets: string[]) => (
-        <div className="bg-background border border-border rounded-xl p-5">
+        <div className="bg-card/50 backdrop-blur-md border border-white/5 rounded-xl p-5">
             <h3 className="text-xl font-bold text-plex mb-2">{title}</h3>
             <p className="text-sm text-muted mb-4">{description}</p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -9187,8 +9187,8 @@ const MaintenanceDashboard: React.FC = () => {
             <header className="hidden md:flex items-center justify-between w-full mb-6 mt-2 md:mt-0">
                 <h1 className="text-xl md:text-3xl font-bold text-plex">Maintenance</h1>
             </header>
-            <div className="w-full flex flex-col p-2 md:p-8 bg-transparent md:bg-card rounded-none md:rounded-2xl border-0 md:border border-border shadow-none md:shadow-2xl">
-                <div className="md:hidden mb-3 px-2 md:px-0">
+            <div className="w-full flex flex-col p-0 md:p-8 bg-transparent md:bg-card/50 md:backdrop-blur-md rounded-none md:rounded-2xl border-0 md:border border-white/5 shadow-none md:shadow-2xl">
+                <div className="md:hidden mb-3">
                     <label className="text-[10px] text-muted font-bold uppercase tracking-wider mb-1 block">Module Page</label>
                     <CustomSelect
                         value={activeSection}
@@ -9199,7 +9199,7 @@ const MaintenanceDashboard: React.FC = () => {
                     />
                 </div>
                 <div className="md:grid md:grid-cols-[280px_minmax(0,1fr)] md:gap-6">
-                    <aside className="hidden md:block bg-black/20 border border-border rounded-xl p-3 h-fit sticky top-20">
+                    <aside className="hidden md:block bg-card/50 border border-white/5 rounded-xl p-3 h-fit sticky top-20 backdrop-blur-md">
                         <p className="text-muted text-xs uppercase tracking-wider font-bold mb-2 px-2">Module Pages</p>
                         <div className="space-y-1">
                             {sections.map((section) => (
@@ -9214,9 +9214,9 @@ const MaintenanceDashboard: React.FC = () => {
                             ))}
                         </div>
                     </aside>
-                    <div className="overflow-y-auto px-2 md:px-0 md:pr-2 flex-grow mb-4 custom-scrollbar space-y-4">
+                    <div className="overflow-y-auto flex-grow mb-4 custom-scrollbar space-y-4 md:pr-2">
                         {!maintenanceFeatureEnabled && (
-                            <div className="bg-background border border-yellow-500/30 rounded-xl p-5">
+                            <div className="bg-card/50 backdrop-blur-md border border-yellow-500/30 rounded-xl p-5">
                                 <h3 className="text-xl font-bold text-plex mb-2">Maintenance Disabled</h3>
                                 <p className="text-sm text-muted mb-3">Experimental Maintenance Mode is currently OFF.</p>
                                 <p className="text-xs text-muted">Enable it in `Settings` → `System` under `Maintenance Experimental Mode`, then click Save Settings.</p>
@@ -9233,55 +9233,55 @@ const MaintenanceDashboard: React.FC = () => {
                         <>
                         {activeSection === 'overview' && (
                             <div className="space-y-4">
-                                <div className="bg-background border border-border rounded-xl p-5">
+                                <div className="bg-card/50 backdrop-blur-md border border-white/5 rounded-xl p-5">
                                     <h3 className="text-xl font-bold text-plex mb-2">Maintenance Control Center</h3>
                                     <p className="text-sm text-muted mb-4">Dedicated top-level module for Maintainerr-style automation: rules, collections, candidates, execution timeline, overlays, calendar, storage, and governance.</p>
                                     <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                                        <div className="bg-black/20 rounded-lg p-3 border border-border">
+                                        <div className="bg-background/30 rounded-lg p-3 border border-white/5">
                                             <p className="text-xs text-muted">Indexed Media</p>
                                             <p className="text-2xl font-bold text-text">{overview?.itemCount || 0}</p>
                                         </div>
-                                        <div className="bg-black/20 rounded-lg p-3 border border-border">
+                                        <div className="bg-background/30 rounded-lg p-3 border border-white/5">
                                             <p className="text-xs text-muted">Request Records</p>
                                             <p className="text-2xl font-bold text-text">{overview?.requestItemCount || 0}</p>
                                         </div>
-                                        <div className="bg-black/20 rounded-lg p-3 border border-border">
+                                        <div className="bg-background/30 rounded-lg p-3 border border-white/5">
                                             <p className="text-xs text-muted">Rules with Matches</p>
                                             <p className="text-2xl font-bold text-text">{previewGroups.filter((p: any) => (p.totalMatches || 0) > 0).length}</p>
                                         </div>
-                                        <div className="bg-black/20 rounded-lg p-3 border border-border">
+                                        <div className="bg-background/30 rounded-lg p-3 border border-white/5">
                                             <p className="text-xs text-muted">Total Runs</p>
                                             <p className="text-2xl font-bold text-text">{runs.length}</p>
                                         </div>
                                     </div>
                                 </div>
-                                <div className="bg-background border border-border rounded-xl p-5 space-y-4">
+                                <div className="bg-card/50 backdrop-blur-md border border-white/5 rounded-xl p-5 space-y-4">
                                     <h4 className="font-bold text-text">Reclaim & Impact Overview</h4>
                                     <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                                        <div className="bg-black/20 rounded-lg p-3 border border-border">
+                                        <div className="bg-background/30 rounded-lg p-3 border border-white/5">
                                             <p className="text-xs text-muted">Total Matched (Rules Combined)</p>
                                             <p className="text-2xl font-bold text-text">{overviewInsights.totalMatches}</p>
                                         </div>
-                                        <div className="bg-black/20 rounded-lg p-3 border border-border">
+                                        <div className="bg-background/30 rounded-lg p-3 border border-white/5">
                                             <p className="text-xs text-muted">Unique Candidate Titles</p>
                                             <p className="text-2xl font-bold text-text">{overviewInsights.uniqueMatches}</p>
                                         </div>
-                                        <div className="bg-black/20 rounded-lg p-3 border border-border">
+                                        <div className="bg-background/30 rounded-lg p-3 border border-white/5">
                                             <p className="text-xs text-muted">Estimated Reclaim</p>
                                             <p className="text-2xl font-bold text-text">{formatReclaimSizeFromGB(overviewInsights.estimatedReclaimGB)}</p>
                                         </div>
-                                        <div className="bg-black/20 rounded-lg p-3 border border-border">
+                                        <div className="bg-background/30 rounded-lg p-3 border border-white/5">
                                             <p className="text-xs text-muted">Top Impact Library</p>
                                             <p className="text-sm font-bold text-text line-clamp-2">{overviewInsights.libraries[0]?.libraryTitle || '—'}</p>
                                             <p className="text-xs text-muted mt-1">{overviewInsights.libraries[0] ? formatReclaimSizeFromGB(overviewInsights.libraries[0].reclaimGB) : 'No data'}</p>
                                         </div>
                                     </div>
                                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                                        <div className="bg-black/20 rounded-lg p-3 border border-border">
+                                        <div className="bg-background/30 rounded-lg p-3 border border-white/5">
                                             <p className="text-xs text-muted font-bold uppercase tracking-wider mb-2">Top Libraries by Reclaim</p>
                                             <div className="space-y-1.5 max-h-52 overflow-y-auto custom-scrollbar pr-1">
                                                 {overviewInsights.libraries.slice(0, 8).map((lib) => (
-                                                    <div key={`overview-lib-${lib.libraryTitle}`} className="flex items-center justify-between text-xs bg-black/20 border border-border rounded px-2 py-1.5">
+                                                    <div key={`overview-lib-${lib.libraryTitle}`} className="flex items-center justify-between text-xs bg-background/30 border border-white/5 rounded px-2 py-1.5">
                                                         <span className="text-text line-clamp-1">{lib.libraryTitle}</span>
                                                         <span className="text-muted ml-2 whitespace-nowrap">{formatReclaimSizeFromGB(lib.reclaimGB)} · {lib.count}</span>
                                                     </div>
@@ -9289,11 +9289,11 @@ const MaintenanceDashboard: React.FC = () => {
                                                 {!overviewInsights.libraries.length && <p className="text-xs text-muted">No matching candidates yet.</p>}
                                             </div>
                                         </div>
-                                        <div className="bg-black/20 rounded-lg p-3 border border-border">
+                                        <div className="bg-background/30 rounded-lg p-3 border border-white/5">
                                             <p className="text-xs text-muted font-bold uppercase tracking-wider mb-2">Top Rules by Reclaim</p>
                                             <div className="space-y-1.5 max-h-52 overflow-y-auto custom-scrollbar pr-1">
                                                 {overviewInsights.rules.slice(0, 8).map((rule) => (
-                                                    <div key={`overview-rule-${rule.ruleId}`} className="flex items-center justify-between text-xs bg-black/20 border border-border rounded px-2 py-1.5">
+                                                    <div key={`overview-rule-${rule.ruleId}`} className="flex items-center justify-between text-xs bg-background/30 border border-white/5 rounded px-2 py-1.5">
                                                         <span className="text-text line-clamp-1">{rule.ruleName}</span>
                                                         <span className="text-muted ml-2 whitespace-nowrap">{formatReclaimSizeFromGB(rule.reclaimGB)} · {rule.totalMatches}</span>
                                                     </div>
@@ -9307,12 +9307,12 @@ const MaintenanceDashboard: React.FC = () => {
                         )}
                         {activeSection === 'rules' && <LibraryMaintenancePanel addToast={addToast} />}
                         {activeSection === 'collections' && (
-                            <div className="bg-background border border-border rounded-xl p-5 space-y-3">
+                            <div className="bg-card/50 backdrop-blur-md border border-white/5 rounded-xl p-5 space-y-3">
                                 <h3 className="text-xl font-bold text-plex">Collections</h3>
                                 <p className="text-sm text-muted">Manage collection behavior per rule. Changes save directly to each ruleset.</p>
                                 <div className="space-y-2">
                                     {rules.map((rule: any) => (
-                                        <div key={`collection-${rule.id}`} className="bg-black/20 border border-border rounded-lg p-3">
+                                        <div key={`collection-${rule.id}`} className="bg-background/30 border border-white/5 rounded-lg p-3">
                                             <div className="flex items-center justify-between gap-3">
                                                 <p className="font-semibold text-text text-sm">{rule.name || 'Unnamed Rule'}</p>
                                                 <label className="text-xs text-muted flex items-center gap-2">
@@ -9347,7 +9347,7 @@ const MaintenanceDashboard: React.FC = () => {
                             </div>
                         )}
                         {activeSection === 'candidates' && (
-                            <div className="bg-background border border-border rounded-xl p-3 md:p-5 space-y-3">
+                            <div className="bg-card/50 backdrop-blur-md border border-white/5 rounded-xl p-3 md:p-5 space-y-3">
                                 <div className="flex flex-wrap items-center justify-between gap-3">
                                     <h3 className="text-xl font-bold text-plex">Candidates</h3>
                                     <div className="flex items-center gap-2">
@@ -9365,7 +9365,7 @@ const MaintenanceDashboard: React.FC = () => {
                                             key={`candidate-rule-tab-${rule.id}`}
                                             type="button"
                                             onClick={() => setCandidateRuleId(rule.id)}
-                                            className={`px-3 py-1.5 text-xs font-semibold rounded-md border transition-colors ${candidateRuleId === rule.id ? 'bg-plex text-background border-plex' : 'bg-black/20 text-text border-border hover:border-plex/40'}`}
+                                        className={`px-3 py-1.5 text-xs font-semibold rounded-md border transition-colors ${candidateRuleId === rule.id ? 'bg-plex text-background border-plex' : 'bg-background/30 text-text border-white/5 hover:border-plex/40'}`}
                                         >
                                             {rule.name || 'Unnamed Rule'}
                                         </button>
@@ -9380,7 +9380,7 @@ const MaintenanceDashboard: React.FC = () => {
                                 {isLoadingCandidates ? <p className="text-sm text-muted">Loading candidates...</p> : (
                                     <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-7 gap-2 md:gap-3 max-h-[620px] overflow-y-auto custom-scrollbar pr-1">
                                         {filteredCandidates.map((item: any) => (
-                                            <div key={`candidate-${item._ruleId || candidateRuleId}-${item.ratingKey}`} className="bg-black/20 border border-border rounded-lg overflow-hidden">
+                                            <div key={`candidate-${item._ruleId || candidateRuleId}-${item.ratingKey}`} className="bg-background/30 border border-white/5 rounded-lg overflow-hidden">
                                                 <div className="aspect-[2/3] bg-black/40">
                                                     {item.thumb ? (
                                                         <img src={`/api/plex/image?path=${encodeURIComponent(item.thumb)}&width=220&height=330`} alt={item.title} loading="lazy" className="w-full h-full object-cover" />
@@ -9400,11 +9400,11 @@ const MaintenanceDashboard: React.FC = () => {
                             </div>
                         )}
                         {activeSection === 'runs' && (
-                            <div className="bg-background border border-border rounded-xl p-5 space-y-3">
+                            <div className="bg-card/50 backdrop-blur-md border border-white/5 rounded-xl p-5 space-y-3">
                                 <h3 className="text-xl font-bold text-plex">Logs</h3>
                                 <div className="space-y-2 max-h-[620px] overflow-y-auto custom-scrollbar pr-1">
                                     {runs.map((run: any) => (
-                                        <details key={`run-${run.id}`} className="bg-black/20 border border-border rounded-lg p-3">
+                                        <details key={`run-${run.id}`} className="bg-background/30 border border-white/5 rounded-lg p-3">
                                             <summary className="cursor-pointer list-none">
                                                 <div className="flex items-center justify-between gap-3">
                                                     <div>
@@ -9419,7 +9419,7 @@ const MaintenanceDashboard: React.FC = () => {
                                             </div>
                                             <div className="mt-2 max-h-52 overflow-y-auto custom-scrollbar pr-1 space-y-1">
                                                 {(run.outcomes || []).slice(0, 120).map((outcome: any, idx: number) => (
-                                                    <div key={`outcome-${run.id}-${idx}`} className="text-xs bg-black/30 border border-border rounded px-2 py-1">
+                                                    <div key={`outcome-${run.id}-${idx}`} className="text-xs bg-background/30 border border-white/5 rounded px-2 py-1">
                                                         {(outcome.title || outcome.type || 'Item')} · {outcome.status || (outcome.success ? 'success' : 'info')}
                                                         {outcome.reason ? ` · ${outcome.reason}` : ''}
                                                     </div>
@@ -9432,12 +9432,12 @@ const MaintenanceDashboard: React.FC = () => {
                             </div>
                         )}
                         {activeSection === 'overlays' && (
-                            <div className="bg-background border border-border rounded-xl p-5 space-y-3">
+                            <div className="bg-card/50 backdrop-blur-md border border-white/5 rounded-xl p-5 space-y-3">
                                 <h3 className="text-xl font-bold text-plex">Overlays</h3>
                                 <p className="text-sm text-muted">Configure per-rule overlay labels (stored with each ruleset).</p>
                                 <div className="space-y-2">
                                     {rules.map((rule: any) => (
-                                        <div key={`overlay-${rule.id}`} className="bg-black/20 border border-border rounded-lg p-3">
+                                        <div key={`overlay-${rule.id}`} className="bg-background/30 border border-white/5 rounded-lg p-3">
                                             <p className="text-sm font-semibold text-text mb-2">{rule.name || 'Unnamed Rule'}</p>
                                             <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                                                 <label className="text-xs text-muted flex items-center gap-2">
@@ -9454,7 +9454,7 @@ const MaintenanceDashboard: React.FC = () => {
                             </div>
                         )}
                         {activeSection === 'calendar' && (
-                            <div className="bg-background border border-border rounded-xl p-5 space-y-3">
+                            <div className="bg-card/50 backdrop-blur-md border border-white/5 rounded-xl p-5 space-y-3">
                                 <h3 className="text-xl font-bold text-plex">Calendar</h3>
                                 <p className="text-sm text-muted">Rule-based eligibility schedule. Grace days are applied from this rule's creation date.</p>
                                 <div className="flex flex-wrap gap-2">
@@ -9463,7 +9463,7 @@ const MaintenanceDashboard: React.FC = () => {
                                             key={`calendar-rule-tab-${rule.id}`}
                                             type="button"
                                             onClick={() => setCandidateRuleId(rule.id)}
-                                            className={`px-3 py-1.5 text-xs font-semibold rounded-md border transition-colors ${candidateRuleId === rule.id ? 'bg-plex text-background border-plex' : 'bg-black/20 text-text border-border hover:border-plex/40'}`}
+                                        className={`px-3 py-1.5 text-xs font-semibold rounded-md border transition-colors ${candidateRuleId === rule.id ? 'bg-plex text-background border-plex' : 'bg-background/30 text-text border-white/5 hover:border-plex/40'}`}
                                         >
                                             {rule.name || 'Unnamed Rule'}
                                         </button>
@@ -9478,22 +9478,22 @@ const MaintenanceDashboard: React.FC = () => {
                                     <button
                                         type="button"
                                         onClick={() => setSelectedCalendarDate(ELIGIBLE_NOW_KEY)}
-                                        className="text-left bg-black/20 border border-border rounded-lg p-3 hover:border-plex/50 transition-colors"
+                                        className="text-left bg-background/30 border border-white/5 rounded-lg p-3 hover:border-plex/50 transition-colors"
                                         title="Titles that match this rule and whose grace window has elapsed."
                                     >
                                         <p className="text-xs text-muted">Eligible Now</p>
                                         <p className="text-2xl font-bold text-text mt-1">{calendarEligibility.eligibleNow.length}</p>
                                         <p className="text-[11px] text-muted mt-1">{formatReclaimSizeFromGB(calendarEligibility.eligibleNow.reduce((sum: number, item: any) => sum + Number(item.sizeGB || 0), 0))} reclaim now</p>
                                     </button>
-                                    <div className="bg-black/20 border border-border rounded-lg p-3" title="Number of future dates with delayed eligibility while this rule's grace period is active.">
+                                    <div className="bg-background/30 border border-white/5 rounded-lg p-3" title="Number of future dates with delayed eligibility while this rule's grace period is active.">
                                         <p className="text-xs text-muted">Eligible Later Days</p>
                                         <p className="text-2xl font-bold text-text mt-1">{calendarEligibility.eligibleLaterByDay.length}</p>
                                     </div>
-                                    <div className="bg-black/20 border border-border rounded-lg p-3" title="Titles currently matching this rule but still waiting for grace to expire.">
+                                    <div className="bg-background/30 border border-white/5 rounded-lg p-3" title="Titles currently matching this rule but still waiting for grace to expire.">
                                         <p className="text-xs text-muted">Later Titles</p>
                                         <p className="text-2xl font-bold text-text mt-1">{calendarEligibility.eligibleLaterByDay.reduce((sum: number, day: any) => sum + Number(day.count || 0), 0)}</p>
                                     </div>
-                                    <div className="bg-black/20 border border-border rounded-lg p-3" title="Reclaim estimate from matches that are delayed by active grace days.">
+                                    <div className="bg-background/30 border border-white/5 rounded-lg p-3" title="Reclaim estimate from matches that are delayed by active grace days.">
                                         <p className="text-xs text-muted">Later Reclaim</p>
                                         <p className="text-2xl font-bold text-text mt-1">{formatReclaimSizeFromGB(calendarEligibility.eligibleLaterByDay.reduce((sum: number, day: any) => sum + Number(day.reclaimGB || 0), 0))}</p>
                                     </div>
@@ -9509,7 +9509,7 @@ const MaintenanceDashboard: React.FC = () => {
                                                 key={`calendar-day-${day.date}`}
                                                 type="button"
                                                 onClick={() => setSelectedCalendarDate(day.date)}
-                                                className="text-left bg-black/20 border border-border rounded-lg p-3 hover:border-plex/50 hover:bg-black/30 transition-colors"
+                                                className="text-left bg-background/30 border border-white/5 rounded-lg p-3 hover:border-plex/50 hover:bg-black/30 transition-colors"
                                             >
                                                 <div className="flex items-center justify-between gap-2">
                                                     <p className="text-sm font-semibold text-text">{dateLabel}</p>
@@ -9518,7 +9518,7 @@ const MaintenanceDashboard: React.FC = () => {
                                                 <p className="text-[11px] text-muted mt-1">{day.minDaysUntil} day(s) until eligible · {formatReclaimSizeFromGB(day.reclaimGB)} reclaim</p>
                                                 <div className="mt-2 flex -space-x-2">
                                                     {day.preview.map((item: any, idx: number) => (
-                                                        <div key={`calendar-preview-${day.date}-${item.ratingKey}-${idx}`} className="w-8 h-8 rounded-full overflow-hidden border border-border bg-black/50" title={`${item.title || 'Unknown Title'} • ${getEligibilityTooltip(item)}`}>
+                                                        <div key={`calendar-preview-${day.date}-${item.ratingKey}-${idx}`} className="w-8 h-8 rounded-full overflow-hidden border border-white/5 bg-black/50" title={`${item.title || 'Unknown Title'} • ${getEligibilityTooltip(item)}`}>
                                                             {item.thumb ? (
                                                                 <img
                                                                     src={`/api/plex/image?path=${encodeURIComponent(item.thumb)}&width=64&height=64`}
@@ -9541,7 +9541,7 @@ const MaintenanceDashboard: React.FC = () => {
                         )}
                         {activeSection === 'calendar' && selectedCalendarGroup && (
                             <div className="fixed inset-0 z-[1500] bg-black/70 backdrop-blur-[1px] flex items-center justify-center p-3 md:p-6" onClick={() => setSelectedCalendarDate(null)}>
-                                <div className="w-full max-w-6xl max-h-[86vh] bg-card border border-border rounded-xl shadow-2xl p-4 md:p-5 overflow-y-auto custom-scrollbar" onClick={(e) => e.stopPropagation()}>
+                                <div className="w-full max-w-6xl max-h-[86vh] bg-card/80 backdrop-blur-md border border-white/5 rounded-xl shadow-2xl p-4 md:p-5 overflow-y-auto custom-scrollbar" onClick={(e) => e.stopPropagation()}>
                                     <div className="flex items-start justify-between gap-3 mb-3">
                                         <div>
                                             <h4 className="text-xl font-bold text-plex">
@@ -9561,7 +9561,7 @@ const MaintenanceDashboard: React.FC = () => {
                                     </div>
                                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-7 gap-3">
                                         {selectedCalendarGroup.items.map((item: any, idx: number) => (
-                                            <div key={`calendar-modal-item-${selectedCalendarGroup.date}-${item.ratingKey}-${idx}`} className="bg-black/20 border border-border rounded-lg overflow-hidden" title={getEligibilityTooltip(item)}>
+                                            <div key={`calendar-modal-item-${selectedCalendarGroup.date}-${item.ratingKey}-${idx}`} className="bg-background/30 border border-white/5 rounded-lg overflow-hidden" title={getEligibilityTooltip(item)}>
                                                 <div className="aspect-[2/3] bg-black/40">
                                                     {item.thumb ? (
                                                         <img
@@ -9588,7 +9588,7 @@ const MaintenanceDashboard: React.FC = () => {
                             </div>
                         )}
                         {activeSection === 'storage' && (
-                            <div className="bg-background border border-border rounded-xl p-5 space-y-4">
+                            <div className="bg-card/50 backdrop-blur-md border border-white/5 rounded-xl p-5 space-y-4">
                                 <h3 className="text-xl font-bold text-plex">Storage Metrics</h3>
                                 <p className="text-sm text-muted">Deep storage projection per library based on indexed size and current rule matches.</p>
                                 <div className="flex items-center gap-2">
@@ -9604,24 +9604,24 @@ const MaintenanceDashboard: React.FC = () => {
                                     )}
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                                    <div className="bg-black/20 border border-border rounded-lg p-3">
+                                    <div className="bg-background/30 border border-white/5 rounded-lg p-3">
                                         <p className="text-xs text-muted">Library Size Before</p>
                                         <p className="text-2xl font-bold text-text">{formatReclaimSizeFromGB(Number(storageSummary?.totals?.beforeGB || 0))}</p>
                                     </div>
-                                    <div className="bg-black/20 border border-border rounded-lg p-3">
+                                    <div className="bg-background/30 border border-white/5 rounded-lg p-3">
                                         <p className="text-xs text-muted">Projected Reclaim</p>
                                         <p className="text-2xl font-bold text-text">{formatReclaimSizeFromGB(Number(storageSummary?.totals?.reclaimGB || 0))}</p>
                                     </div>
-                                    <div className="bg-black/20 border border-border rounded-lg p-3">
+                                    <div className="bg-background/30 border border-white/5 rounded-lg p-3">
                                         <p className="text-xs text-muted">Projected Size After</p>
                                         <p className="text-2xl font-bold text-text">{formatReclaimSizeFromGB(Number(storageSummary?.totals?.afterGB || 0))}</p>
                                     </div>
-                                    <div className="bg-black/20 border border-border rounded-lg p-3">
+                                    <div className="bg-background/30 border border-white/5 rounded-lg p-3">
                                         <p className="text-xs text-muted">Reclaim Percent</p>
                                         <p className="text-2xl font-bold text-text">{Number(storageSummary?.totals?.reclaimPercent || 0).toFixed(1)}%</p>
                                     </div>
                                 </div>
-                                <div className="bg-black/20 border border-border rounded-lg p-3">
+                                <div className="bg-background/30 border border-white/5 rounded-lg p-3">
                                     <div className="grid grid-cols-[minmax(0,2fr)_1fr_1fr_1fr_1fr] gap-2 px-2 py-1 text-[11px] uppercase tracking-wider text-muted font-bold border-b border-border">
                                         <span>Library</span>
                                         <span className="text-right">Before</span>
@@ -9631,7 +9631,7 @@ const MaintenanceDashboard: React.FC = () => {
                                     </div>
                                     <div className="max-h-[420px] overflow-y-auto custom-scrollbar pr-1 space-y-1 mt-2">
                                         {(storageSummary?.libraries || []).map((row: any) => (
-                                            <div key={`storage-row-${row.libraryTitle}`} className="grid grid-cols-[minmax(0,2fr)_1fr_1fr_1fr_1fr] gap-2 px-2 py-2 text-sm bg-black/20 border border-border rounded-lg items-center">
+                                            <div key={`storage-row-${row.libraryTitle}`} className="grid grid-cols-[minmax(0,2fr)_1fr_1fr_1fr_1fr] gap-2 px-2 py-2 text-sm bg-background/30 border border-white/5 rounded-lg items-center">
                                                 <span className="text-text line-clamp-1">{row.libraryTitle}</span>
                                                 <span className="text-muted text-right">{formatReclaimSizeFromGB(Number(row.totalSizeGB || 0))}</span>
                                                 <span className="text-right text-plex font-semibold">{formatReclaimSizeFromGB(Number(row.reclaimGB || 0))}</span>
@@ -9646,21 +9646,21 @@ const MaintenanceDashboard: React.FC = () => {
                                     </div>
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                                    <div className="bg-black/20 border border-border rounded-lg p-3">
+                                    <div className="bg-background/30 border border-white/5 rounded-lg p-3">
                                         <p className="text-xs text-muted">Total Indexed Items</p>
                                         <p className="text-xl font-bold text-text">{Number(storageSummary?.totals?.items || 0)}</p>
                                     </div>
-                                    <div className="bg-black/20 border border-border rounded-lg p-3">
+                                    <div className="bg-background/30 border border-white/5 rounded-lg p-3">
                                         <p className="text-xs text-muted">Matched Candidate Items</p>
                                         <p className="text-xl font-bold text-text">{Number(storageSummary?.totals?.matchedItems || 0)}</p>
                                     </div>
-                                    <div className="bg-black/20 border border-border rounded-lg p-3">
+                                    <div className="bg-background/30 border border-white/5 rounded-lg p-3">
                                         <p className="text-xs text-muted">Libraries Covered</p>
                                         <p className="text-xl font-bold text-text">{Number(storageSummary?.totals?.libraries || 0)}</p>
                                     </div>
                                 </div>
                                 {storageSummary?.rulesConsidered?.length > 0 && (
-                                    <div className="bg-black/20 border border-border rounded-lg p-3">
+                                    <div className="bg-background/30 border border-white/5 rounded-lg p-3">
                                         <p className="text-xs text-muted font-bold uppercase tracking-wider mb-2">Rules Included</p>
                                         <div className="flex flex-wrap gap-1.5">
                                             {storageSummary.rulesConsidered.map((rule: any) => (
@@ -9672,7 +9672,7 @@ const MaintenanceDashboard: React.FC = () => {
                             </div>
                         )}
                         {activeSection === 'library' && (
-                            <div className="bg-background border border-border rounded-xl p-5 space-y-3">
+                            <div className="bg-card/50 backdrop-blur-md border border-white/5 rounded-xl p-5 space-y-3">
                                 <h3 className="text-xl font-bold text-plex">Rule Library</h3>
                                 <div className="flex flex-wrap gap-2">
                                     <button
@@ -9717,11 +9717,11 @@ const MaintenanceDashboard: React.FC = () => {
                             </div>
                         )}
                         {activeSection === 'exclusions' && (
-                            <div className="bg-background border border-border rounded-xl p-3 md:p-5 space-y-3">
+                            <div className="bg-card/50 backdrop-blur-md border border-white/5 rounded-xl p-4 md:p-5 space-y-3">
                                 <h3 className="text-xl font-bold text-plex">Exclusions</h3>
                                 <p className="text-sm text-muted">Browse posters by library, search titles, click posters to select, then bulk exclude/unexclude. Excluded items are removed from preview and execution.</p>
-                                <div className="md:bg-black/20 md:border border-border rounded-lg p-2 md:p-3 space-y-2">
-                                    <div className="min-w-0 md:w-[220px] h-8 md:h-9 -mt-0.5">
+                                <div className="bg-background/30 border border-white/5 rounded-lg p-3 md:p-4 space-y-2.5">
+                                    <div className="min-w-0 md:w-[220px] h-9">
                                             <CustomSelect
                                                 value={libraryBrowseId}
                                                 onChange={(value) => {
@@ -9737,9 +9737,9 @@ const MaintenanceDashboard: React.FC = () => {
                                                 ]}
                                             />
                                     </div>
-                                    <div className="grid grid-cols-[minmax(0,1fr)_auto] md:grid-cols-[minmax(0,1fr)_auto] gap-1.5 md:gap-2 items-center">
+                                    <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 items-center mt-1">
                                         <input
-                                            className="p-1.5 md:p-2 h-8 md:h-9 rounded border border-border bg-card text-text text-xs md:text-sm min-w-0"
+                                            className="h-9 px-2.5 rounded border border-border bg-card text-text text-xs md:text-sm min-w-0"
                                             placeholder="Search title..."
                                             value={libraryBrowseSearch}
                                             onChange={(e) => {
@@ -9747,12 +9747,12 @@ const MaintenanceDashboard: React.FC = () => {
                                                 setLibraryBrowsePage(1);
                                             }}
                                         />
-                                        <button type="button" className="h-8 md:h-9 px-2.5 md:px-3 bg-border text-text rounded-md text-xs md:text-sm font-semibold whitespace-nowrap" onClick={loadLibraryBrowse}>Refresh</button>
+                                        <button type="button" className="h-9 px-3 bg-border text-text rounded-md text-xs md:text-sm font-semibold whitespace-nowrap" onClick={loadLibraryBrowse}>Refresh</button>
                                     </div>
-                                    <div className="flex flex-wrap items-center gap-1.5 md:gap-2">
+                                    <div className="grid grid-cols-[minmax(0,1fr)_auto] md:flex md:flex-wrap items-center gap-2">
                                         <button
                                             type="button"
-                                            className="h-8 md:h-9 px-2.5 md:px-3 bg-plex text-background rounded-md text-xs md:text-sm font-semibold whitespace-nowrap"
+                                            className="h-9 px-3 bg-plex text-background rounded-md text-xs md:text-sm font-semibold whitespace-nowrap"
                                             onClick={async () => {
                                                 if (!selectedExcludeKeys.length) {
                                                     addToast('Select posters to exclude first.', 'error');
@@ -9771,7 +9771,7 @@ const MaintenanceDashboard: React.FC = () => {
                                         </button>
                                         <button
                                             type="button"
-                                            className="h-8 w-8 md:h-9 md:w-9 flex items-center justify-center bg-red-500/15 border border-red-500/40 text-red-300 rounded-md hover:bg-red-500/25 transition-colors"
+                                            className="h-9 w-9 flex items-center justify-center bg-red-500/15 border border-red-500/40 text-red-300 rounded-md hover:bg-red-500/25 transition-colors"
                                             onClick={() => setSelectedExcludeKeys([])}
                                             title="Clear Selection"
                                             aria-label="Clear Selection"
@@ -9780,7 +9780,7 @@ const MaintenanceDashboard: React.FC = () => {
                                         </button>
                                         <button
                                             type="button"
-                                            className="h-8 md:h-9 px-2.5 md:px-3 bg-border text-text rounded-md text-xs md:text-sm font-semibold whitespace-nowrap"
+                                            className="col-span-2 md:col-auto h-9 px-3 bg-border text-text rounded-md text-xs md:text-sm font-semibold whitespace-nowrap"
                                             onClick={async () => {
                                                 if (!selectedExcludeKeys.length) {
                                                     addToast('Select posters to unexclude first.', 'error');
@@ -9797,7 +9797,7 @@ const MaintenanceDashboard: React.FC = () => {
                                         >
                                             Remove Selected Exclusions
                                         </button>
-                                        <p className="text-[11px] md:text-xs text-muted w-full md:w-auto md:ml-auto md:text-right">Showing {libraryItems.length} of {libraryBrowseTotal} titles · page {libraryBrowsePage}</p>
+                                        <p className="col-span-2 text-[11px] md:text-xs text-muted w-full md:w-auto md:ml-auto md:text-right">Showing {libraryItems.length} of {libraryBrowseTotal} titles · page {libraryBrowsePage}</p>
                                     </div>
                                     {libraryBrowseLoading ? (
                                         <p className="text-sm text-muted">Loading posters...</p>
@@ -9808,7 +9808,7 @@ const MaintenanceDashboard: React.FC = () => {
                                                 const selected = selectedExcludeKeys.includes(key);
                                                 const excluded = item.excluded || excludedRatingKeySet.has(key);
                                                 return (
-                                                    <div key={`exclude-item-${key}`} className={`relative w-full border rounded-lg overflow-hidden transition-colors ${selected ? 'border-plex' : 'border-border'} ${excluded ? 'ring-1 ring-red-500/70' : ''}`}>
+                                                    <div key={`exclude-item-${key}`} className={`relative w-full border rounded-lg overflow-hidden transition-colors ${selected ? 'border-plex' : 'border-white/5'} ${excluded ? 'ring-1 ring-red-500/70' : ''}`}>
                                                         <button
                                                             type="button"
                                                             className="w-full text-left"
@@ -9874,14 +9874,14 @@ const MaintenanceDashboard: React.FC = () => {
                                         </button>
                                     </div>
                                 </div>
-                                <div className="bg-black/20 border border-border rounded-lg p-3 space-y-3">
+                                <div className="bg-background/30 border border-white/5 rounded-lg p-3 space-y-3">
                                     <h4 className="text-sm font-bold text-text">Current Exclusions (Resolved)</h4>
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                                        <div className="bg-background/40 border border-border rounded-lg p-3 space-y-2">
+                                        <div className="bg-background/30 border border-white/5 rounded-lg p-3 space-y-2">
                                             <p className="text-xs font-bold text-muted uppercase tracking-wider">Excluded Titles by RatingKey</p>
                                             <div className="space-y-2 max-h-52 overflow-y-auto custom-scrollbar pr-1">
                                                 {exclusionsSummary.ratingKeys.map((entry: any) => (
-                                                    <div key={`resolved-key-${entry.ratingKey}`} className="flex items-center gap-2 bg-black/20 border border-border rounded-md p-2">
+                                                    <div key={`resolved-key-${entry.ratingKey}`} className="flex items-center gap-2 bg-background/30 border border-white/5 rounded-md p-2">
                                                         <div className="w-10 h-14 rounded overflow-hidden bg-black/40 flex-shrink-0">
                                                             {entry.thumb ? (
                                                                 <img src={`/api/plex/image?path=${encodeURIComponent(entry.thumb)}&width=80&height=120`} alt={entry.title} className="w-full h-full object-cover" />
@@ -9898,11 +9898,11 @@ const MaintenanceDashboard: React.FC = () => {
                                                 {!exclusionsSummary.ratingKeys.length && <p className="text-xs text-muted">No ratingKey exclusions set.</p>}
                                             </div>
                                         </div>
-                                        <div className="bg-background/40 border border-border rounded-lg p-3 space-y-2">
+                                        <div className="bg-background/30 border border-white/5 rounded-lg p-3 space-y-2">
                                             <p className="text-xs font-bold text-muted uppercase tracking-wider">Excluded Title Terms</p>
                                             <div className="space-y-1.5 max-h-52 overflow-y-auto custom-scrollbar pr-1">
                                                 {exclusionsSummary.titles.map((entry: any) => (
-                                                    <div key={`resolved-title-${entry.title}`} className="bg-black/20 border border-border rounded-md px-2 py-1.5">
+                                                    <div key={`resolved-title-${entry.title}`} className="bg-background/30 border border-white/5 rounded-md px-2 py-1.5">
                                                         <p className="text-xs text-text line-clamp-1">{entry.title}</p>
                                                         <p className="text-[10px] text-muted">{entry.matchCount} indexed match(es)</p>
                                                     </div>
@@ -9910,11 +9910,11 @@ const MaintenanceDashboard: React.FC = () => {
                                                 {!exclusionsSummary.titles.length && <p className="text-xs text-muted">No title exclusions set.</p>}
                                             </div>
                                         </div>
-                                        <div className="bg-background/40 border border-border rounded-lg p-3 space-y-2">
+                                        <div className="bg-background/30 border border-white/5 rounded-lg p-3 space-y-2">
                                             <p className="text-xs font-bold text-muted uppercase tracking-wider">Excluded Libraries</p>
                                             <div className="space-y-1.5 max-h-52 overflow-y-auto custom-scrollbar pr-1">
                                                 {exclusionsSummary.libraries.map((entry: any) => (
-                                                    <div key={`resolved-library-${entry.libraryTitle}`} className="bg-black/20 border border-border rounded-md px-2 py-1.5">
+                                                    <div key={`resolved-library-${entry.libraryTitle}`} className="bg-background/30 border border-white/5 rounded-md px-2 py-1.5">
                                                         <p className="text-xs text-text line-clamp-1">{entry.libraryTitle}</p>
                                                         <p className="text-[10px] text-muted">{entry.matchCount} indexed item(s)</p>
                                                     </div>
@@ -9956,21 +9956,21 @@ const MaintenanceDashboard: React.FC = () => {
                             </div>
                         )}
                         {activeSection === 'settings' && (
-                            <div className="bg-background border border-border rounded-xl p-5 space-y-4">
+                            <div className="bg-card/50 backdrop-blur-md border border-white/5 rounded-xl p-5 space-y-4">
                                 <h3 className="text-xl font-bold text-plex">Maintenance Settings</h3>
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                                    <div className="bg-black/20 border border-border rounded-lg p-3">
+                                    <div className="bg-background/30 border border-white/5 rounded-lg p-3">
                                         <label className="text-xs text-muted font-bold uppercase block mb-2">Default Dry-run</label>
                                         <label className="text-sm text-muted flex items-center gap-2">
                                             <input type="checkbox" checked={!!preferences?.global?.dryRunByDefault} onChange={(e) => setPreferences((prev: any) => ({ ...prev, global: { ...(prev.global || {}), dryRunByDefault: e.target.checked } }))} />
                                             Enable by default
                                         </label>
                                     </div>
-                                    <div className="bg-black/20 border border-border rounded-lg p-3">
+                                    <div className="bg-background/30 border border-white/5 rounded-lg p-3">
                                         <label className="text-xs text-muted font-bold uppercase block mb-2">Max Actions Per Run</label>
                                         <input type="number" min={1} className="w-full p-2 rounded border border-border bg-card text-text text-sm" value={preferences?.global?.maxActionsPerRun || 25} onChange={(e) => setPreferences((prev: any) => ({ ...prev, global: { ...(prev.global || {}), maxActionsPerRun: Math.max(1, Number(e.target.value) || 1) } }))} />
                                     </div>
-                                    <div className="bg-black/20 border border-border rounded-lg p-3">
+                                    <div className="bg-background/30 border border-white/5 rounded-lg p-3">
                                         <label className="text-xs text-muted font-bold uppercase block mb-2">Require Confirm Token</label>
                                         <label className="text-sm text-muted flex items-center gap-2">
                                             <input type="checkbox" checked={!!preferences?.global?.requireConfirmForDestructive} onChange={(e) => setPreferences((prev: any) => ({ ...prev, global: { ...(prev.global || {}), requireConfirmForDestructive: e.target.checked } }))} />
