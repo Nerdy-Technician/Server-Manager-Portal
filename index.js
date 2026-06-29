@@ -6416,6 +6416,22 @@ app.post('/api/maintenance/run', requireAdmin, async (req, res) => {
 });
 
 // --- Stream Kill Rules Engine ---
+function normalizeRuleResolution(rawResolution, transcodeWidth, transcodeHeight, isTranscoding) {
+    if (isTranscoding && (Number(transcodeWidth) > 0 || Number(transcodeHeight) > 0)) {
+        const w = Number(transcodeWidth || 0);
+        const h = Number(transcodeHeight || 0);
+        const maxDim = Math.max(w, h);
+        if (maxDim >= 3800) return '4k';
+        if (maxDim >= 2500) return '1440';
+        if (maxDim >= 1800) return '1080';
+        if (maxDim >= 1200) return '720';
+        if (maxDim >= 900) return '576';
+        if (maxDim >= 700) return '480';
+        return 'sd';
+    }
+    return String(rawResolution || '').toLowerCase();
+}
+
 function sessionMatchesCondition(session, condition) {
     const { field, operator, value } = condition;
     let sessionVal;
@@ -6527,11 +6543,15 @@ async function monitorConcurrentSessions() {
                     const isTranscode = !!(m.TranscodeSession || (m.Media && m.Media[0] && m.Media[0].Part && m.Media[0].Part[0] && m.Media[0].Part[0].Stream && m.Media[0].Part[0].Stream.some(s => s.decision === 'transcode')));
                     const player = m.Player || {};
                     const session = m.Session || {};
+                    const transcodeWidth = Number(m?.TranscodeSession?.width || 0);
+                    const transcodeHeight = Number(m?.TranscodeSession?.height || 0);
+                    const sourceResolution = m.Media && m.Media[0] ? m.Media[0].videoResolution : null;
                     return {
                         sessionId: session.id || m.sessionKey,
                         user: m.User ? m.User.title : 'Unknown',
                         isTranscoding: isTranscode,
-                        resolution: m.Media && m.Media[0] ? m.Media[0].videoResolution : null,
+                        sourceResolution: sourceResolution ? String(sourceResolution).toLowerCase() : null,
+                        resolution: normalizeRuleResolution(sourceResolution, transcodeWidth, transcodeHeight, isTranscode),
                         bandwidth: (session && session.bandwidth) || (m.Media && m.Media[0] && m.Media[0].bitrate) || 0,
                         playerProduct: player.product || '',
                         playerTitle: player.title || '',
