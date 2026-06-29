@@ -1377,20 +1377,6 @@ const LibraryMaintenancePanel: React.FC<{ addToast: (m: string, t?: 'success' | 
     );
 };
 
-const SETTINGS_MAINTENANCE_TAB_IDS = [
-    'maintenance-overview',
-    'maintenance-rules',
-    'maintenance-collections',
-    'maintenance-candidates',
-    'maintenance-runs',
-    'maintenance-overlays',
-    'maintenance-calendar',
-    'maintenance-storage',
-    'maintenance-library',
-    'maintenance-exclusions',
-    'maintenance-settings'
-];
-
 const SettingHint: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const detailsRef = useRef<HTMLDetailsElement>(null);
 
@@ -1492,7 +1478,7 @@ const SettingsDashboard: React.FC = () => {
     const [libraries, setLibraries] = useState<any[]>([]);
     const [activeTab, setActiveTab] = useState(() => {
         const hash = window.location.hash.replace('#', '');
-        return ['plex', 'smtp', 'newsletter', 'cleanup', 'mediastack', 'branding', 'navigation', 'status', 'invites', 'tasks', 'system', 'contact', 'broadcast', 'stream-rules', 'logs', ...SETTINGS_MAINTENANCE_TAB_IDS].includes(hash) ? hash : 'plex';
+        return ['plex', 'smtp', 'newsletter', 'cleanup', 'mediastack', 'branding', 'navigation', 'status', 'invites', 'tasks', 'system', 'contact', 'broadcast', 'stream-rules', 'logs'].includes(hash) ? hash : 'plex';
     });
     const [settingsSearch, setSettingsSearch] = useState('');
 
@@ -1530,22 +1516,6 @@ const SettingsDashboard: React.FC = () => {
                 { id: 'tasks', label: 'Background Tasks', keywords: ['jobs', 'scheduler', 'run now'] },
                 { id: 'system', label: 'System', keywords: ['backup', 'restore', 'diagnostics'] },
                 { id: 'logs', label: 'Logs & Audit', keywords: ['audit', 'emails', 'deleted users', 'history'] }
-            ]
-        },
-        {
-            title: 'Maintenance',
-            tabs: [
-                { id: 'maintenance-overview', label: 'Overview', keywords: ['maintainerr', 'cleanup', 'module', 'overview'] },
-                { id: 'maintenance-rules', label: 'Rules', keywords: ['filters', 'conditions', 'automation'] },
-                { id: 'maintenance-collections', label: 'Collections', keywords: ['plex', 'leaving soon', 'collection'] },
-                { id: 'maintenance-candidates', label: 'Candidates', keywords: ['queue', 'matches', 'review'] },
-                { id: 'maintenance-runs', label: 'Execution Timeline', keywords: ['runs', 'history', 'results'] },
-                { id: 'maintenance-overlays', label: 'Overlays', keywords: ['poster', 'countdown', 'graphics'] },
-                { id: 'maintenance-calendar', label: 'Calendar', keywords: ['schedule', 'grace period', 'dates'] },
-                { id: 'maintenance-storage', label: 'Storage Metrics', keywords: ['disk', 'space', 'reclaim'] },
-                { id: 'maintenance-library', label: 'Rule Library', keywords: ['templates', 'import', 'export'] },
-                { id: 'maintenance-exclusions', label: 'Exclusions', keywords: ['safelist', 'ignore', 'protect'] },
-                { id: 'maintenance-settings', label: 'Maintenance Settings', keywords: ['global', 'safety', 'limits'] }
             ]
         }
     ];
@@ -1967,22 +1937,6 @@ const SettingsDashboard: React.FC = () => {
             setLoading(false);
         }
     };
-
-    const renderMaintenancePage = (title: string, description: string, points: string[]) => (
-        <div className="mb-8 animate-fade-in space-y-4">
-            <h3 className="text-xl font-bold text-plex mb-4 border-b border-border pb-2">{title}</h3>
-            <div className="bg-background border border-border rounded-xl p-5">
-                <p className="text-sm text-muted mb-4">{description}</p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {points.map(point => (
-                        <div key={point} className="bg-black/20 border border-border rounded-lg px-3 py-2 text-sm text-text">
-                            {point}
-                        </div>
-                    ))}
-                </div>
-            </div>
-        </div>
-    );
 
     useEffect(() => {
         if (initialSettings) {
@@ -2528,122 +2482,6 @@ const SettingsDashboard: React.FC = () => {
                             </div>
                         </div>
                     )}
-                    {activeTab === 'maintenance-overview' && (
-                        <div className="mb-8 animate-fade-in">
-                            <h3 className="text-xl font-bold text-plex mb-4 border-b border-border pb-2">Maintenance Overview</h3>
-                            <div className="bg-background border border-border rounded-xl p-4 md:p-5 space-y-3">
-                                <p className="text-sm text-muted">Experimental mode gate for the entire Maintenance module.</p>
-                                <div className="flex items-center justify-between bg-black/10 p-4 rounded-lg border border-border">
-                                    <div>
-                                        <label className="font-bold block mb-1">Enable Experimental Maintenance Mode</label>
-                                        <span className="text-xs text-muted block">When OFF, all maintenance APIs/actions are blocked and the module becomes read-only.</span>
-                                    </div>
-                                    <button
-                                        onClick={() => setMaintenanceExperimentalEnabled(!maintenanceExperimentalEnabled)}
-                                        className={`relative inline-flex items-center h-6 rounded-full w-11 transition-colors ${maintenanceExperimentalEnabled ? 'bg-plex' : 'bg-border'}`}
-                                        type="button"
-                                    >
-                                        <span className={`inline-block w-4 h-4 transform bg-white rounded-full transition-transform ${maintenanceExperimentalEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
-                                    </button>
-                                </div>
-                                <p className={`text-xs font-semibold ${maintenanceExperimentalEnabled ? 'text-green-300' : 'text-yellow-300'}`}>
-                                    Current status: {maintenanceExperimentalEnabled ? 'ON' : 'OFF (default)'}
-                                </p>
-                            </div>
-                        </div>
-                    )}
-                    {activeTab === 'maintenance-rules' && <LibraryMaintenancePanel addToast={addToast} />}
-                    {activeTab === 'maintenance-collections' && renderMaintenancePage(
-                        'Collections',
-                        'Manage Plex leaving-soon collections created from maintenance rules.',
-                        [
-                            'Collection name templates per rule',
-                            'Pin/shelf behavior and sync cadence',
-                            'Manual include and exclusion overrides',
-                            'Collection sync diagnostics and drift checks'
-                        ]
-                    )}
-                    {activeTab === 'maintenance-candidates' && renderMaintenancePage(
-                        'Candidates',
-                        'Review items matched by maintenance filters before actioning.',
-                        [
-                            'Candidate queue with actionability status',
-                            'Bulk approve and skip controls',
-                            'Filter by library, media type, and age',
-                            'Paginated queue for large libraries'
-                        ]
-                    )}
-                    {activeTab === 'maintenance-runs' && renderMaintenancePage(
-                        'Execution Timeline',
-                        'Observe every maintenance run from trigger to outcome.',
-                        [
-                            'Run timeline with status progression',
-                            'Per-run deleted/skipped/failed totals',
-                            'Failure reasons with retry targeting',
-                            'Audit-linked event trail'
-                        ]
-                    )}
-                    {activeTab === 'maintenance-overlays' && renderMaintenancePage(
-                        'Overlays',
-                        'Configure countdown and leaving-soon overlays for posters/cards.',
-                        [
-                            'Text and badge overlay templates',
-                            'Per-library overlay style presets',
-                            'Enable/disable overlays by rule',
-                            'Poster/title-card preview workflow'
-                        ]
-                    )}
-                    {activeTab === 'maintenance-calendar' && renderMaintenancePage(
-                        'Calendar',
-                        'Plan maintenance schedules and grace period expirations.',
-                        [
-                            'Upcoming expiry and deletion windows',
-                            'Rule schedule visual timeline',
-                            'Blackout windows for maintenance actions',
-                            'Projected actions by day/week'
-                        ]
-                    )}
-                    {activeTab === 'maintenance-storage' && renderMaintenancePage(
-                        'Storage Metrics',
-                        'Measure projected and historical reclaim from maintenance automation.',
-                        [
-                            'Estimated reclaimed storage by rule',
-                            'Library growth vs cleanup trend',
-                            'Disk pressure threshold planning',
-                            'Top reclaim contributors by media class'
-                        ]
-                    )}
-                    {activeTab === 'maintenance-library' && renderMaintenancePage(
-                        'Rule Library',
-                        'Use reusable templates and shareable rule packs.',
-                        [
-                            'Template import/export (YAML/JSON)',
-                            'Community rule bundle support',
-                            'Rule migration and compatibility checks',
-                            'Clone templates into local rule set'
-                        ]
-                    )}
-                    {activeTab === 'maintenance-exclusions' && renderMaintenancePage(
-                        'Exclusions',
-                        'Prevent critical media from being removed by automation.',
-                        [
-                            'Global never-delete safelist',
-                            'Tag/collection based exclusions',
-                            'Per-library protection policies',
-                            'Temporary exclusions with expiry'
-                        ]
-                    )}
-                    {activeTab === 'maintenance-settings' && renderMaintenancePage(
-                        'Maintenance Settings',
-                        'Global safety and execution controls for maintenance automation.',
-                        [
-                            'Default dry-run and destructive safeguards',
-                            'Run concurrency and action caps',
-                            'Confirmation token requirements',
-                            'Provider integration health checks'
-                        ]
-                    )}
-
                     {activeTab === 'mediastack' && (
                         <div className="mb-8 animate-fade-in">
                             <h3 className="text-xl font-bold text-plex mb-4 border-b border-border pb-2">Sonarr Integration</h3>
@@ -2957,6 +2795,25 @@ const SettingsDashboard: React.FC = () => {
                                         </ul>
                                     )}
                                 </div>
+                            </div>
+                            <div className="bg-background border border-border rounded-xl p-4">
+                                <h4 className="font-bold text-text mb-3">Maintenance Experimental Mode</h4>
+                                <div className="bg-black/20 rounded-lg p-3 flex items-center justify-between gap-3">
+                                    <div>
+                                        <p className="font-semibold text-text">Enable Maintenance Module</p>
+                                        <p className="text-xs text-muted mt-1">Single global toggle for the main `Maintenance` navigation section. OFF by default.</p>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => setMaintenanceExperimentalEnabled(!maintenanceExperimentalEnabled)}
+                                        className={`relative inline-flex items-center h-6 rounded-full w-11 transition-colors ${maintenanceExperimentalEnabled ? 'bg-plex' : 'bg-border'}`}
+                                    >
+                                        <span className={`inline-block w-4 h-4 transform bg-white rounded-full transition-transform ${maintenanceExperimentalEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+                                    </button>
+                                </div>
+                                <p className={`text-xs mt-2 font-semibold ${maintenanceExperimentalEnabled ? 'text-green-300' : 'text-yellow-300'}`}>
+                                    Current status: {maintenanceExperimentalEnabled ? 'ON' : 'OFF'}
+                                </p>
                             </div>
                             <div className="bg-background border border-border rounded-xl p-4">
                                 <h4 className="font-bold text-text mb-3">Backup & Restore</h4>
