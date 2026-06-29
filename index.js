@@ -1465,6 +1465,7 @@ app.post('/api/config', setupRateLimit, async (req, res) => {
 
     const existingConfig = await loadFile(CONFIG_PATH, {});
     const isConfigured = !!(existingConfig && existingConfig.plexToken && existingConfig.serverIdentifier);
+    const wasMaintenanceEnabled = !!existingConfig.maintenanceExperimentalEnabled;
 
     if (isConfigured) {
         const sessionToken = req.cookies && req.cookies.session;
@@ -1561,6 +1562,19 @@ app.post('/api/config', setupRateLimit, async (req, res) => {
     systemJobs.autoBackup.nextRun = config.autoBackupEnabled ? computeNextBackupRun(config) : null;
     log('Configuration saved successfully.');
     startBackgroundService(); // (Re)start service with new config
+    const becameConfigured = !isConfigured && !!config.plexToken && !!config.serverIdentifier;
+    const maintenanceJustEnabled = !wasMaintenanceEnabled && !!config.maintenanceExperimentalEnabled;
+    if ((becameConfigured || maintenanceJustEnabled) && !!config.maintenanceExperimentalEnabled) {
+        // Kick an immediate index build after setup/enablement so rules are usable right away.
+        setTimeout(async () => {
+            try {
+                await buildMaintenanceMediaIndex({ actor: req.user || { username: 'System', email: 'system@local' }, force: true });
+                log('Maintenance index rebuilt after setup/config enablement.');
+            } catch (e) {
+                log(`Post-setup maintenance index rebuild failed: ${e.message}`);
+            }
+        }, 1000);
+    }
     res.json({ message: 'Configuration saved.' });
 });
 
