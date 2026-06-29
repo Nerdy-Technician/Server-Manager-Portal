@@ -8782,7 +8782,7 @@ const LibraryDashboard: React.FC<{ onBack: () => void, isAdmin?: boolean, public
 
 const MaintenanceDashboard: React.FC = () => {
     const [toasts, setToasts] = useState<ToastMessage[]>([]);
-    const [maintenanceFeatureEnabled, setMaintenanceFeatureEnabled] = useState(true);
+    const [maintenanceFeatureEnabled, setMaintenanceFeatureEnabled] = useState(false);
     const [overview, setOverview] = useState<any>(null);
     const [runs, setRuns] = useState<any[]>([]);
     const [previewGroups, setPreviewGroups] = useState<any[]>([]);
@@ -8830,6 +8830,10 @@ const MaintenanceDashboard: React.FC = () => {
 
     const addToast = useCallback((message: string, type: 'success' | 'error' = 'success') => {
         setToasts(t => [...t, { id: Date.now() + Math.random(), message, type }]);
+    }, []);
+    const isMaintenanceDisabledError = useCallback((error: any) => {
+        const msg = String(error?.message || '');
+        return msg.includes('Maintenance Experimental Mode is disabled');
     }, []);
 
     const sections = [
@@ -8909,14 +8913,15 @@ const MaintenanceDashboard: React.FC = () => {
                 rules: ruleInsights.sort((a: any, b: any) => b.reclaimGB - a.reclaimGB)
             });
         } catch (e: any) {
-            if ((e?.message || '').includes('Maintenance Experimental Mode is disabled')) {
+            if (isMaintenanceDisabledError(e)) {
                 setMaintenanceFeatureEnabled(false);
+                return;
             }
             addToast(e.message || 'Failed to load maintenance overview', 'error');
         } finally {
             setLoading(false);
         }
-    }, [addToast]);
+    }, [addToast, isMaintenanceDisabledError]);
 
     useEffect(() => {
         loadOverview();
@@ -8934,6 +8939,10 @@ const MaintenanceDashboard: React.FC = () => {
     }, [rules, candidateRuleId]);
 
     const fetchCandidatesForRule = useCallback(async (ruleId: string) => {
+        if (!maintenanceFeatureEnabled) {
+            setCandidateItems([]);
+            return;
+        }
         if (!ruleId) {
             setCandidateItems([]);
             return;
@@ -8951,17 +8960,21 @@ const MaintenanceDashboard: React.FC = () => {
             const selected = previews.find((preview: any) => preview.ruleId === ruleId);
             setCandidateItems((selected?.sample || []).map((item: any) => ({ ...item, _ruleId: selected?.ruleId, _ruleName: selected?.ruleName })));
         } catch (e: any) {
+            if (isMaintenanceDisabledError(e)) {
+                setMaintenanceFeatureEnabled(false);
+                return;
+            }
             addToast(e.message || 'Failed to load candidates', 'error');
         } finally {
             setIsLoadingCandidates(false);
         }
-    }, [addToast]);
+    }, [addToast, isMaintenanceDisabledError, maintenanceFeatureEnabled]);
 
     useEffect(() => {
-        if (activeSection === 'candidates' || activeSection === 'storage' || activeSection === 'calendar') {
+        if (maintenanceFeatureEnabled && (activeSection === 'candidates' || activeSection === 'storage' || activeSection === 'calendar')) {
             fetchCandidatesForRule(candidateRuleId);
         }
-    }, [activeSection, candidateRuleId, fetchCandidatesForRule]);
+    }, [activeSection, candidateRuleId, fetchCandidatesForRule, maintenanceFeatureEnabled]);
 
     const saveAllRules = async (nextRules: any[]) => {
         await apiFetch('/api/maintenance/rules', { method: 'POST', body: JSON.stringify(nextRules) });
@@ -8974,6 +8987,7 @@ const MaintenanceDashboard: React.FC = () => {
     };
 
     const loadExclusionsSummary = useCallback(async () => {
+        if (!maintenanceFeatureEnabled) return;
         try {
             const payload = await apiFetch('/api/maintenance/exclusions/summary');
             setExclusionsSummary({
@@ -8982,11 +8996,16 @@ const MaintenanceDashboard: React.FC = () => {
                 libraries: Array.isArray(payload?.libraries) ? payload.libraries : []
             });
         } catch (e: any) {
+            if (isMaintenanceDisabledError(e)) {
+                setMaintenanceFeatureEnabled(false);
+                return;
+            }
             addToast(e.message || 'Failed to load exclusions summary.', 'error');
         }
-    }, [addToast]);
+    }, [addToast, isMaintenanceDisabledError, maintenanceFeatureEnabled]);
 
     const loadLibraryBrowse = useCallback(async () => {
+        if (!maintenanceFeatureEnabled) return;
         setLibraryBrowseLoading(true);
         try {
             const params = new URLSearchParams({
@@ -9001,18 +9020,22 @@ const MaintenanceDashboard: React.FC = () => {
             setLibraryOptions(Array.isArray(payload?.libraries) ? payload.libraries : []);
             setLibraryBrowseTotal(Number(payload?.total || 0));
         } catch (e: any) {
+            if (isMaintenanceDisabledError(e)) {
+                setMaintenanceFeatureEnabled(false);
+                return;
+            }
             addToast(e.message || 'Failed to load library posters.', 'error');
         } finally {
             setLibraryBrowseLoading(false);
         }
-    }, [addToast, libraryBrowseId, libraryBrowseLimit, libraryBrowsePage, libraryBrowseSearch]);
+    }, [addToast, isMaintenanceDisabledError, libraryBrowseId, libraryBrowseLimit, libraryBrowsePage, libraryBrowseSearch, maintenanceFeatureEnabled]);
 
     useEffect(() => {
-        if (activeSection === 'exclusions') {
+        if (maintenanceFeatureEnabled && activeSection === 'exclusions') {
             loadLibraryBrowse();
             loadExclusionsSummary();
         }
-    }, [activeSection, loadLibraryBrowse, loadExclusionsSummary]);
+    }, [activeSection, loadLibraryBrowse, loadExclusionsSummary, maintenanceFeatureEnabled]);
 
     const filteredCandidates = candidateItems.filter((item: any) => {
         if (!candidateSearch.trim()) return true;
