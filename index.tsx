@@ -16,11 +16,12 @@ interface CustomSelectProps {
     onChange: (value: string) => void;
     options: { label: string; value: string | number }[];
     className?: string;
+    compact?: boolean;
 }
 
 import ReactDOM from 'react-dom';
 
-const CustomSelect: React.FC<CustomSelectProps> = ({ id, value, onChange, options, className }) => {
+const CustomSelect: React.FC<CustomSelectProps> = ({ id, value, onChange, options, className, compact = false }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [dropPos, setDropPos] = useState<{ top: number; left: number; width: number } | null>(null);
     const triggerRef = useRef<HTMLDivElement>(null);
@@ -70,16 +71,32 @@ const CustomSelect: React.FC<CustomSelectProps> = ({ id, value, onChange, option
     return (
         <div className={`relative ${className || ''}`} ref={triggerRef} id={id}>
             <div
-                className={`flex justify-between items-center w-full cursor-pointer h-full px-4 py-3 rounded-lg border bg-background text-text transition-all ${isOpen ? 'border-plex ring-1 ring-plex' : 'border-border hover:border-plex/50'}`}
+                className={`flex justify-between items-center w-full cursor-pointer h-full rounded-lg border bg-background text-text transition-all ${compact ? 'px-3 py-2' : 'px-4 py-3'} ${isOpen ? 'border-plex ring-1 ring-plex' : 'border-border hover:border-plex/50'}`}
                 onClick={openDropdown}
             >
-                <span className="truncate mr-4 font-medium text-sm">{selectedOption?.label || 'Select...'}</span>
+                <span className={`truncate mr-4 font-medium ${compact ? 'text-xs' : 'text-sm'}`}>{selectedOption?.label || 'Select...'}</span>
                 <span className={`text-[10px] transition-transform ${isOpen ? 'rotate-180' : ''}`}>▼</span>
             </div>
             {dropdown}
         </div>
     );
 };
+
+const StyledCheckbox: React.FC<{ checked: boolean; onChange: (checked: boolean) => void; label: string }> = ({ checked, onChange, label }) => (
+    <label className="flex items-center gap-2 text-xs text-muted">
+        <span className="relative inline-flex h-4 w-4 items-center justify-center">
+            <input
+                type="checkbox"
+                checked={checked}
+                onChange={(e) => onChange(e.target.checked)}
+                className="peer sr-only"
+            />
+            <span className="h-4 w-4 rounded border border-border bg-background transition-colors peer-checked:border-plex peer-checked:bg-plex/20" />
+            <Check className="pointer-events-none absolute h-3 w-3 text-plex opacity-0 transition-opacity peer-checked:opacity-100" />
+        </span>
+        {label}
+    </label>
+);
 
 
 const hexToRgb = (hex: string) => {
@@ -967,23 +984,27 @@ const MaintenanceConditionRow: React.FC<{
                 value={condition.field}
                 onChange={updateField}
                 options={fields.map((f: any) => ({ label: f.label, value: f.field }))}
+                compact
             />
             <CustomSelect
                 value={selectedOperator}
                 onChange={(value) => onChange({ ...condition, operator: value })}
                 options={operatorOptions}
+                compact
             />
             {fieldDef?.type === 'boolean' ? (
                 <CustomSelect
                     value={String(condition.value)}
                     onChange={(value) => onChange({ ...condition, value: value === 'true' })}
                     options={[{ label: 'True', value: 'true' }, { label: 'False', value: 'false' }]}
+                    compact
                 />
             ) : fieldDef?.type === 'select' ? (
                 <CustomSelect
                     value={String(condition.value ?? '')}
                     onChange={(value) => onChange({ ...condition, value })}
                     options={(fieldDef.options || []).map((opt: string) => ({ label: opt, value: opt }))}
+                    compact
                 />
             ) : (
                 <input
@@ -998,11 +1019,11 @@ const MaintenanceConditionRow: React.FC<{
                             onChange({ ...condition, value: fieldDef?.type === 'number' ? Number(raw) : raw });
                         }
                     }}
-                    className="w-full p-3 rounded-lg border border-border bg-background text-text outline-none focus:border-plex"
+                    className="w-full px-3 py-2 text-xs rounded-lg border border-border bg-background text-text outline-none focus:border-plex"
                     placeholder={selectedOperator === 'between' ? 'min,max' : (selectedOperator === 'in' || selectedOperator === 'not_in') ? 'v1,v2' : 'value'}
                 />
             )}
-            <button type="button" onClick={onDelete} className="px-2.5 py-1.5 text-xs rounded-lg border border-red-500/40 text-red-300 hover:bg-red-500/10">Remove</button>
+            <button type="button" onClick={onDelete} className="px-2 py-1 text-[11px] rounded-lg border border-red-500/40 text-red-300 hover:bg-red-500/10">Remove</button>
         </div>
     );
 };
@@ -1357,53 +1378,47 @@ const LibraryMaintenancePanel: React.FC<{ addToast: (m: string, t?: 'success' | 
                                 value={selectedRule?.filterTree?.logic || 'AND'}
                                 onChange={(value) => updateRule(selectedRule.id, { filterTree: { ...(selectedRule.filterTree || {}), logic: value } })}
                                 options={[{ label: 'AND', value: 'AND' }, { label: 'OR', value: 'OR' }, { label: 'NOT', value: 'NOT' }]}
+                                compact
                             />
                         </div>
                         <div>
                             <label className="text-xs text-muted font-bold uppercase" title="Global grace period for this ruleset. Matching items become eligible this many days after the rule was created.">Grace Days</label>
-                            <input type="number" min={0} className="w-full p-3 rounded-lg border border-border bg-card text-text" value={selectedRule?.graceDays || 0} onChange={(e) => updateRule(selectedRule.id, { graceDays: Number(e.target.value) })} />
+                            <input type="number" min={0} className="w-full px-3 py-2 text-xs rounded-lg border border-border bg-card text-text" value={selectedRule?.graceDays || 0} onChange={(e) => updateRule(selectedRule.id, { graceDays: Number(e.target.value) })} />
                         </div>
                         <div>
                             <label className="text-xs text-muted font-bold uppercase">Max Actions</label>
-                            <input type="number" min={1} className="w-full p-3 rounded-lg border border-border bg-card text-text" value={selectedRule?.settings?.maxActionsPerRun || 25} onChange={(e) => updateRule(selectedRule.id, { settings: { ...(selectedRule.settings || {}), maxActionsPerRun: Number(e.target.value) } })} />
+                            <input type="number" min={1} className="w-full px-3 py-2 text-xs rounded-lg border border-border bg-card text-text" value={selectedRule?.settings?.maxActionsPerRun || 25} onChange={(e) => updateRule(selectedRule.id, { settings: { ...(selectedRule.settings || {}), maxActionsPerRun: Number(e.target.value) } })} />
                         </div>
                         <div>
                             <label className="text-xs text-muted font-bold uppercase">Collection Name</label>
-                            <input type="text" className="w-full p-3 rounded-lg border border-border bg-card text-text" value={selectedRule?.collection?.nameTemplate || 'Leaving Soon - {{ruleName}}'} onChange={(e) => updateRule(selectedRule.id, { collection: { ...(selectedRule.collection || {}), nameTemplate: e.target.value } })} />
+                            <input type="text" className="w-full px-3 py-2 text-xs rounded-lg border border-border bg-card text-text" value={selectedRule?.collection?.nameTemplate || 'Leaving Soon - {{ruleName}}'} onChange={(e) => updateRule(selectedRule.id, { collection: { ...(selectedRule.collection || {}), nameTemplate: e.target.value } })} />
                         </div>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                        <label className="flex items-center gap-2 text-sm text-muted"><input type="checkbox" checked={selectedRule?.collection?.enabled !== false} onChange={(e) => updateRule(selectedRule.id, { collection: { ...(selectedRule.collection || {}), enabled: e.target.checked } })} /> Create / Sync Plex Collection</label>
-                        <label className="flex items-center gap-2 text-sm text-muted"><input type="checkbox" checked={selectedRule?.actions?.deleteFromArr !== false} onChange={(e) => updateRule(selectedRule.id, { actions: { ...(selectedRule.actions || {}), deleteFromArr: e.target.checked } })} /> Delete via Sonarr/Radarr</label>
-                        <label className="flex items-center gap-2 text-sm text-muted"><input type="checkbox" checked={!!selectedRule?.actions?.deleteFiles} onChange={(e) => updateRule(selectedRule.id, { actions: { ...(selectedRule.actions || {}), deleteFiles: e.target.checked } })} /> Delete files on disk</label>
+                        <StyledCheckbox checked={selectedRule?.collection?.enabled !== false} onChange={(checked) => updateRule(selectedRule.id, { collection: { ...(selectedRule.collection || {}), enabled: checked } })} label="Create / Sync Plex Collection" />
+                        <StyledCheckbox checked={selectedRule?.actions?.deleteFromArr !== false} onChange={(checked) => updateRule(selectedRule.id, { actions: { ...(selectedRule.actions || {}), deleteFromArr: checked } })} label="Delete via Sonarr/Radarr" />
+                        <StyledCheckbox checked={!!selectedRule?.actions?.deleteFiles} onChange={(checked) => updateRule(selectedRule.id, { actions: { ...(selectedRule.actions || {}), deleteFiles: checked } })} label="Delete files on disk" />
                     </div>
 
                     <div className="space-y-2">
                         {(selectedRule?.filterTree?.conditions || []).map((cond: any, idx: number) => (
                             <MaintenanceConditionRow key={`${selectedRule.id}-${idx}`} condition={cond} fields={fields} onChange={(next) => updateCondition(selectedRule.id, idx, next)} onDelete={() => removeCondition(selectedRule.id, idx)} />
                         ))}
-                        <button type="button" onClick={() => addCondition(selectedRule.id)} className="px-2.5 py-1.5 border border-border rounded-lg text-xs text-plex font-semibold">Add Filter Condition</button>
+                        <button type="button" onClick={() => addCondition(selectedRule.id)} className="px-2 py-1 text-[11px] border border-border rounded-lg text-plex font-semibold">Add Filter Condition</button>
                     </div>
 
                     <div className="bg-black/20 border border-border rounded-lg p-3">
-                        <label className="flex items-center gap-2 text-sm text-muted">
-                            <input
-                                type="checkbox"
-                                checked={pinCollectionOnDestructiveRun}
-                                onChange={(e) => setPinCollectionOnDestructiveRun(e.target.checked)}
-                            />
-                            On destructive run, create collection and pin to home for all users
-                        </label>
+                        <StyledCheckbox checked={pinCollectionOnDestructiveRun} onChange={setPinCollectionOnDestructiveRun} label="On destructive run, create collection and pin to home for all users" />
                     </div>
 
                     <div className="flex flex-wrap gap-2 pt-1">
-                        <button type="button" className="px-2.5 py-1.5 bg-plex text-background rounded-md text-xs font-semibold hover:opacity-90 disabled:opacity-50" onClick={(e) => saveRules(e)} disabled={saving}>
+                        <button type="button" className="px-2 py-1 text-[11px] bg-plex text-background rounded-md font-semibold hover:opacity-90 disabled:opacity-50" onClick={(e) => saveRules(e)} disabled={saving}>
                             {saving ? 'Saving...' : 'Save Filter'}
                         </button>
-                        <button type="button" className="px-2.5 py-1.5 bg-border text-text rounded-md text-xs font-semibold hover:bg-opacity-80 disabled:opacity-50" onClick={(e) => runPreview(selectedRule.id, e)} disabled={previewRuleId === selectedRule.id}>{previewRuleId === selectedRule.id ? 'Refreshing Preview...' : 'Preview Matches'}</button>
-                        <button type="button" className="px-2.5 py-1.5 bg-blue-500/20 text-blue-300 rounded-md text-xs font-semibold border border-blue-500/30 disabled:opacity-50" onClick={(e) => runRule(selectedRule.id, true, e)} disabled={runningRuleId === selectedRule.id}>{runningRuleId === selectedRule.id ? 'Running...' : 'Run Dry-Run'}</button>
-                        <button type="button" className="px-2.5 py-1.5 bg-red-500/20 text-red-300 rounded-md text-xs font-semibold border border-red-500/30 disabled:opacity-50" onClick={(e) => runRule(selectedRule.id, false, e)} disabled={runningRuleId === selectedRule.id}>{runningRuleId === selectedRule.id ? 'Executing...' : 'Run Destructive'}</button>
+                        <button type="button" className="px-2 py-1 text-[11px] bg-border text-text rounded-md font-semibold hover:bg-opacity-80 disabled:opacity-50" onClick={(e) => runPreview(selectedRule.id, e)} disabled={previewRuleId === selectedRule.id}>{previewRuleId === selectedRule.id ? 'Refreshing Preview...' : 'Preview Matches'}</button>
+                        <button type="button" className="px-2 py-1 text-[11px] bg-blue-500/20 text-blue-300 rounded-md font-semibold border border-blue-500/30 disabled:opacity-50" onClick={(e) => runRule(selectedRule.id, true, e)} disabled={runningRuleId === selectedRule.id}>{runningRuleId === selectedRule.id ? 'Running...' : 'Run Dry-Run'}</button>
+                        <button type="button" className="px-2 py-1 text-[11px] bg-red-500/20 text-red-300 rounded-md font-semibold border border-red-500/30 disabled:opacity-50" onClick={(e) => runRule(selectedRule.id, false, e)} disabled={runningRuleId === selectedRule.id}>{runningRuleId === selectedRule.id ? 'Executing...' : 'Run Destructive'}</button>
                     </div>
                 </div>
             )}
@@ -9141,19 +9156,19 @@ const MaintenanceDashboard: React.FC = () => {
                 <h1 className="text-xl md:text-3xl font-bold text-plex">Maintenance</h1>
             </header>
             <div className="w-full flex flex-col p-0 md:p-8 bg-transparent md:bg-card rounded-none md:rounded-2xl border-0 md:border border-border shadow-none md:shadow-2xl">
-                <div className="md:hidden mb-3 overflow-x-auto custom-scrollbar">
-                    <div className="flex gap-1.5 min-w-max pb-1">
+                <div className="md:hidden mb-3">
+                    <label className="text-[10px] text-muted font-bold uppercase tracking-wider mb-1 block">Module Page</label>
+                    <select
+                        value={activeSection}
+                        onChange={(e) => setActiveSection(e.target.value)}
+                        className="w-full px-3 py-2 rounded-lg border border-border bg-card text-text text-xs font-semibold outline-none focus:border-plex"
+                    >
                         {sections.map((section) => (
-                            <button
-                                key={`mobile-section-${section.id}`}
-                                type="button"
-                                onClick={() => setActiveSection(section.id)}
-                                className={`px-2.5 py-1.5 rounded-md text-[11px] font-semibold whitespace-nowrap transition-colors ${activeSection === section.id ? 'bg-plex text-background' : 'bg-card border border-border text-muted hover:text-text'}`}
-                            >
+                            <option key={`mobile-section-${section.id}`} value={section.id}>
                                 {section.label}
-                            </button>
+                            </option>
                         ))}
-                    </div>
+                    </select>
                 </div>
                 <div className="md:grid md:grid-cols-[280px_minmax(0,1fr)] md:gap-6">
                     <aside className="hidden md:block bg-black/20 border border-border rounded-xl p-3 h-fit sticky top-20">
