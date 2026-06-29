@@ -1023,7 +1023,7 @@ const SettingsDashboard: React.FC = () => {
     const [libraries, setLibraries] = useState<any[]>([]);
     const [activeTab, setActiveTab] = useState(() => {
         const hash = window.location.hash.replace('#', '');
-        return ['plex', 'smtp', 'newsletter', 'cleanup', 'mediastack', 'branding', 'navigation', 'status', 'invites', 'tasks', 'system', 'contact', 'broadcast', 'stream-rules'].includes(hash) ? hash : 'plex';
+        return ['plex', 'smtp', 'newsletter', 'cleanup', 'mediastack', 'branding', 'navigation', 'status', 'invites', 'tasks', 'system', 'contact', 'broadcast', 'stream-rules', 'logs'].includes(hash) ? hash : 'plex';
     });
     const [settingsSearch, setSettingsSearch] = useState('');
 
@@ -1059,7 +1059,8 @@ const SettingsDashboard: React.FC = () => {
                 { id: 'cleanup', label: 'Cleanup', keywords: ['inactive', 'revoke', 'expiry'] },
                 { id: 'stream-rules', label: 'Stream Rules', keywords: ['kill', 'transcode', 'rule'] },
                 { id: 'tasks', label: 'Background Tasks', keywords: ['jobs', 'scheduler', 'run now'] },
-                { id: 'system', label: 'System', keywords: ['backup', 'restore', 'diagnostics'] }
+                { id: 'system', label: 'System', keywords: ['backup', 'restore', 'diagnostics'] },
+                { id: 'logs', label: 'Logs & Audit', keywords: ['audit', 'emails', 'deleted users', 'history'] }
             ]
         }
     ];
@@ -1138,6 +1139,8 @@ const SettingsDashboard: React.FC = () => {
     const [auditLogEntries, setAuditLogEntries] = useState<any[]>([]);
     const [isLoadingAuditLog, setIsLoadingAuditLog] = useState(false);
     const [auditLogPage, setAuditLogPage] = useState(1);
+    const [deletedUsersLog, setDeletedUsersLog] = useState<any[]>([]);
+    const [emailLogPage, setEmailLogPage] = useState(1);
 
     const handlePushAnnouncement = async () => {
         setIsPushingAnnouncement(true);
@@ -1192,10 +1195,20 @@ const SettingsDashboard: React.FC = () => {
             const data = await apiFetch('/api/audit-log');
             setAuditLogEntries(Array.isArray(data) ? data : []);
             setAuditLogPage(1);
+            setEmailLogPage(1);
         } catch (e) {
             addToast('Failed to load audit log', 'error');
         } finally {
             setIsLoadingAuditLog(false);
+        }
+    };
+
+    const fetchDeletedUsersLog = async () => {
+        try {
+            const data = await apiFetch('/api/deleted-users');
+            setDeletedUsersLog(Array.isArray(data) ? data : []);
+        } catch (e) {
+            addToast('Failed to load deleted users log', 'error');
         }
     };
 
@@ -1288,7 +1301,27 @@ const SettingsDashboard: React.FC = () => {
             fetchBackupFiles();
             fetchAuditLog();
         }
+        if (activeTab === 'logs') {
+            fetchDeletedUsersLog();
+            fetchAuditLog();
+        }
     }, [activeTab]);
+
+    const handleUnblockDeletedUser = async (deletedUser: any) => {
+        const label = deletedUser.username || deletedUser.email || 'this user';
+        appConfirm(`Allow ${label} to use the portal again? This does not invite them automatically.`, async () => {
+            setLoading(true);
+            try {
+                await apiFetch(`/api/deleted-users/${encodeURIComponent(deletedUser.blockId)}`, { method: 'DELETE' });
+                addToast('Deleted user unblocked.');
+                await Promise.all([fetchDeletedUsersLog(), fetchAuditLog()]);
+            } catch (error: any) {
+                addToast(error instanceof Error ? error.message : 'Failed to unblock user.', 'error');
+            } finally {
+                setLoading(false);
+            }
+        });
+    };
 
     const formatEventName = (event: string) => event
         .split('_')
@@ -1419,6 +1452,10 @@ const SettingsDashboard: React.FC = () => {
     const auditEventsPerPage = 12;
     const totalAuditLogPages = Math.max(1, Math.ceil(auditLogEntries.length / auditEventsPerPage));
     const pagedAuditEntries = auditLogEntries.slice((auditLogPage - 1) * auditEventsPerPage, auditLogPage * auditEventsPerPage);
+    const emailAuditEntries = auditLogEntries.filter(entry => entry.event === 'system_email_sent');
+    const emailsPerPage = 12;
+    const totalEmailLogPages = Math.max(1, Math.ceil(emailAuditEntries.length / emailsPerPage));
+    const pagedEmailEntries = emailAuditEntries.slice((emailLogPage - 1) * emailsPerPage, emailLogPage * emailsPerPage);
 
     const handleRunTask = async (taskId: string) => {
         setLoading(true);
@@ -2454,6 +2491,82 @@ const SettingsDashboard: React.FC = () => {
                                                     className="px-3 py-1.5 bg-border text-text rounded-md font-semibold hover:bg-opacity-80 disabled:opacity-50"
                                                     disabled={auditLogPage === totalAuditLogPages}
                                                     onClick={() => setAuditLogPage(p => Math.min(totalAuditLogPages, p + 1))}
+                                                >
+                                                    Next
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+                    {activeTab === 'logs' && (
+                        <div className="mb-8 animate-fade-in space-y-6">
+                            <h3 className="text-xl font-bold text-plex mb-4 border-b border-border pb-2">Logs & Audit</h3>
+
+                            <div className="bg-background border border-border rounded-xl p-4">
+                                <div className="flex items-center justify-between mb-3">
+                                    <h4 className="font-bold text-text">Deleted User Blocklist</h4>
+                                    <span className="px-2 py-1 rounded text-xs font-semibold bg-red-500/20 text-red-300">{deletedUsersLog.length}</span>
+                                </div>
+                                <div className="space-y-2">
+                                    {deletedUsersLog.length === 0 ? (
+                                        <p className="text-sm text-muted">No deleted users are currently blocked.</p>
+                                    ) : (
+                                        deletedUsersLog.map((deletedUser) => (
+                                            <div key={deletedUser.blockId} className="bg-black/20 rounded-lg p-3 flex items-center justify-between gap-3">
+                                                <div className="min-w-0">
+                                                    <p className="text-sm font-semibold text-text truncate">{deletedUser.username || 'Unknown user'}</p>
+                                                    <p className="text-xs text-muted truncate">{deletedUser.email || deletedUser.plexId || deletedUser.id || 'No identifier'}</p>
+                                                    <p className="text-[11px] text-muted/80">Deleted {formatDateTime(deletedUser.deletedAt)} by {deletedUser.deletedBy || 'admin'}</p>
+                                                </div>
+                                                <button
+                                                    className="px-3 py-1.5 bg-border text-text rounded text-xs font-semibold hover:bg-opacity-80"
+                                                    onClick={() => handleUnblockDeletedUser(deletedUser)}
+                                                >
+                                                    Unblock
+                                                </button>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className="bg-background border border-border rounded-xl p-4">
+                                <div className="flex items-center justify-between mb-3">
+                                    <h4 className="font-bold text-text">Email Log</h4>
+                                    <button className="px-3 py-1.5 bg-border text-text rounded-md font-semibold hover:bg-opacity-80" onClick={fetchAuditLog}>
+                                        {isLoadingAuditLog ? 'Refreshing...' : 'Refresh'}
+                                    </button>
+                                </div>
+                                {pagedEmailEntries.length === 0 ? (
+                                    <p className="text-sm text-muted">No system emails have been logged yet.</p>
+                                ) : (
+                                    <div className="space-y-2">
+                                        {pagedEmailEntries.map((entry) => (
+                                            <div key={entry.id} className="bg-black/20 rounded-lg p-3">
+                                                <div className="flex items-start justify-between gap-3">
+                                                    <p className="text-sm font-semibold text-text line-clamp-1">{entry.details?.subject || 'System Email'}</p>
+                                                    <span className="text-[11px] text-muted whitespace-nowrap">{formatDateTime(entry.timestamp)}</span>
+                                                </div>
+                                                <p className="text-xs text-muted mt-1">To: {entry.target?.username || entry.target?.email || 'Unknown user'}</p>
+                                            </div>
+                                        ))}
+                                        {totalEmailLogPages > 1 && (
+                                            <div className="flex items-center justify-between pt-1">
+                                                <button
+                                                    className="px-3 py-1.5 bg-border text-text rounded-md font-semibold hover:bg-opacity-80 disabled:opacity-50"
+                                                    disabled={emailLogPage === 1}
+                                                    onClick={() => setEmailLogPage(p => Math.max(1, p - 1))}
+                                                >
+                                                    Previous
+                                                </button>
+                                                <span className="text-xs text-muted">Page {emailLogPage} of {totalEmailLogPages}</span>
+                                                <button
+                                                    className="px-3 py-1.5 bg-border text-text rounded-md font-semibold hover:bg-opacity-80 disabled:opacity-50"
+                                                    disabled={emailLogPage === totalEmailLogPages}
+                                                    onClick={() => setEmailLogPage(p => Math.min(totalEmailLogPages, p + 1))}
                                                 >
                                                     Next
                                                 </button>
@@ -8027,6 +8140,7 @@ const Navigation: React.FC<NavigationProps> = ({ currentRoute, onNavigate, onLog
                         const item = navItemsConfig[key];
                         if (!item) return null;
                         if (item.adminOnly && !isAdmin) return null;
+                        if (key === 'logs') return null;
 
                         const isCurrent = item.route ? ['admin', 'user'].includes(currentRoute) && key === 'home' ? true : currentRoute === item.route : false;
 
@@ -8262,6 +8376,11 @@ const MainApp: React.FC = () => {
     }, [fetchPublicConfig]);
 
     const setRoute = useCallback((route: 'login' | 'admin' | 'user' | 'users' | 'status' | 'dashboard' | 'settings' | 'logs' | 'analytics' | 'mediastack' | 'invite' | 'loading') => {
+        if (route === 'logs') {
+            setCurrentRoute('settings');
+            window.history.pushState({}, '', '/settings#logs');
+            return;
+        }
         setCurrentRoute(route);
         if (route !== 'loading' && route !== 'invite') {
             let path = '/';
@@ -8271,7 +8390,6 @@ const MainApp: React.FC = () => {
             if (route === 'status') path = '/status';
             if (route === 'dashboard') path = '/dashboard';
             if (route === 'settings') path = '/settings';
-            if (route === 'logs') path = '/logs';
             if (route === 'analytics') path = '/analytics';
             if (route === 'mediastack') path = '/mediastack';
             window.history.pushState({}, '', path);
@@ -8292,7 +8410,10 @@ const MainApp: React.FC = () => {
             if (path === '/status') setCurrentRoute('status');
             else if (path === '/dashboard') setCurrentRoute('dashboard');
             else if (path === '/settings' && data.session.isAdmin) setCurrentRoute('settings');
-            else if (path === '/logs' && data.session.isAdmin) setCurrentRoute('logs');
+            else if (path === '/logs' && data.session.isAdmin) {
+                window.history.replaceState({}, '', '/settings#logs');
+                setCurrentRoute('settings');
+            }
             else if (path === '/mediastack') setCurrentRoute('mediastack');
             else if (path === '/analytics') setCurrentRoute('analytics');
             else if (path === '/settings' && !data.session.isAdmin) setCurrentRoute('user');
