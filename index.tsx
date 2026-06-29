@@ -1711,7 +1711,7 @@ const SettingsDashboard: React.FC = () => {
                         {visibleTabGroups.length === 0 ? (
                             <p className="text-xs text-muted px-2 py-3">No settings sections found.</p>
                         ) : (
-                            <div className="space-y-3 max-h-[70vh] overflow-y-auto custom-scrollbar pr-1">
+                            <div className="space-y-3 pr-1">
                                 {visibleTabGroups.map(group => (
                                     <div key={group.title}>
                                         <p className="text-[10px] uppercase tracking-wider font-bold text-plex px-2 mb-1">{group.title}</p>
