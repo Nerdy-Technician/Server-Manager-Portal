@@ -922,6 +922,475 @@ const StreamKillRulesPanel: React.FC<{ addToast: (m: string, t?: 'success' | 'er
     );
 };
 
+const mkMaintenanceCondition = () => ({ field: 'daysSinceLastWatch', operator: 'greater_than', value: 30 });
+const mkMaintenanceRule = () => ({
+    id: `maintenance-${Date.now()}`,
+    name: 'New Maintenance Rule',
+    enabled: true,
+    graceDays: 7,
+    settings: { enabled: false, dryRunByDefault: true, maxActionsPerRun: 25, requireConfirmForDestructive: true },
+    collection: { enabled: true, nameTemplate: 'Leaving Soon - {{ruleName}}' },
+    actions: { deleteFromArr: true, deleteFiles: true, unmonitor: false, qualityProfileId: 0 },
+    filterTree: { logic: 'AND', conditions: [mkMaintenanceCondition()] }
+});
+
+const MaintenanceConditionRow: React.FC<{
+    condition: any;
+    fields: any[];
+    onChange: (next: any) => void;
+    onDelete: () => void;
+}> = ({ condition, fields, onChange, onDelete }) => {
+    const fieldDef = fields.find((f: any) => f.field === condition.field) || fields[0];
+    const operatorOptions = (fieldDef?.operators || ['equals']).map((op: string) => ({ label: op.replace(/_/g, ' '), value: op }));
+    const selectedOperator = operatorOptions.find((o: any) => o.value === condition.operator)?.value || operatorOptions[0]?.value || 'equals';
+    const updateField = (field: string) => {
+        const nextField = fields.find((f: any) => f.field === field) || fields[0];
+        const nextOperator = (nextField?.operators || ['equals'])[0];
+        const defaultValue = nextField?.type === 'boolean' ? false : (nextField?.type === 'number' ? 0 : (nextField?.options?.[0] ?? ''));
+        onChange({ ...condition, field, operator: nextOperator, value: defaultValue });
+    };
+    return (
+        <div className="grid grid-cols-1 md:grid-cols-[1.5fr_1fr_2fr_auto] gap-2 p-3 border border-border rounded-lg bg-black/20">
+            <CustomSelect
+                value={condition.field}
+                onChange={updateField}
+                options={fields.map((f: any) => ({ label: f.label, value: f.field }))}
+            />
+            <CustomSelect
+                value={selectedOperator}
+                onChange={(value) => onChange({ ...condition, operator: value })}
+                options={operatorOptions}
+            />
+            {fieldDef?.type === 'boolean' ? (
+                <CustomSelect
+                    value={String(condition.value)}
+                    onChange={(value) => onChange({ ...condition, value: value === 'true' })}
+                    options={[{ label: 'True', value: 'true' }, { label: 'False', value: 'false' }]}
+                />
+            ) : fieldDef?.type === 'select' ? (
+                <CustomSelect
+                    value={String(condition.value ?? '')}
+                    onChange={(value) => onChange({ ...condition, value })}
+                    options={(fieldDef.options || []).map((opt: string) => ({ label: opt, value: opt }))}
+                />
+            ) : (
+                <input
+                    type={fieldDef?.type === 'number' ? 'number' : 'text'}
+                    value={Array.isArray(condition.value) ? condition.value.join(',') : String(condition.value ?? '')}
+                    onChange={(e) => {
+                        const raw = e.target.value;
+                        if (selectedOperator === 'between' || selectedOperator === 'in' || selectedOperator === 'not_in') {
+                            const parsed = raw.split(',').map(v => v.trim()).filter(Boolean);
+                            onChange({ ...condition, value: fieldDef?.type === 'number' ? parsed.map(Number) : parsed });
+                        } else {
+                            onChange({ ...condition, value: fieldDef?.type === 'number' ? Number(raw) : raw });
+                        }
+                    }}
+                    className="w-full p-3 rounded-lg border border-border bg-background text-text outline-none focus:border-plex"
+                    placeholder={selectedOperator === 'between' ? 'min,max' : (selectedOperator === 'in' || selectedOperator === 'not_in') ? 'v1,v2' : 'value'}
+                />
+            )}
+            <button type="button" onClick={onDelete} className="px-3 py-2 rounded-lg border border-red-500/40 text-red-300 hover:bg-red-500/10">Remove</button>
+        </div>
+    );
+};
+
+const LibraryMaintenancePanel: React.FC<{ addToast: (m: string, t?: 'success' | 'error') => void }> = ({ addToast }) => {
+    const [fields, setFields] = useState<any[]>([]);
+    const [rules, setRules] = useState<any[]>([]);
+    const [runs, setRuns] = useState<any[]>([]);
+    const [previewData, setPreviewData] = useState<any[]>([]);
+    const [indexInfo, setIndexInfo] = useState<any>(null);
+    const [selectedRuleId, setSelectedRuleId] = useState<string | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
+    const [runningRuleId, setRunningRuleId] = useState<string | null>(null);
+    const [previewRuleId, setPreviewRuleId] = useState<string | null>(null);
+
+    const selectedRule = useMemo(() => rules.find((rule: any) => rule.id === selectedRuleId) || null, [rules, selectedRuleId]);
+    const selectedPreview = useMemo(() => previewData.find((preview: any) => preview.ruleId === selectedRuleId) || null, [previewData, selectedRuleId]);
+
+    const refreshIndexInfo = useCallback(async () => {
+        const data = await apiFetch('/api/maintenance/index');
+        setIndexInfo(data);
+    }, []);
+
+    const refreshRuns = useCallback(async () => {
+        const data = await apiFetch('/api/maintenance/runs');
+        setRuns(Array.isArray(data) ? data : []);
+    }, []);
+
+    const refreshRules = useCallback(async () => {
+        const data = await apiFetch('/api/maintenance/rules');
+        const normalized = Array.isArray(data) ? data : [];
+        setRules(normalized);
+        setSelectedRuleId(prev => {
+            if (!prev) return null;
+            return normalized.some((rule: any) => rule.id === prev) ? prev : null;
+        });
+    }, []);
+
+    const loadAll = useCallback(async () => {
+        setLoading(true);
+        try {
+            const [catalog, preview, index] = await Promise.all([
+                apiFetch('/api/maintenance/filter-options'),
+                apiFetch('/api/maintenance/preview', { method: 'POST', body: JSON.stringify({ includeAll: false, limit: 40 }) }),
+                apiFetch('/api/maintenance/index')
+            ]);
+            setFields(Array.isArray(catalog?.fields) ? catalog.fields : []);
+            setPreviewData(Array.isArray(preview?.previews) ? preview.previews : []);
+            setIndexInfo(index);
+            await Promise.all([refreshRules(), refreshRuns()]);
+        } catch (e: any) {
+            addToast(e.message || 'Failed to load maintenance module', 'error');
+        } finally {
+            setLoading(false);
+        }
+    }, [addToast, refreshRules, refreshRuns]);
+
+    useEffect(() => { loadAll(); }, [loadAll]);
+
+    const updateRule = (ruleId: string, patch: any) => setRules(prev => prev.map(rule => (rule.id === ruleId ? { ...rule, ...patch } : rule)));
+    const addRule = (event?: React.MouseEvent) => {
+        event?.preventDefault();
+        event?.stopPropagation();
+        const next = mkMaintenanceRule();
+        setRules(prev => [...prev, next]);
+        setSelectedRuleId(next.id);
+    };
+    const removeRule = (ruleId: string) => {
+        setRules(prev => {
+            const filtered = prev.filter(rule => rule.id !== ruleId);
+            if (selectedRuleId === ruleId) {
+                setSelectedRuleId(filtered[0]?.id || null);
+            }
+            return filtered;
+        });
+        setPreviewData(prev => prev.filter((p: any) => p.ruleId !== ruleId));
+    };
+    const deleteRule = async (ruleId: string, event?: React.MouseEvent) => {
+        event?.preventDefault();
+        event?.stopPropagation();
+        const target = rules.find((rule: any) => rule.id === ruleId);
+        if (!target) return;
+        appConfirm(`Delete filter "${target.name || 'Unnamed Rule'}"?`, async () => {
+            const previousRules = rules;
+            const nextRules = rules.filter((rule: any) => rule.id !== ruleId);
+            removeRule(ruleId);
+            setSaving(true);
+            try {
+                await apiFetch('/api/maintenance/rules', { method: 'POST', body: JSON.stringify(nextRules) });
+                addToast(`Deleted filter: ${target.name || 'Unnamed Rule'}.`);
+                await Promise.all([refreshRules(), refreshRuns()]);
+            } catch (e: any) {
+                setRules(previousRules);
+                addToast(e.message || 'Failed to delete filter', 'error');
+            } finally {
+                setSaving(false);
+            }
+        });
+    };
+    const addCondition = (ruleId: string) => {
+        setRules(prev => prev.map(rule => {
+            if (rule.id !== ruleId) return rule;
+            const existing = Array.isArray(rule?.filterTree?.conditions) ? rule.filterTree.conditions : [];
+            return { ...rule, filterTree: { logic: rule?.filterTree?.logic || 'AND', conditions: [...existing, mkMaintenanceCondition()] } };
+        }));
+    };
+    const updateCondition = (ruleId: string, index: number, condition: any) => {
+        setRules(prev => prev.map(rule => {
+            if (rule.id !== ruleId) return rule;
+            const conditions = [...(rule?.filterTree?.conditions || [])];
+            conditions[index] = condition;
+            return { ...rule, filterTree: { logic: rule?.filterTree?.logic || 'AND', conditions } };
+        }));
+    };
+    const removeCondition = (ruleId: string, index: number) => {
+        setRules(prev => prev.map(rule => {
+            if (rule.id !== ruleId) return rule;
+            const conditions = (rule?.filterTree?.conditions || []).filter((_: any, i: number) => i !== index);
+            return { ...rule, filterTree: { logic: rule?.filterTree?.logic || 'AND', conditions } };
+        }));
+    };
+
+    const saveRules = async (event?: React.MouseEvent) => {
+        event?.preventDefault();
+        event?.stopPropagation();
+        setSaving(true);
+        try {
+            await apiFetch('/api/maintenance/rules', { method: 'POST', body: JSON.stringify(rules) });
+            addToast('Maintenance rules saved.');
+            await refreshRules();
+        } catch (e: any) {
+            addToast(e.message || 'Failed to save maintenance rules', 'error');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const rebuildIndex = async (event?: React.MouseEvent) => {
+        event?.preventDefault();
+        event?.stopPropagation();
+        try {
+            await apiFetch('/api/maintenance/index/rebuild', { method: 'POST' });
+            addToast('Maintenance index rebuilt.');
+            await Promise.all([refreshIndexInfo(), loadAll()]);
+        } catch (e: any) {
+            addToast(e.message || 'Failed to rebuild maintenance index', 'error');
+        }
+    };
+
+    const runPreview = async (ruleId: string, event?: React.MouseEvent) => {
+        event?.preventDefault();
+        event?.stopPropagation();
+        setPreviewRuleId(ruleId);
+        try {
+            const ruleDraft = rules.find((r: any) => r.id === ruleId);
+            const payload = await apiFetch('/api/maintenance/preview', {
+                method: 'POST',
+                body: JSON.stringify({
+                    ruleId,
+                    rule: ruleDraft || undefined,
+                    includeAll: true
+                })
+            });
+            const previews = Array.isArray(payload?.previews) ? payload.previews : [];
+            setPreviewData((prev) => {
+                const map = new Map(prev.map((entry: any) => [entry.ruleId, entry]));
+                previews.forEach((entry: any) => map.set(entry.ruleId, entry));
+                return Array.from(map.values());
+            });
+            const current = previews.find((p: any) => p.ruleId === ruleId) || previews[0];
+            addToast(`Preview complete: ${current?.totalMatches ?? 0} match(es).`);
+        } catch (e: any) {
+            addToast(e.message || 'Failed to generate preview', 'error');
+        } finally {
+            setPreviewRuleId(null);
+        }
+    };
+
+    const runRule = async (ruleId: string, dryRun: boolean, event?: React.MouseEvent) => {
+        event?.preventDefault();
+        event?.stopPropagation();
+        const runNow = async () => {
+            setRunningRuleId(ruleId);
+            try {
+                await apiFetch('/api/maintenance/run', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        ruleId,
+                        dryRun,
+                        confirmToken: dryRun ? null : 'CONFIRM_MAINTENANCE_DELETE'
+                    })
+                });
+                addToast(dryRun ? 'Dry-run completed.' : 'Rule execution completed.');
+                await Promise.all([refreshRuns(), runPreview(ruleId)]);
+            } catch (e: any) {
+                addToast(e.message || 'Rule execution failed', 'error');
+            } finally {
+                setRunningRuleId(null);
+            }
+        };
+        if (!dryRun) {
+            appConfirm('Run destructive maintenance action now? This will only delete via Sonarr/Radarr.', runNow);
+            return;
+        }
+        await runNow();
+    };
+
+    if (loading) return <div className="flex justify-center py-16"><div className="w-8 h-8 border-4 border-plex border-t-transparent rounded-full animate-spin" /></div>;
+
+    return (
+        <div className="mb-8 animate-fade-in space-y-6" onSubmitCapture={(e) => e.preventDefault()}>
+            <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border pb-3">
+                <div>
+                    <h3 className="text-xl font-bold text-plex">Library Maintenance Rules</h3>
+                    <p className="text-xs text-muted mt-1">Saved filters are listed below. Click one to edit, preview, and run.</p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                    <button type="button" className="px-3 py-2 bg-border text-text rounded-md font-semibold hover:bg-opacity-80" onClick={(e) => rebuildIndex(e)}>Rebuild Index</button>
+                    <button type="button" className="px-3 py-2 bg-border text-text rounded-md font-semibold hover:bg-opacity-80" onClick={(e) => addRule(e)}>Add Filter</button>
+                </div>
+            </div>
+
+            <div className="bg-black/20 border border-border rounded-xl p-3 text-xs text-muted">
+                Index: <span className="text-text font-semibold">{indexInfo?.itemCount || 0}</span> media items
+                {indexInfo?.generatedAt ? <> · Last build: <span className="text-text">{new Date(indexInfo.generatedAt).toLocaleString()}</span></> : null}
+                {' '}· Request records: <span className="text-text font-semibold">{indexInfo?.requestItemCount || 0}</span>
+            </div>
+
+            <div className="bg-background border border-border rounded-xl p-4">
+                <p className="text-xs text-muted uppercase tracking-wider font-bold mb-3">Saved Filters</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {rules.map((rule: any) => {
+                        const preview = previewData.find((p: any) => p.ruleId === rule.id);
+                        return (
+                            <div key={rule.id} className={`border rounded-lg p-3 transition-colors ${selectedRuleId === rule.id ? 'border-plex bg-plex/5' : 'border-border bg-black/20'}`}>
+                                <div className="flex items-start justify-between gap-2">
+                                    <div>
+                                        <p className="text-sm font-semibold text-text">{rule.name || 'Unnamed Rule'}</p>
+                                        <p className="text-xs text-muted mt-1">{(rule?.filterTree?.conditions || []).length} condition(s)</p>
+                                    </div>
+                                    <span className={`text-[11px] px-2 py-0.5 rounded ${rule.enabled !== false ? 'bg-green-500/20 text-green-300' : 'bg-border text-muted'}`}>
+                                        {rule.enabled !== false ? 'Enabled' : 'Disabled'}
+                                    </span>
+                                </div>
+                                <p className="text-[11px] text-muted mt-2">Matches: {preview?.totalMatches ?? '—'}</p>
+                                <div className="flex gap-2 mt-3">
+                                    <button
+                                        type="button"
+                                        className="px-2.5 py-1.5 text-xs rounded border border-border text-text hover:border-plex/50"
+                                        onClick={() => setSelectedRuleId(rule.id)}
+                                    >
+                                        Edit Filter
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className="px-2.5 py-1.5 text-xs rounded border border-border text-text hover:border-plex/50"
+                                        onClick={(e) => runPreview(rule.id, e)}
+                                    >
+                                        Refresh Matches
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className="px-2.5 py-1.5 text-xs rounded border border-red-500/40 text-red-300 hover:bg-red-500/10 disabled:opacity-50"
+                                        onClick={(e) => deleteRule(rule.id, e)}
+                                        disabled={saving}
+                                    >
+                                        Delete
+                                    </button>
+                                </div>
+                            </div>
+                        );
+                    })}
+                    {rules.length === 0 && <span className="text-sm text-muted">No filters yet. Click Add Filter.</span>}
+                </div>
+            </div>
+
+            {selectedRule && (
+                <div className="bg-background border border-border rounded-xl p-4 space-y-4 w-full">
+                    <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1">
+                            <label className="text-xs text-muted font-bold uppercase">Filter Name</label>
+                            <input
+                                value={selectedRule.name || ''}
+                                onChange={(e) => updateRule(selectedRule.id, { name: e.target.value })}
+                                className="w-full mt-1 p-3 rounded-lg border border-border bg-card text-text outline-none focus:border-plex"
+                                placeholder="Filter name"
+                            />
+                        </div>
+                        <div className="mt-6 flex gap-2">
+                            <button type="button" className="px-3 py-2 text-xs border border-border text-text rounded hover:bg-white/5" onClick={() => setSelectedRuleId(null)}>Close Editor</button>
+                            <button
+                                type="button"
+                                className="px-3 py-2 text-xs border border-red-500/40 text-red-300 rounded hover:bg-red-500/10 disabled:opacity-50"
+                                onClick={(e) => deleteRule(selectedRule.id, e)}
+                                disabled={saving}
+                            >
+                                Delete Filter
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                        <div>
+                            <label className="text-xs text-muted font-bold uppercase">Match Logic</label>
+                            <CustomSelect
+                                value={selectedRule?.filterTree?.logic || 'AND'}
+                                onChange={(value) => updateRule(selectedRule.id, { filterTree: { ...(selectedRule.filterTree || {}), logic: value } })}
+                                options={[{ label: 'AND', value: 'AND' }, { label: 'OR', value: 'OR' }, { label: 'NOT', value: 'NOT' }]}
+                            />
+                        </div>
+                        <div>
+                            <label className="text-xs text-muted font-bold uppercase">Grace Days</label>
+                            <input type="number" min={0} className="w-full p-3 rounded-lg border border-border bg-card text-text" value={selectedRule.graceDays || 0} onChange={(e) => updateRule(selectedRule.id, { graceDays: Number(e.target.value) })} />
+                        </div>
+                        <div>
+                            <label className="text-xs text-muted font-bold uppercase">Max Actions</label>
+                            <input type="number" min={1} className="w-full p-3 rounded-lg border border-border bg-card text-text" value={selectedRule?.settings?.maxActionsPerRun || 25} onChange={(e) => updateRule(selectedRule.id, { settings: { ...(selectedRule.settings || {}), maxActionsPerRun: Number(e.target.value) } })} />
+                        </div>
+                        <div>
+                            <label className="text-xs text-muted font-bold uppercase">Collection Name</label>
+                            <input type="text" className="w-full p-3 rounded-lg border border-border bg-card text-text" value={selectedRule?.collection?.nameTemplate || 'Leaving Soon - {{ruleName}}'} onChange={(e) => updateRule(selectedRule.id, { collection: { ...(selectedRule.collection || {}), nameTemplate: e.target.value } })} />
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <label className="flex items-center gap-2 text-sm text-muted"><input type="checkbox" checked={selectedRule?.collection?.enabled !== false} onChange={(e) => updateRule(selectedRule.id, { collection: { ...(selectedRule.collection || {}), enabled: e.target.checked } })} /> Create / Sync Plex Collection</label>
+                        <label className="flex items-center gap-2 text-sm text-muted"><input type="checkbox" checked={selectedRule?.actions?.deleteFromArr !== false} onChange={(e) => updateRule(selectedRule.id, { actions: { ...(selectedRule.actions || {}), deleteFromArr: e.target.checked } })} /> Delete via Sonarr/Radarr</label>
+                        <label className="flex items-center gap-2 text-sm text-muted"><input type="checkbox" checked={!!selectedRule?.actions?.deleteFiles} onChange={(e) => updateRule(selectedRule.id, { actions: { ...(selectedRule.actions || {}), deleteFiles: e.target.checked } })} /> Delete files on disk</label>
+                    </div>
+
+                    <div className="space-y-2">
+                        {(selectedRule?.filterTree?.conditions || []).map((cond: any, idx: number) => (
+                            <MaintenanceConditionRow key={`${selectedRule.id}-${idx}`} condition={cond} fields={fields} onChange={(next) => updateCondition(selectedRule.id, idx, next)} onDelete={() => removeCondition(selectedRule.id, idx)} />
+                        ))}
+                        <button type="button" onClick={() => addCondition(selectedRule.id)} className="px-3 py-2 border border-border rounded-lg text-sm text-plex font-semibold">Add Filter Condition</button>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2 pt-1">
+                        <button type="button" className="px-3 py-2 bg-plex text-background rounded-md text-sm font-semibold hover:opacity-90 disabled:opacity-50" onClick={(e) => saveRules(e)} disabled={saving}>
+                            {saving ? 'Saving...' : 'Save Filter'}
+                        </button>
+                        <button type="button" className="px-3 py-2 bg-border text-text rounded-md text-sm font-semibold hover:bg-opacity-80 disabled:opacity-50" onClick={(e) => runPreview(selectedRule.id, e)} disabled={previewRuleId === selectedRule.id}>{previewRuleId === selectedRule.id ? 'Refreshing Preview...' : 'Preview Matches'}</button>
+                        <button type="button" className="px-3 py-2 bg-blue-500/20 text-blue-300 rounded-md text-sm font-semibold border border-blue-500/30 disabled:opacity-50" onClick={(e) => runRule(selectedRule.id, true, e)} disabled={runningRuleId === selectedRule.id}>{runningRuleId === selectedRule.id ? 'Running...' : 'Run Dry-Run'}</button>
+                        <button type="button" className="px-3 py-2 bg-red-500/20 text-red-300 rounded-md text-sm font-semibold border border-red-500/30 disabled:opacity-50" onClick={(e) => runRule(selectedRule.id, false, e)} disabled={runningRuleId === selectedRule.id}>{runningRuleId === selectedRule.id ? 'Executing...' : 'Run Destructive'}</button>
+                    </div>
+                </div>
+            )}
+
+            <div className="bg-background border border-border rounded-xl p-4">
+                <div className="flex items-center justify-between mb-3">
+                    <h4 className="font-bold text-text">Matched Titles</h4>
+                    <span className="text-xs px-2 py-1 rounded bg-plex/20 text-plex font-semibold">{selectedPreview?.totalMatches || 0} matches</span>
+                </div>
+                {!selectedRuleId ? (
+                    <p className="text-sm text-muted">Select a saved filter to preview matches.</p>
+                ) : (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-7 xl:grid-cols-8 gap-3 max-h-[640px] overflow-y-auto custom-scrollbar pr-1">
+                        {(selectedPreview?.sample || []).map((item: any) => (
+                            <div key={`${selectedRuleId}-${item.ratingKey}`} className="bg-black/20 border border-border rounded-lg overflow-hidden">
+                                <div className="aspect-[2/3] bg-black/40">
+                                    {item.thumb ? (
+                                        <img
+                                            src={`/api/plex/image?path=${encodeURIComponent(item.thumb)}&width=240&height=360`}
+                                            alt={item.title}
+                                            loading="lazy"
+                                            className="w-full h-full object-cover"
+                                        />
+                                    ) : (
+                                        <div className="w-full h-full flex items-center justify-center text-xs text-muted">No Poster</div>
+                                    )}
+                                </div>
+                                <div className="p-2">
+                                    <p className="text-xs text-text line-clamp-2">{item.title}</p>
+                                    <p className="text-[11px] text-muted mt-1">{item.libraryTitle || item.mediaType}</p>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+
+        </div>
+    );
+};
+
+const SETTINGS_MAINTENANCE_TAB_IDS = [
+    'maintenance-overview',
+    'maintenance-rules',
+    'maintenance-collections',
+    'maintenance-candidates',
+    'maintenance-runs',
+    'maintenance-overlays',
+    'maintenance-calendar',
+    'maintenance-storage',
+    'maintenance-library',
+    'maintenance-exclusions',
+    'maintenance-settings'
+];
+
 const SettingHint: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const detailsRef = useRef<HTMLDetailsElement>(null);
 
@@ -1023,7 +1492,7 @@ const SettingsDashboard: React.FC = () => {
     const [libraries, setLibraries] = useState<any[]>([]);
     const [activeTab, setActiveTab] = useState(() => {
         const hash = window.location.hash.replace('#', '');
-        return ['plex', 'smtp', 'newsletter', 'cleanup', 'mediastack', 'branding', 'navigation', 'status', 'invites', 'tasks', 'system', 'contact', 'broadcast', 'stream-rules', 'logs'].includes(hash) ? hash : 'plex';
+        return ['plex', 'smtp', 'newsletter', 'cleanup', 'mediastack', 'branding', 'navigation', 'status', 'invites', 'tasks', 'system', 'contact', 'broadcast', 'stream-rules', 'logs', ...SETTINGS_MAINTENANCE_TAB_IDS].includes(hash) ? hash : 'plex';
     });
     const [settingsSearch, setSettingsSearch] = useState('');
 
@@ -1061,6 +1530,22 @@ const SettingsDashboard: React.FC = () => {
                 { id: 'tasks', label: 'Background Tasks', keywords: ['jobs', 'scheduler', 'run now'] },
                 { id: 'system', label: 'System', keywords: ['backup', 'restore', 'diagnostics'] },
                 { id: 'logs', label: 'Logs & Audit', keywords: ['audit', 'emails', 'deleted users', 'history'] }
+            ]
+        },
+        {
+            title: 'Maintenance',
+            tabs: [
+                { id: 'maintenance-overview', label: 'Overview', keywords: ['maintainerr', 'cleanup', 'module', 'overview'] },
+                { id: 'maintenance-rules', label: 'Rules', keywords: ['filters', 'conditions', 'automation'] },
+                { id: 'maintenance-collections', label: 'Collections', keywords: ['plex', 'leaving soon', 'collection'] },
+                { id: 'maintenance-candidates', label: 'Candidates', keywords: ['queue', 'matches', 'review'] },
+                { id: 'maintenance-runs', label: 'Execution Timeline', keywords: ['runs', 'history', 'results'] },
+                { id: 'maintenance-overlays', label: 'Overlays', keywords: ['poster', 'countdown', 'graphics'] },
+                { id: 'maintenance-calendar', label: 'Calendar', keywords: ['schedule', 'grace period', 'dates'] },
+                { id: 'maintenance-storage', label: 'Storage Metrics', keywords: ['disk', 'space', 'reclaim'] },
+                { id: 'maintenance-library', label: 'Rule Library', keywords: ['templates', 'import', 'export'] },
+                { id: 'maintenance-exclusions', label: 'Exclusions', keywords: ['safelist', 'ignore', 'protect'] },
+                { id: 'maintenance-settings', label: 'Maintenance Settings', keywords: ['global', 'safety', 'limits'] }
             ]
         }
     ];
@@ -1114,6 +1599,10 @@ const SettingsDashboard: React.FC = () => {
     const [radarrApiKey, setRadarrApiKey] = useState('');
     const [tautulliUrl, setTautulliUrl] = useState('');
     const [tautulliApiKey, setTautulliApiKey] = useState('');
+    const [requestAppType, setRequestAppType] = useState('none');
+    const [requestAppUrl, setRequestAppUrl] = useState('');
+    const [requestAppApiKey, setRequestAppApiKey] = useState('');
+    const [maintenanceExperimentalEnabled, setMaintenanceExperimentalEnabled] = useState(false);
 
     // Branding & UI States
     const [primaryColor, setPrimaryColor] = useState('#E5A00D');
@@ -1125,7 +1614,16 @@ const SettingsDashboard: React.FC = () => {
     const [isPushingAnnouncement, setIsPushingAnnouncement] = useState(false);
     const [use24HourClock, setUse24HourClock] = useState(initialSettings.use24HourClock || false);
     const [allowTemporaryAccess, setAllowTemporaryAccess] = useState(initialSettings.allowTemporaryAccess || false);
-    const [navOrder, setNavOrder] = useState<string[]>(['home', 'discover', 'status', 'logs', 'analytics', 'mediastack', 'request', 'settings', 'logout']);
+    const ensureMaintenanceNavOrder = useCallback((order: string[]) => {
+        const base = Array.isArray(order) ? order.filter(Boolean) : ['home', 'discover', 'status', 'analytics', 'mediastack', 'request', 'settings', 'logout'];
+        if (!base.includes('maintenance')) {
+            const requestIndex = base.indexOf('request');
+            if (requestIndex >= 0) base.splice(requestIndex, 0, 'maintenance');
+            else base.push('maintenance');
+        }
+        return base;
+    }, []);
+    const [navOrder, setNavOrder] = useState<string[]>(() => ensureMaintenanceNavOrder(['home', 'discover', 'status', 'analytics', 'mediastack', 'request', 'settings', 'logout']));
     const [logoFile, setLogoFile] = useState<File | null>(null);
     const [tasks, setTasks] = useState<any[]>([]);
     const [diagnostics, setDiagnostics] = useState<any>(null);
@@ -1470,6 +1968,22 @@ const SettingsDashboard: React.FC = () => {
         }
     };
 
+    const renderMaintenancePage = (title: string, description: string, points: string[]) => (
+        <div className="mb-8 animate-fade-in space-y-4">
+            <h3 className="text-xl font-bold text-plex mb-4 border-b border-border pb-2">{title}</h3>
+            <div className="bg-background border border-border rounded-xl p-5">
+                <p className="text-sm text-muted mb-4">{description}</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {points.map(point => (
+                        <div key={point} className="bg-black/20 border border-border rounded-lg px-3 py-2 text-sm text-text">
+                            {point}
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </div>
+    );
+
     useEffect(() => {
         if (initialSettings) {
             setToken(initialSettings.token || '');
@@ -1497,13 +2011,16 @@ const SettingsDashboard: React.FC = () => {
             setRadarrApiKey(initialSettings.radarrApiKey || '');
             setTautulliUrl(initialSettings.tautulliUrl || '');
             setTautulliApiKey(initialSettings.tautulliApiKey || '');
+            setRequestAppType(initialSettings.requestAppType || 'none');
+            setRequestAppUrl(initialSettings.requestAppUrl || '');
+            setRequestAppApiKey(initialSettings.requestAppApiKey || '');
             setPrimaryColor(initialSettings.primaryColor || '#E5A00D');
             setCustomLogoUrl(initialSettings.customLogoUrl || '');
             setReferralEnabled(!!initialSettings.referralEnabled);
             setReferralTrialDays(initialSettings.referralTrialDays || 3);
             setReferralRewardDays(initialSettings.referralRewardDays || 7);
             setAnnouncement(initialSettings.announcement || '');
-            if (initialSettings.navOrder) setNavOrder(initialSettings.navOrder);
+            if (initialSettings.navOrder) setNavOrder(ensureMaintenanceNavOrder(initialSettings.navOrder));
             setHideStreamUsers(initialSettings.hideStreamUsers === true ? 'anonymous' : (initialSettings.hideStreamUsers || 'false'));
             if (initialSettings.defaultLibraryIds) setDefaultLibraryIds(initialSettings.defaultLibraryIds);
             if (initialSettings.use24HourClock !== undefined) setUse24HourClock(!!initialSettings.use24HourClock);
@@ -1511,6 +2028,7 @@ const SettingsDashboard: React.FC = () => {
             if (initialSettings.autoBackupEnabled !== undefined) setAutoBackupEnabled(!!initialSettings.autoBackupEnabled);
             if (initialSettings.autoBackupIntervalDays !== undefined) setAutoBackupIntervalDays(Number(initialSettings.autoBackupIntervalDays) || 2);
             if (initialSettings.autoBackupRetentionCount !== undefined) setAutoBackupRetentionCount(Number(initialSettings.autoBackupRetentionCount) || 10);
+            if (initialSettings.maintenanceExperimentalEnabled !== undefined) setMaintenanceExperimentalEnabled(!!initialSettings.maintenanceExperimentalEnabled);
             setTestRecipient('');
             setServers([]);
         }
@@ -1598,20 +2116,24 @@ const SettingsDashboard: React.FC = () => {
             radarrApiKey,
             tautulliUrl,
             tautulliApiKey,
+            requestAppType,
+            requestAppUrl,
+            requestAppApiKey,
             primaryColor,
             customLogoUrl,
             referralEnabled,
             referralTrialDays,
             referralRewardDays,
             announcement,
-            navOrder,
+            navOrder: ensureMaintenanceNavOrder(navOrder),
             hideStreamUsers,
             defaultLibraryIds,
             use24HourClock,
             allowTemporaryAccess,
             autoBackupEnabled,
             autoBackupIntervalDays,
-            autoBackupRetentionCount
+            autoBackupRetentionCount,
+            maintenanceExperimentalEnabled
         });
         document.documentElement.style.setProperty('--color-plex', hexToRgb(primaryColor));
     };
@@ -1674,7 +2196,7 @@ const SettingsDashboard: React.FC = () => {
     };
 
     return (
-        <div className="w-full max-w-[1600px] mx-auto flex flex-col">
+        <div className="w-full flex flex-col">
             <Loader isLoading={isLoading} />
             <div className="fixed bottom-5 left-1/2 -translate-x-1/2 z-[2000] flex flex-col-reverse gap-2 items-center">
                 {toasts.map(toast => <Toast key={toast.id} {...toast} onDismiss={() => setToasts(t => t.filter(item => item.id !== toast.id))} />)}
@@ -2006,6 +2528,121 @@ const SettingsDashboard: React.FC = () => {
                             </div>
                         </div>
                     )}
+                    {activeTab === 'maintenance-overview' && (
+                        <div className="mb-8 animate-fade-in">
+                            <h3 className="text-xl font-bold text-plex mb-4 border-b border-border pb-2">Maintenance Overview</h3>
+                            <div className="bg-background border border-border rounded-xl p-4 md:p-5 space-y-3">
+                                <p className="text-sm text-muted">Experimental mode gate for the entire Maintenance module.</p>
+                                <div className="flex items-center justify-between bg-black/10 p-4 rounded-lg border border-border">
+                                    <div>
+                                        <label className="font-bold block mb-1">Enable Experimental Maintenance Mode</label>
+                                        <span className="text-xs text-muted block">When OFF, all maintenance APIs/actions are blocked and the module becomes read-only.</span>
+                                    </div>
+                                    <button
+                                        onClick={() => setMaintenanceExperimentalEnabled(!maintenanceExperimentalEnabled)}
+                                        className={`relative inline-flex items-center h-6 rounded-full w-11 transition-colors ${maintenanceExperimentalEnabled ? 'bg-plex' : 'bg-border'}`}
+                                        type="button"
+                                    >
+                                        <span className={`inline-block w-4 h-4 transform bg-white rounded-full transition-transform ${maintenanceExperimentalEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+                                    </button>
+                                </div>
+                                <p className={`text-xs font-semibold ${maintenanceExperimentalEnabled ? 'text-green-300' : 'text-yellow-300'}`}>
+                                    Current status: {maintenanceExperimentalEnabled ? 'ON' : 'OFF (default)'}
+                                </p>
+                            </div>
+                        </div>
+                    )}
+                    {activeTab === 'maintenance-rules' && <LibraryMaintenancePanel addToast={addToast} />}
+                    {activeTab === 'maintenance-collections' && renderMaintenancePage(
+                        'Collections',
+                        'Manage Plex leaving-soon collections created from maintenance rules.',
+                        [
+                            'Collection name templates per rule',
+                            'Pin/shelf behavior and sync cadence',
+                            'Manual include and exclusion overrides',
+                            'Collection sync diagnostics and drift checks'
+                        ]
+                    )}
+                    {activeTab === 'maintenance-candidates' && renderMaintenancePage(
+                        'Candidates',
+                        'Review items matched by maintenance filters before actioning.',
+                        [
+                            'Candidate queue with actionability status',
+                            'Bulk approve and skip controls',
+                            'Filter by library, media type, and age',
+                            'Paginated queue for large libraries'
+                        ]
+                    )}
+                    {activeTab === 'maintenance-runs' && renderMaintenancePage(
+                        'Execution Timeline',
+                        'Observe every maintenance run from trigger to outcome.',
+                        [
+                            'Run timeline with status progression',
+                            'Per-run deleted/skipped/failed totals',
+                            'Failure reasons with retry targeting',
+                            'Audit-linked event trail'
+                        ]
+                    )}
+                    {activeTab === 'maintenance-overlays' && renderMaintenancePage(
+                        'Overlays',
+                        'Configure countdown and leaving-soon overlays for posters/cards.',
+                        [
+                            'Text and badge overlay templates',
+                            'Per-library overlay style presets',
+                            'Enable/disable overlays by rule',
+                            'Poster/title-card preview workflow'
+                        ]
+                    )}
+                    {activeTab === 'maintenance-calendar' && renderMaintenancePage(
+                        'Calendar',
+                        'Plan maintenance schedules and grace period expirations.',
+                        [
+                            'Upcoming expiry and deletion windows',
+                            'Rule schedule visual timeline',
+                            'Blackout windows for maintenance actions',
+                            'Projected actions by day/week'
+                        ]
+                    )}
+                    {activeTab === 'maintenance-storage' && renderMaintenancePage(
+                        'Storage Metrics',
+                        'Measure projected and historical reclaim from maintenance automation.',
+                        [
+                            'Estimated reclaimed storage by rule',
+                            'Library growth vs cleanup trend',
+                            'Disk pressure threshold planning',
+                            'Top reclaim contributors by media class'
+                        ]
+                    )}
+                    {activeTab === 'maintenance-library' && renderMaintenancePage(
+                        'Rule Library',
+                        'Use reusable templates and shareable rule packs.',
+                        [
+                            'Template import/export (YAML/JSON)',
+                            'Community rule bundle support',
+                            'Rule migration and compatibility checks',
+                            'Clone templates into local rule set'
+                        ]
+                    )}
+                    {activeTab === 'maintenance-exclusions' && renderMaintenancePage(
+                        'Exclusions',
+                        'Prevent critical media from being removed by automation.',
+                        [
+                            'Global never-delete safelist',
+                            'Tag/collection based exclusions',
+                            'Per-library protection policies',
+                            'Temporary exclusions with expiry'
+                        ]
+                    )}
+                    {activeTab === 'maintenance-settings' && renderMaintenancePage(
+                        'Maintenance Settings',
+                        'Global safety and execution controls for maintenance automation.',
+                        [
+                            'Default dry-run and destructive safeguards',
+                            'Run concurrency and action caps',
+                            'Confirmation token requirements',
+                            'Provider integration health checks'
+                        ]
+                    )}
 
                     {activeTab === 'mediastack' && (
                         <div className="mb-8 animate-fade-in">
@@ -2043,6 +2680,33 @@ const SettingsDashboard: React.FC = () => {
                                 <label htmlFor="tautulliApiKey">Tautulli API Key</label>
                                 <input className="w-full p-3 rounded-lg border border-border bg-background text-text outline-none focus:border-plex focus:ring-1 focus:ring-plex transition-all" id="tautulliApiKey" type="password" value={tautulliApiKey} onChange={(e) => setTautulliApiKey(e.target.value)} placeholder="Enter Tautulli API Key" />
                             </div>
+
+                            <h3 className="text-xl font-bold text-plex mb-4 border-b border-border pb-2 mt-8">Request App Integration</h3>
+                            <div className="mb-4">
+                                <label htmlFor="requestAppType">Request App Type</label>
+                                <CustomSelect
+                                    id="requestAppType"
+                                    value={requestAppType}
+                                    onChange={(val) => setRequestAppType(val)}
+                                    options={[
+                                        { label: 'Disabled', value: 'none' },
+                                        { label: 'Overseerr', value: 'overseerr' },
+                                        { label: 'Jellyseerr', value: 'jellyseerr' },
+                                        { label: 'Ombi', value: 'ombi' }
+                                    ]}
+                                />
+                                <div className="mt-2">
+                                    <SettingHint>Used by Library Maintenance rules for request-age/status filtering and cleanup workflows.</SettingHint>
+                                </div>
+                            </div>
+                            <div className="mb-4">
+                                <label htmlFor="requestAppUrl">Request App URL</label>
+                                <input className="w-full p-3 rounded-lg border border-border bg-background text-text outline-none focus:border-plex focus:ring-1 focus:ring-plex transition-all" id="requestAppUrl" type="text" value={requestAppUrl} onChange={(e) => setRequestAppUrl(e.target.value)} placeholder="http://localhost:5055" />
+                            </div>
+                            <div className="mb-8">
+                                <label htmlFor="requestAppApiKey">Request App API Key</label>
+                                <input className="w-full p-3 rounded-lg border border-border bg-background text-text outline-none focus:border-plex focus:ring-1 focus:ring-plex transition-all" id="requestAppApiKey" type="password" value={requestAppApiKey} onChange={(e) => setRequestAppApiKey(e.target.value)} placeholder="API key from request app settings" />
+                            </div>
                         </div>
                     )}
 
@@ -2053,7 +2717,7 @@ const SettingsDashboard: React.FC = () => {
                             <div className="flex flex-col gap-2 max-w-md">
                                 {navOrder.map((key, index) => {
                                     const labels: Record<string, string> = {
-                                        'home': 'Home', 'discover': 'Discover', 'status': 'Status', 'logs': 'Logs (Admin Only)', 'analytics': 'Analytics', 'mediastack': 'Media Stack', 'request': 'Request Content', 'settings': 'Settings (Admin Only)', 'logout': 'Logout'
+                                        'home': 'Home', 'discover': 'Discover', 'status': 'Status', 'logs': 'Logs (Admin Only)', 'analytics': 'Analytics', 'mediastack': 'Media Stack', 'maintenance': 'Maintenance (Admin Only)', 'request': 'Request Content', 'settings': 'Settings (Admin Only)', 'logout': 'Logout'
                                     };
                                     return (
                                         <div key={key} className="flex items-center justify-between p-3 bg-card border border-border rounded-lg shadow-sm">
@@ -3143,7 +3807,7 @@ const PersonalAnalyticsDashboard: React.FC<{ username: string, thumb: string | n
     }, [days]);
 
     return (
-        <div className="w-full max-w-[1600px] animate-fade-in flex flex-col gap-6">
+        <div className="w-full animate-fade-in flex flex-col gap-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
                 <div>
                     <h1 className="text-3xl font-bold text-text uppercase tracking-widest flex items-center gap-3">
@@ -3297,6 +3961,7 @@ const MediaStackDashboard: React.FC<{ isAdmin: boolean }> = ({ isAdmin }) => {
     const [error, setError] = useState('');
     const [monthOffset, setMonthOffset] = useState(0);
     const [activeCalendarItem, setActiveCalendarItem] = useState<any>(null);
+    const [autoMonthNotice, setAutoMonthNotice] = useState('');
 
     const fetchData = useCallback(async () => {
         try {
@@ -3400,6 +4065,41 @@ const MediaStackDashboard: React.FC<{ isAdmin: boolean }> = ({ isAdmin }) => {
     const filteredCalendar = useMemo(() => {
         return calendarItems;
     }, [calendarItems]);
+
+    useEffect(() => {
+        let cancelled = false;
+        const maybeAutoSelectMonthWithReleases = async () => {
+            if (!data || monthOffset !== 0 || calendarItems.length > 0) {
+                if (!cancelled && monthOffset === 0) {
+                    setAutoMonthNotice('');
+                }
+                return;
+            }
+            for (let offset = 1; offset <= 6; offset += 1) {
+                try {
+                    const res = await apiFetch(`/api/media-stack/summary?monthOffset=${offset}`);
+                    const sonarrCount = Array.isArray(res?.sonarr?.calendar) ? res.sonarr.calendar.length : 0;
+                    const radarrCount = Array.isArray(res?.radarr?.calendar) ? res.radarr.calendar.length : 0;
+                    if ((sonarrCount + radarrCount) > 0) {
+                        if (cancelled) return;
+                        setData(res);
+                        setMonthOffset(offset);
+                        setAutoMonthNotice(`Showing the next month with releases (${new Date(new Date().setFullYear(new Date().getFullYear(), new Date().getMonth() + offset, 1)).toLocaleDateString('default', { month: 'long', year: 'numeric' })}).`);
+                        return;
+                    }
+                } catch {
+                    // Keep trying next month; this is a best-effort UX fallback.
+                }
+            }
+            if (!cancelled) {
+                setAutoMonthNotice('No releases found in the next 6 months.');
+            }
+        };
+        maybeAutoSelectMonthWithReleases();
+        return () => {
+            cancelled = true;
+        };
+    }, [calendarItems.length, data, monthOffset]);
 
     const groupedCalendar = useMemo(() => {
         const groups: { [dateStr: string]: typeof filteredCalendar } = {};
@@ -3549,6 +4249,7 @@ const MediaStackDashboard: React.FC<{ isAdmin: boolean }> = ({ isAdmin }) => {
         const totalGB = disk ? (disk.totalSpace / 1024 / 1024 / 1024) : 1;
         const freePercent = disk ? (freeGB / totalGB) * 100 : 0;
         const usedPercent = 100 - freePercent;
+        const isReachable = !!status;
 
         return (
             <div className="bg-card border border-white/5 shadow-2xl rounded-2xl p-4 md:p-6 relative overflow-hidden backdrop-blur-sm group hover:border-white/10 transition-all duration-300">
@@ -3563,12 +4264,15 @@ const MediaStackDashboard: React.FC<{ isAdmin: boolean }> = ({ isAdmin }) => {
                     <div>
                         <h3 className="text-lg font-bold text-text tracking-wide">{name}</h3>
                         <div className="flex items-center gap-2 mt-0.5">
-                            <span className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)] animate-pulse"></span>
-                            <span className="text-[10px] font-bold text-green-500 tracking-wider uppercase">Online</span>
+                            <span className={`w-2 h-2 rounded-full ${isReachable ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)] animate-pulse' : 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]'}`}></span>
+                            <span className={`text-[10px] font-bold tracking-wider uppercase ${isReachable ? 'text-green-500' : 'text-red-400'}`}>{isReachable ? 'Online' : 'Unavailable'}</span>
                             {status?.version && <span className="text-[10px] text-muted font-bold">v{status.version}</span>}
                         </div>
                     </div>
                 </div>
+                {!isReachable && (
+                    <p className="text-[11px] text-red-300 mb-2">Unable to fetch data from {name}. Check URL/API key and local network reachability.</p>
+                )}
 
                 {disk && (
                     <div className="bg-background/40 rounded-xl p-3 border border-white/5 mt-2">
@@ -3590,7 +4294,7 @@ const MediaStackDashboard: React.FC<{ isAdmin: boolean }> = ({ isAdmin }) => {
     };
 
     return (
-        <div className="w-full max-w-[1600px] animate-fade-in flex flex-col gap-6">
+        <div className="w-full animate-fade-in flex flex-col gap-6">
             <div className="flex items-center justify-between gap-4 mb-2">
                 <div>
                     <h1 className="text-3xl font-bold text-text uppercase tracking-widest flex items-center gap-3">
@@ -3613,17 +4317,20 @@ const MediaStackDashboard: React.FC<{ isAdmin: boolean }> = ({ isAdmin }) => {
                             </h2>
 
                             <div className="flex bg-white/5 p-0.5 md:p-1 rounded-lg md:rounded-xl border border-white/10 w-fit flex-shrink-0 items-center gap-1 md:gap-2">
-                                <button onClick={() => setMonthOffset(m => m - 1)} className="p-1 md:p-1.5 hover:bg-white/10 rounded-md md:rounded-lg text-muted hover:text-text transition-colors">
+                                <button onClick={() => { setAutoMonthNotice(''); setMonthOffset(m => m - 1); }} className="p-1 md:p-1.5 hover:bg-white/10 rounded-md md:rounded-lg text-muted hover:text-text transition-colors">
                                     <ChevronLeft className="w-3 h-3 md:w-4 md:h-4" />
                                 </button>
                                 <span className="text-[10px] md:text-xs font-bold px-1 w-16 md:w-28 text-center text-text uppercase tracking-wider">
                                     {new Date(new Date().setFullYear(new Date().getFullYear(), new Date().getMonth() + monthOffset, 1)).toLocaleDateString('default', { month: 'short', year: 'numeric' })}
                                 </span>
-                                <button onClick={() => setMonthOffset(m => m + 1)} className="p-1 md:p-1.5 hover:bg-white/10 rounded-md md:rounded-lg text-muted hover:text-text transition-colors">
+                                <button onClick={() => { setAutoMonthNotice(''); setMonthOffset(m => m + 1); }} className="p-1 md:p-1.5 hover:bg-white/10 rounded-md md:rounded-lg text-muted hover:text-text transition-colors">
                                     <ChevronRight className="w-3 h-3 md:w-4 md:h-4" />
                                 </button>
                             </div>
                         </div>
+                        {autoMonthNotice && (
+                            <p className="text-xs text-plex/90 mb-3">{autoMonthNotice}</p>
+                        )}
 
                         {filteredCalendar.length === 0 ? (
                             <div className="text-center py-12 bg-background/30 rounded-xl border border-white/5 text-muted text-sm">
@@ -4284,7 +4991,7 @@ const AnalyticsDashboard: React.FC<{ isAdmin: boolean, sessionInfo: any }> = ({ 
     };
 
     return (
-        <div className="w-full max-w-[1600px] animate-fade-in flex flex-col gap-6">
+        <div className="w-full animate-fade-in flex flex-col gap-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
                 <div>
                     <h1 className="text-3xl font-bold text-text uppercase tracking-widest flex items-center gap-3">
@@ -4710,7 +5417,7 @@ const LogsDashboard: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
     const totalEmailPages = Math.max(1, Math.ceil(emailLogs.length / itemsPerPage));
 
     return (
-        <div className="w-full max-w-[1600px] mx-auto flex flex-col">
+        <div className="w-full flex flex-col">
             <Loader isLoading={isLoading} />
             <div className="fixed bottom-5 left-1/2 -translate-x-1/2 z-[2000] flex flex-col-reverse gap-2 items-center">
                 {toasts.map(toast => <Toast key={toast.id} {...toast} onDismiss={() => setToasts(t => t.filter(item => item.id !== toast.id))} />)}
@@ -5135,7 +5842,7 @@ const AdminDashboard: React.FC<{ onLogout: () => void, onViewUserPortal: () => v
     const allFilteredSelected = filteredUserIds.length > 0 && filteredUserIds.every(id => selectedUserIds.includes(id));
 
     return (
-        <div className="w-full max-w-[1600px] mx-auto flex flex-col">
+        <div className="w-full flex flex-col">
             <Loader isLoading={isLoading} />
             <div className="fixed bottom-5 left-1/2 -translate-x-1/2 z-[2000] flex flex-col-reverse gap-2 items-center">
                 {toasts.map(toast => <Toast key={toast.id} {...toast} onDismiss={() => setToasts(t => t.filter(item => item.id !== toast.id))} />)}
@@ -6436,7 +7143,7 @@ const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onLogout: 
     const heroBg = analytics?.recentHistory?.[0]?.thumbUrl || publicConfig?.customLogoUrl || '';
 
     return (
-        <div className="w-full max-w-[1600px] mx-auto flex flex-col gap-6">
+        <div className="w-full flex flex-col gap-6">
             <Loader isLoading={isLoading} />
             {toast && <Toast message={toast.message} type={toast.type} onDismiss={() => setToast(null)} />}
 
@@ -7288,7 +7995,7 @@ const StatusDashboard: React.FC<{ onBack: () => void, isAdmin: boolean, isPublic
     const groups = config?.groups || [];
 
     return (
-        <div className="w-full max-w-[1600px] mx-auto flex flex-col">
+        <div className="w-full flex flex-col">
             <header className="flex items-center gap-4 w-full mb-8 pb-4 border-b border-border">
                 {isPublic && (
                     <button onClick={onBack} className="p-2 bg-white/5 hover:bg-white/10 rounded-full transition-colors flex items-center justify-center text-muted hover:text-text">
@@ -7681,7 +8388,7 @@ const LibraryDashboard: React.FC<{ onBack: () => void, isAdmin?: boolean, public
     const totalBandwidthMbps = (totalBandwidthKbps / 1000).toFixed(2);
 
     return (
-        <div className="w-[calc(100%-8px)] md:w-[95%] max-w-[1600px] mx-auto flex flex-col min-h-screen">
+        <div className="w-full flex flex-col min-h-screen">
             <main className="w-full pb-8 mt-4 md:mt-0">
                 {error && <div className="toast error show">{error}</div>}
 
@@ -7711,7 +8418,7 @@ const LibraryDashboard: React.FC<{ onBack: () => void, isAdmin?: boolean, public
                 <section className="mb-12 w-full">
                     <h2 className="text-plex text-sm uppercase tracking-[2px] mb-6 font-bold border-b border-white/10 pb-2">ACTIVITY</h2>
                     {dashboardData && dashboardData.activeSessions && dashboardData.activeSessions.length > 0 ? (
-                        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-3 md:gap-6">
+                        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-4 gap-3 md:gap-6">
                             {dashboardData.activeSessions.map((session, i) => (
                                 <div key={i} onClick={() => setSelectedSession(session)} className="bg-card rounded-xl border border-border flex flex-col overflow-hidden shadow-lg hover:border-plex/50 hover:shadow-plex/20 transition-all cursor-pointer select-none">
                                     <div className="flex flex-row flex-grow relative">
@@ -7830,7 +8537,7 @@ const LibraryDashboard: React.FC<{ onBack: () => void, isAdmin?: boolean, public
                     {/* RECENT MOVIES */}
                     <div className="flex flex-col">
                         <h2 className="text-plex text-sm uppercase tracking-[2px] mb-6 font-bold border-b border-white/10 pb-2">RECENTLY ADDED MOVIES</h2>
-                        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 2xl:grid-cols-8 gap-4 w-full pb-4">
+                        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-7 xl:grid-cols-8 2xl:grid-cols-10 gap-3 w-full pb-4">
                             {dashboardData && dashboardData.recentMovies.slice(0, recentLimit).map((item, i) => (
                                 <a key={i} href={item.plexUrl} target="_blank" rel="noreferrer" className="flex flex-col w-full gap-2 group" style={{ textDecoration: 'none', color: 'inherit' }}>
                                     <div className="relative aspect-[2/3] w-full rounded-lg overflow-hidden border border-border group-hover:border-plex transition-colors shadow-md">
@@ -7846,7 +8553,7 @@ const LibraryDashboard: React.FC<{ onBack: () => void, isAdmin?: boolean, public
                     {/* RECENT TV SHOWS */}
                     <div className="flex flex-col">
                         <h2 className="text-plex text-sm uppercase tracking-[2px] mb-6 font-bold border-b border-white/10 pb-2">RECENTLY ADDED TV SHOWS</h2>
-                        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 2xl:grid-cols-8 gap-4 w-full pb-4">
+                        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-7 xl:grid-cols-8 2xl:grid-cols-10 gap-3 w-full pb-4">
                             {dashboardData && dashboardData.recentShows.slice(0, recentLimit).map((item, i) => (
                                 <a key={i} href={item.plexUrl} target="_blank" rel="noreferrer" className="flex flex-col w-full gap-2 group" style={{ textDecoration: 'none', color: 'inherit' }}>
                                     <div className="relative aspect-[2/3] w-full rounded-lg overflow-hidden border border-border group-hover:border-plex transition-colors shadow-md">
@@ -7862,7 +8569,7 @@ const LibraryDashboard: React.FC<{ onBack: () => void, isAdmin?: boolean, public
                     {/* RECENT MUSIC */}
                     <div className="flex flex-col">
                         <h2 className="text-plex text-sm uppercase tracking-[2px] mb-6 font-bold border-b border-white/10 pb-2">RECENTLY ADDED MUSIC</h2>
-                        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 2xl:grid-cols-8 gap-4 w-full pb-4">
+                        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-7 xl:grid-cols-8 2xl:grid-cols-10 gap-3 w-full pb-4">
                             {dashboardData && dashboardData.recentMusic.slice(0, recentLimit).map((item, i) => (
                                 <a key={i} href={item.plexUrl} target="_blank" rel="noreferrer" className="flex flex-col w-full gap-2 group" style={{ textDecoration: 'none', color: 'inherit' }}>
                                     <div className="relative aspect-square w-full rounded-lg overflow-hidden border border-border group-hover:border-plex transition-colors shadow-md">
@@ -7888,7 +8595,7 @@ const LibraryDashboard: React.FC<{ onBack: () => void, isAdmin?: boolean, public
                         {trendingStats.trending7Days?.length > 0 && (
                             <div className="flex flex-col">
                                 <h3 className="text-plex text-sm uppercase tracking-[2px] mb-6 font-bold border-b border-white/10 pb-2">🔥 Trending This Week</h3>
-                                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 2xl:grid-cols-8 gap-4 w-full pb-4">
+                                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-7 xl:grid-cols-8 2xl:grid-cols-10 gap-3 w-full pb-4">
                                     {trendingStats.trending7Days.slice(0, recentLimit).map((item, i) => (
                                         <a key={i} href={item.plexUrl || '#'} target="_blank" rel="noreferrer" className="flex flex-col w-full gap-2 group" style={{ textDecoration: 'none', color: 'inherit' }}>
                                             <div className="relative aspect-[2/3] w-full rounded-lg overflow-hidden border border-border group-hover:border-plex transition-colors shadow-md">
@@ -7908,7 +8615,7 @@ const LibraryDashboard: React.FC<{ onBack: () => void, isAdmin?: boolean, public
                         {trendingStats.movies30Days?.length > 0 && (
                             <div className="flex flex-col">
                                 <h3 className="text-plex text-sm uppercase tracking-[2px] mb-6 font-bold border-b border-white/10 pb-2">🍿 Most Watched Movies (This Month)</h3>
-                                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 2xl:grid-cols-8 gap-4 w-full pb-4">
+                                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-7 xl:grid-cols-8 2xl:grid-cols-10 gap-3 w-full pb-4">
                                     {trendingStats.movies30Days.slice(0, recentLimit).map((item, i) => (
                                         <a key={i} href={item.plexUrl || '#'} target="_blank" rel="noreferrer" className="flex flex-col w-full gap-2 group" style={{ textDecoration: 'none', color: 'inherit' }}>
                                             <div className="relative aspect-[2/3] w-full rounded-lg overflow-hidden border border-border group-hover:border-plex transition-colors shadow-md">
@@ -7928,7 +8635,7 @@ const LibraryDashboard: React.FC<{ onBack: () => void, isAdmin?: boolean, public
                         {trendingStats.shows30Days?.length > 0 && (
                             <div className="flex flex-col">
                                 <h3 className="text-plex text-sm uppercase tracking-[2px] mb-6 font-bold border-b border-white/10 pb-2">📺 Most Watched Shows (This Month)</h3>
-                                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 2xl:grid-cols-8 gap-4 w-full pb-4">
+                                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-7 xl:grid-cols-8 2xl:grid-cols-10 gap-3 w-full pb-4">
                                     {trendingStats.shows30Days.slice(0, recentLimit).map((item, i) => (
                                         <a key={i} href={item.plexUrl || '#'} target="_blank" rel="noreferrer" className="flex flex-col w-full gap-2 group" style={{ textDecoration: 'none', color: 'inherit' }}>
                                             <div className="relative aspect-[2/3] w-full rounded-lg overflow-hidden border border-border group-hover:border-plex transition-colors shadow-md">
@@ -7948,7 +8655,7 @@ const LibraryDashboard: React.FC<{ onBack: () => void, isAdmin?: boolean, public
                         {trendingStats.top365Days?.length > 0 && (
                             <div className="flex flex-col">
                                 <h3 className="text-plex text-sm uppercase tracking-[2px] mb-6 font-bold border-b border-white/10 pb-2">🏆 Top of the Year</h3>
-                                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 2xl:grid-cols-8 gap-4 w-full pb-4">
+                                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-7 xl:grid-cols-8 2xl:grid-cols-10 gap-3 w-full pb-4">
                                     {trendingStats.top365Days.slice(0, recentLimit).map((item, i) => (
                                         <a key={i} href={item.plexUrl || '#'} target="_blank" rel="noreferrer" className="flex flex-col w-full gap-2 group" style={{ textDecoration: 'none', color: 'inherit' }}>
                                             <div className="relative aspect-[2/3] w-full rounded-lg overflow-hidden border border-border group-hover:border-plex transition-colors shadow-md">
@@ -7968,7 +8675,7 @@ const LibraryDashboard: React.FC<{ onBack: () => void, isAdmin?: boolean, public
                         {trendingStats.allTime?.length > 0 && (
                             <div className="flex flex-col">
                                 <h3 className="text-plex text-sm uppercase tracking-[2px] mb-6 font-bold border-b border-white/10 pb-2">🌟 All Time Favorites</h3>
-                                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 2xl:grid-cols-8 gap-4 w-full pb-4">
+                                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-7 xl:grid-cols-8 2xl:grid-cols-10 gap-3 w-full pb-4">
                                     {trendingStats.allTime.slice(0, recentLimit).map((item, i) => (
                                         <a key={i} href={item.plexUrl || '#'} target="_blank" rel="noreferrer" className="flex flex-col w-full gap-2 group" style={{ textDecoration: 'none', color: 'inherit' }}>
                                             <div className="relative aspect-[2/3] w-full rounded-lg overflow-hidden border border-border group-hover:border-plex transition-colors shadow-md">
@@ -7988,7 +8695,7 @@ const LibraryDashboard: React.FC<{ onBack: () => void, isAdmin?: boolean, public
                         {trendingStats.weekendWarriors?.length > 0 && (
                             <div className="flex flex-col">
                                 <h3 className="text-plex text-sm uppercase tracking-[2px] mb-6 font-bold border-b border-white/10 pb-2">🍿 Weekend Warriors</h3>
-                                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 2xl:grid-cols-8 gap-4 w-full pb-4">
+                                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-7 xl:grid-cols-8 2xl:grid-cols-10 gap-3 w-full pb-4">
                                     {trendingStats.weekendWarriors.slice(0, recentLimit).map((item, i) => (
                                         <a key={i} href={item.plexUrl || '#'} target="_blank" rel="noreferrer" className="flex flex-col w-full gap-2 group" style={{ textDecoration: 'none', color: 'inherit' }}>
                                             <div className="relative aspect-[2/3] w-full rounded-lg overflow-hidden border border-border group-hover:border-plex transition-colors shadow-md">
@@ -8008,7 +8715,7 @@ const LibraryDashboard: React.FC<{ onBack: () => void, isAdmin?: boolean, public
                         {trendingStats.nightOwls?.length > 0 && (
                             <div className="flex flex-col">
                                 <h3 className="text-plex text-sm uppercase tracking-[2px] mb-6 font-bold border-b border-white/10 pb-2">🦇 Night Owl Club</h3>
-                                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 2xl:grid-cols-8 gap-4 w-full pb-4">
+                                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-7 xl:grid-cols-8 2xl:grid-cols-10 gap-3 w-full pb-4">
                                     {trendingStats.nightOwls.slice(0, recentLimit).map((item, i) => (
                                         <a key={i} href={item.plexUrl || '#'} target="_blank" rel="noreferrer" className="flex flex-col w-full gap-2 group" style={{ textDecoration: 'none', color: 'inherit' }}>
                                             <div className="relative aspect-[2/3] w-full rounded-lg overflow-hidden border border-border group-hover:border-plex transition-colors shadow-md">
@@ -8028,7 +8735,7 @@ const LibraryDashboard: React.FC<{ onBack: () => void, isAdmin?: boolean, public
                         {trendingStats.retroHits?.length > 0 && (
                             <div className="flex flex-col">
                                 <h3 className="text-plex text-sm uppercase tracking-[2px] mb-6 font-bold border-b border-white/10 pb-2">📼 Blast from the Past</h3>
-                                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 2xl:grid-cols-8 gap-4 w-full pb-4">
+                                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-7 xl:grid-cols-8 2xl:grid-cols-10 gap-3 w-full pb-4">
                                     {trendingStats.retroHits.slice(0, recentLimit).map((item, i) => (
                                         <a key={i} href={item.plexUrl || '#'} target="_blank" rel="noreferrer" className="flex flex-col w-full gap-2 group" style={{ textDecoration: 'none', color: 'inherit' }}>
                                             <div className="relative aspect-[2/3] w-full rounded-lg overflow-hidden border border-border group-hover:border-plex transition-colors shadow-md">
@@ -8048,7 +8755,7 @@ const LibraryDashboard: React.FC<{ onBack: () => void, isAdmin?: boolean, public
                         {trendingStats.cultClassics?.length > 0 && (
                             <div className="flex flex-col">
                                 <h3 className="text-plex text-sm uppercase tracking-[2px] mb-6 font-bold border-b border-white/10 pb-2">💎 Cult Classics</h3>
-                                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 2xl:grid-cols-8 gap-4 w-full pb-4">
+                                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-7 xl:grid-cols-8 2xl:grid-cols-10 gap-3 w-full pb-4">
                                     {trendingStats.cultClassics.slice(0, recentLimit).map((item, i) => (
                                         <a key={i} href={item.plexUrl || '#'} target="_blank" rel="noreferrer" className="flex flex-col w-full gap-2 group" style={{ textDecoration: 'none', color: 'inherit' }}>
                                             <div className="relative aspect-[2/3] w-full rounded-lg overflow-hidden border border-border group-hover:border-plex transition-colors shadow-md">
@@ -8073,10 +8780,955 @@ const LibraryDashboard: React.FC<{ onBack: () => void, isAdmin?: boolean, public
     );
 };
 
+const MaintenanceDashboard: React.FC = () => {
+    const [toasts, setToasts] = useState<ToastMessage[]>([]);
+    const [maintenanceFeatureEnabled, setMaintenanceFeatureEnabled] = useState(true);
+    const [overview, setOverview] = useState<any>(null);
+    const [runs, setRuns] = useState<any[]>([]);
+    const [previewGroups, setPreviewGroups] = useState<any[]>([]);
+    const [rules, setRules] = useState<any[]>([]);
+    const [overviewInsights, setOverviewInsights] = useState<{
+        totalMatches: number;
+        uniqueMatches: number;
+        estimatedReclaimGB: number;
+        libraries: Array<{ libraryTitle: string; count: number; reclaimGB: number }>;
+        rules: Array<{ ruleId: string; ruleName: string; totalMatches: number; reclaimGB: number }>;
+    }>({
+        totalMatches: 0,
+        uniqueMatches: 0,
+        estimatedReclaimGB: 0,
+        libraries: [],
+        rules: []
+    });
+    const [preferences, setPreferences] = useState<any>({
+        global: { dryRunByDefault: true, maxActionsPerRun: 25, requireConfirmForDestructive: true },
+        exclusions: { ratingKeys: [], titles: [], libraries: [] }
+    });
+    const [candidateRuleId, setCandidateRuleId] = useState<string>('');
+    const [candidateItems, setCandidateItems] = useState<any[]>([]);
+    const [candidateSearch, setCandidateSearch] = useState('');
+    const [isLoadingCandidates, setIsLoadingCandidates] = useState(false);
+    const [libraryJsonInput, setLibraryJsonInput] = useState('');
+    const [libraryItems, setLibraryItems] = useState<any[]>([]);
+    const [libraryOptions, setLibraryOptions] = useState<Array<{ id: string; title: string; count: number }>>([]);
+    const [libraryBrowseId, setLibraryBrowseId] = useState('all');
+    const [libraryBrowseSearch, setLibraryBrowseSearch] = useState('');
+    const [libraryBrowsePage, setLibraryBrowsePage] = useState(1);
+    const [libraryBrowseLimit] = useState(48);
+    const [libraryBrowseTotal, setLibraryBrowseTotal] = useState(0);
+    const [libraryBrowseLoading, setLibraryBrowseLoading] = useState(false);
+    const [selectedExcludeKeys, setSelectedExcludeKeys] = useState<string[]>([]);
+    const [exclusionsSummary, setExclusionsSummary] = useState<{ ratingKeys: any[]; titles: any[]; libraries: any[] }>({ ratingKeys: [], titles: [], libraries: [] });
+    const [loading, setLoading] = useState(true);
+    const [activeSection, setActiveSection] = useState(() => {
+        const hash = window.location.hash.replace('#', '');
+        if (hash.startsWith('maintenance-')) {
+            return hash.replace('maintenance-', '');
+        }
+        return 'overview';
+    });
+
+    const addToast = useCallback((message: string, type: 'success' | 'error' = 'success') => {
+        setToasts(t => [...t, { id: Date.now() + Math.random(), message, type }]);
+    }, []);
+
+    const sections = [
+        { id: 'overview', label: 'Overview' },
+        { id: 'exclusions', label: 'Exclusions' },
+        { id: 'rules', label: 'Rules' },
+        { id: 'collections', label: 'Collections' },
+        { id: 'candidates', label: 'Candidates' },
+        { id: 'calendar', label: 'Calendar' },
+        { id: 'storage', label: 'Storage Metrics' },
+        { id: 'library', label: 'Rule Library' },
+        { id: 'settings', label: 'Maintenance Settings' },
+        { id: 'runs', label: 'Logs' }
+    ];
+
+    useEffect(() => {
+        window.location.hash = `maintenance-${activeSection}`;
+    }, [activeSection]);
+
+    const loadOverview = useCallback(async () => {
+        setLoading(true);
+        try {
+            const configData = await apiFetch('/api/config');
+            const isEnabled = !!configData?.settings?.maintenanceExperimentalEnabled;
+            setMaintenanceFeatureEnabled(isEnabled);
+            if (!isEnabled) {
+                setLoading(false);
+                return;
+            }
+            const [indexData, runsData, previewData, previewAllData, rulesData, prefData] = await Promise.all([
+                apiFetch('/api/maintenance/index'),
+                apiFetch('/api/maintenance/runs'),
+                apiFetch('/api/maintenance/preview', { method: 'POST', body: JSON.stringify({ limit: 30 }) }),
+                apiFetch('/api/maintenance/preview', { method: 'POST', body: JSON.stringify({ includeAll: true }) }),
+                apiFetch('/api/maintenance/rules'),
+                apiFetch('/api/maintenance/preferences')
+            ]);
+            setOverview(indexData || null);
+            setRuns(Array.isArray(runsData) ? runsData : []);
+            setPreviewGroups(Array.isArray(previewData?.previews) ? previewData.previews : []);
+            setRules(Array.isArray(rulesData) ? rulesData : []);
+            setPreferences(prefData || {
+                global: { dryRunByDefault: true, maxActionsPerRun: 25, requireConfirmForDestructive: true },
+                exclusions: { ratingKeys: [], titles: [], libraries: [] }
+            });
+            const previewAll = Array.isArray(previewAllData?.previews) ? previewAllData.previews : [];
+            const uniqueItems = new Map<string, any>();
+            const libraryMap: Record<string, { libraryTitle: string; count: number; reclaimGB: number }> = {};
+            const ruleInsights = previewAll.map((preview: any) => {
+                const sample = Array.isArray(preview?.sample) ? preview.sample : [];
+                let ruleReclaim = 0;
+                sample.forEach((item: any) => {
+                    const ratingKey = String(item?.ratingKey || '');
+                    if (ratingKey && !uniqueItems.has(ratingKey)) uniqueItems.set(ratingKey, item);
+                    const size = Number(item?.sizeGB || 0);
+                    ruleReclaim += size;
+                    const libraryTitle = item?.libraryTitle || 'Unknown Library';
+                    if (!libraryMap[libraryTitle]) libraryMap[libraryTitle] = { libraryTitle, count: 0, reclaimGB: 0 };
+                    libraryMap[libraryTitle].count += 1;
+                    libraryMap[libraryTitle].reclaimGB += size;
+                });
+                return {
+                    ruleId: String(preview?.ruleId || ''),
+                    ruleName: preview?.ruleName || 'Unnamed Rule',
+                    totalMatches: Number(preview?.totalMatches || sample.length || 0),
+                    reclaimGB: ruleReclaim
+                };
+            });
+            const uniqueValues = Array.from(uniqueItems.values());
+            const estimatedReclaimGB = uniqueValues.reduce((sum: number, item: any) => sum + Number(item?.sizeGB || 0), 0);
+            const totalMatches = ruleInsights.reduce((sum: number, rule: any) => sum + Number(rule.totalMatches || 0), 0);
+            setOverviewInsights({
+                totalMatches,
+                uniqueMatches: uniqueValues.length,
+                estimatedReclaimGB,
+                libraries: Object.values(libraryMap).sort((a, b) => b.reclaimGB - a.reclaimGB),
+                rules: ruleInsights.sort((a: any, b: any) => b.reclaimGB - a.reclaimGB)
+            });
+        } catch (e: any) {
+            if ((e?.message || '').includes('Maintenance Experimental Mode is disabled')) {
+                setMaintenanceFeatureEnabled(false);
+            }
+            addToast(e.message || 'Failed to load maintenance overview', 'error');
+        } finally {
+            setLoading(false);
+        }
+    }, [addToast]);
+
+    useEffect(() => {
+        loadOverview();
+    }, [loadOverview]);
+
+    useEffect(() => {
+        if (!rules.length) {
+            setCandidateRuleId('');
+            setCandidateItems([]);
+            return;
+        }
+        if (!candidateRuleId || !rules.some((rule: any) => rule.id === candidateRuleId)) {
+            setCandidateRuleId(rules[0].id);
+        }
+    }, [rules, candidateRuleId]);
+
+    const fetchCandidatesForRule = useCallback(async (ruleId: string) => {
+        if (!ruleId) {
+            setCandidateItems([]);
+            return;
+        }
+        setIsLoadingCandidates(true);
+        try {
+            const payload = await apiFetch('/api/maintenance/preview', {
+                method: 'POST',
+                body: JSON.stringify({
+                    ruleId,
+                    includeAll: true
+                })
+            });
+            const previews = Array.isArray(payload?.previews) ? payload.previews : [];
+            const selected = previews.find((preview: any) => preview.ruleId === ruleId);
+            setCandidateItems((selected?.sample || []).map((item: any) => ({ ...item, _ruleId: selected?.ruleId, _ruleName: selected?.ruleName })));
+        } catch (e: any) {
+            addToast(e.message || 'Failed to load candidates', 'error');
+        } finally {
+            setIsLoadingCandidates(false);
+        }
+    }, [addToast]);
+
+    useEffect(() => {
+        if (activeSection === 'candidates' || activeSection === 'storage' || activeSection === 'calendar') {
+            fetchCandidatesForRule(candidateRuleId);
+        }
+    }, [activeSection, candidateRuleId, fetchCandidatesForRule]);
+
+    const saveAllRules = async (nextRules: any[]) => {
+        await apiFetch('/api/maintenance/rules', { method: 'POST', body: JSON.stringify(nextRules) });
+        setRules(nextRules);
+    };
+
+    const savePreferences = async (nextPrefs: any) => {
+        const response = await apiFetch('/api/maintenance/preferences', { method: 'POST', body: JSON.stringify(nextPrefs) });
+        setPreferences(response?.preferences || nextPrefs);
+    };
+
+    const loadExclusionsSummary = useCallback(async () => {
+        try {
+            const payload = await apiFetch('/api/maintenance/exclusions/summary');
+            setExclusionsSummary({
+                ratingKeys: Array.isArray(payload?.ratingKeys) ? payload.ratingKeys : [],
+                titles: Array.isArray(payload?.titles) ? payload.titles : [],
+                libraries: Array.isArray(payload?.libraries) ? payload.libraries : []
+            });
+        } catch (e: any) {
+            addToast(e.message || 'Failed to load exclusions summary.', 'error');
+        }
+    }, [addToast]);
+
+    const loadLibraryBrowse = useCallback(async () => {
+        setLibraryBrowseLoading(true);
+        try {
+            const params = new URLSearchParams({
+                libraryId: libraryBrowseId,
+                search: libraryBrowseSearch,
+                page: String(libraryBrowsePage),
+                limit: String(libraryBrowseLimit),
+                includeExcluded: 'true'
+            });
+            const payload = await apiFetch(`/api/maintenance/library-items?${params.toString()}`);
+            setLibraryItems(Array.isArray(payload?.items) ? payload.items : []);
+            setLibraryOptions(Array.isArray(payload?.libraries) ? payload.libraries : []);
+            setLibraryBrowseTotal(Number(payload?.total || 0));
+        } catch (e: any) {
+            addToast(e.message || 'Failed to load library posters.', 'error');
+        } finally {
+            setLibraryBrowseLoading(false);
+        }
+    }, [addToast, libraryBrowseId, libraryBrowseLimit, libraryBrowsePage, libraryBrowseSearch]);
+
+    useEffect(() => {
+        if (activeSection === 'exclusions') {
+            loadLibraryBrowse();
+            loadExclusionsSummary();
+        }
+    }, [activeSection, loadLibraryBrowse, loadExclusionsSummary]);
+
+    const filteredCandidates = candidateItems.filter((item: any) => {
+        if (!candidateSearch.trim()) return true;
+        const q = candidateSearch.trim().toLowerCase();
+        return `${item.title || ''} ${item.libraryTitle || ''}`.toLowerCase().includes(q);
+    });
+    const selectedCandidateRule = useMemo(
+        () => rules.find((rule: any) => rule.id === candidateRuleId) || null,
+        [rules, candidateRuleId]
+    );
+
+    const excludedRatingKeySet = useMemo(
+        () => new Set((preferences?.exclusions?.ratingKeys || []).map((v: string) => String(v))),
+        [preferences?.exclusions?.ratingKeys]
+    );
+
+    const storageStats = useMemo(() => {
+        const totalSize = filteredCandidates.reduce((sum: number, item: any) => sum + Number(item.sizeGB || 0), 0);
+        const byLibrary = filteredCandidates.reduce((acc: Record<string, number>, item: any) => {
+            const key = item.libraryTitle || 'Unknown';
+            acc[key] = (acc[key] || 0) + Number(item.sizeGB || 0);
+            return acc;
+        }, {});
+        return { totalSize, byLibrary };
+    }, [filteredCandidates]);
+
+    const formatReclaimSizeFromGB = (sizeGB: number) => {
+        const safeGB = Math.max(0, Number(sizeGB || 0));
+        if (safeGB >= 1024) {
+            return `${Math.ceil(safeGB / 1024)} TB`;
+        }
+        if (safeGB >= 1) {
+            return `${Math.ceil(safeGB)} GB`;
+        }
+        return `${Math.ceil(safeGB * 1024)} MB`;
+    };
+
+    const upcomingCalendar = useMemo(() => {
+        const entries = filteredCandidates.map((item: any) => {
+            const daysSince = Number(item.daysSinceLastWatch ?? item.daysSinceAdded ?? 0);
+            const projectedDays = Math.max(0, 365 - daysSince);
+            const etaDate = new Date(Date.now() + (projectedDays * 24 * 60 * 60 * 1000));
+            return {
+                ...item,
+                projectedDate: etaDate.toISOString().split('T')[0]
+            };
+        });
+        return entries.slice(0, 300).sort((a: any, b: any) => (a.projectedDate < b.projectedDate ? -1 : 1));
+    }, [filteredCandidates]);
+
+    const renderScaffoldPage = (title: string, description: string, bullets: string[]) => (
+        <div className="bg-background border border-border rounded-xl p-5">
+            <h3 className="text-xl font-bold text-plex mb-2">{title}</h3>
+            <p className="text-sm text-muted mb-4">{description}</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {bullets.map((item) => (
+                    <div key={item} className="bg-black/20 border border-border rounded-lg px-3 py-2 text-sm text-text">
+                        {item}
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+
+    return (
+        <div className="w-full flex flex-col">
+            <Loader isLoading={loading} />
+            <div className="fixed bottom-5 left-1/2 -translate-x-1/2 z-[2000] flex flex-col-reverse gap-2 items-center">
+                {toasts.map(toast => <Toast key={toast.id} {...toast} onDismiss={() => setToasts(t => t.filter(item => item.id !== toast.id))} />)}
+            </div>
+            <header className="hidden md:flex items-center justify-between w-full mb-6 mt-2 md:mt-0">
+                <h1 className="text-xl md:text-3xl font-bold text-plex">Maintenance</h1>
+            </header>
+            <div className="w-full flex flex-col p-0 md:p-8 bg-transparent md:bg-card rounded-none md:rounded-2xl border-0 md:border border-border shadow-none md:shadow-2xl">
+                <div className="md:hidden mb-3 overflow-x-auto custom-scrollbar">
+                    <div className="flex gap-1.5 min-w-max pb-1">
+                        {sections.map((section) => (
+                            <button
+                                key={`mobile-section-${section.id}`}
+                                type="button"
+                                onClick={() => setActiveSection(section.id)}
+                                className={`px-2.5 py-1.5 rounded-md text-[11px] font-semibold whitespace-nowrap transition-colors ${activeSection === section.id ? 'bg-plex text-background' : 'bg-card border border-border text-muted hover:text-text'}`}
+                            >
+                                {section.label}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+                <div className="md:grid md:grid-cols-[280px_minmax(0,1fr)] md:gap-6">
+                    <aside className="hidden md:block bg-black/20 border border-border rounded-xl p-3 h-fit sticky top-20">
+                        <p className="text-muted text-xs uppercase tracking-wider font-bold mb-2 px-2">Module Pages</p>
+                        <div className="space-y-1">
+                            {sections.map((section) => (
+                                <button
+                                    key={section.id}
+                                    type="button"
+                                    onClick={() => setActiveSection(section.id)}
+                                    className={`w-full text-left px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${activeSection === section.id ? 'bg-plex text-background' : 'text-muted hover:text-text hover:bg-white/5'}`}
+                                >
+                                    {section.label}
+                                </button>
+                            ))}
+                        </div>
+                    </aside>
+                    <div className="overflow-y-auto pr-2 flex-grow mb-4 custom-scrollbar space-y-4">
+                        {!maintenanceFeatureEnabled && (
+                            <div className="bg-background border border-yellow-500/30 rounded-xl p-5">
+                                <h3 className="text-xl font-bold text-plex mb-2">Maintenance Disabled</h3>
+                                <p className="text-sm text-muted mb-3">Experimental Maintenance Mode is currently OFF.</p>
+                                <p className="text-xs text-muted">Enable it in `Settings` → `Maintenance Overview` and click Save Settings to unlock this module.</p>
+                            </div>
+                        )}
+                        {maintenanceFeatureEnabled && (
+                        <>
+                        {activeSection === 'overview' && (
+                            <div className="space-y-4">
+                                <div className="bg-background border border-border rounded-xl p-5">
+                                    <h3 className="text-xl font-bold text-plex mb-2">Maintenance Control Center</h3>
+                                    <p className="text-sm text-muted mb-4">Dedicated top-level module for Maintainerr-style automation: rules, collections, candidates, execution timeline, overlays, calendar, storage, and governance.</p>
+                                    <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                                        <div className="bg-black/20 rounded-lg p-3 border border-border">
+                                            <p className="text-xs text-muted">Indexed Media</p>
+                                            <p className="text-2xl font-bold text-text">{overview?.itemCount || 0}</p>
+                                        </div>
+                                        <div className="bg-black/20 rounded-lg p-3 border border-border">
+                                            <p className="text-xs text-muted">Request Records</p>
+                                            <p className="text-2xl font-bold text-text">{overview?.requestItemCount || 0}</p>
+                                        </div>
+                                        <div className="bg-black/20 rounded-lg p-3 border border-border">
+                                            <p className="text-xs text-muted">Rules with Matches</p>
+                                            <p className="text-2xl font-bold text-text">{previewGroups.filter((p: any) => (p.totalMatches || 0) > 0).length}</p>
+                                        </div>
+                                        <div className="bg-black/20 rounded-lg p-3 border border-border">
+                                            <p className="text-xs text-muted">Total Runs</p>
+                                            <p className="text-2xl font-bold text-text">{runs.length}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="bg-background border border-border rounded-xl p-5">
+                                    <h4 className="font-bold text-text mb-2">Run Logs</h4>
+                                    <p className="text-sm text-muted">Execution history has moved to the dedicated `Logs` page for full log visibility.</p>
+                                    <div className="mt-3 flex items-center gap-3">
+                                        <button
+                                            type="button"
+                                            className="px-3 py-1.5 bg-plex text-background rounded-md font-semibold"
+                                            onClick={() => setActiveSection('runs')}
+                                        >
+                                            Open Logs
+                                        </button>
+                                        <button type="button" className="px-3 py-1.5 bg-border text-text rounded-md font-semibold hover:bg-opacity-80" onClick={loadOverview}>Refresh</button>
+                                    </div>
+                                </div>
+                                <div className="bg-background border border-border rounded-xl p-5 space-y-4">
+                                    <h4 className="font-bold text-text">Reclaim & Impact Overview</h4>
+                                    <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                                        <div className="bg-black/20 rounded-lg p-3 border border-border">
+                                            <p className="text-xs text-muted">Total Matched (Rules Combined)</p>
+                                            <p className="text-2xl font-bold text-text">{overviewInsights.totalMatches}</p>
+                                        </div>
+                                        <div className="bg-black/20 rounded-lg p-3 border border-border">
+                                            <p className="text-xs text-muted">Unique Candidate Titles</p>
+                                            <p className="text-2xl font-bold text-text">{overviewInsights.uniqueMatches}</p>
+                                        </div>
+                                        <div className="bg-black/20 rounded-lg p-3 border border-border">
+                                            <p className="text-xs text-muted">Estimated Reclaim</p>
+                                            <p className="text-2xl font-bold text-text">{formatReclaimSizeFromGB(overviewInsights.estimatedReclaimGB)}</p>
+                                        </div>
+                                        <div className="bg-black/20 rounded-lg p-3 border border-border">
+                                            <p className="text-xs text-muted">Top Impact Library</p>
+                                            <p className="text-sm font-bold text-text line-clamp-2">{overviewInsights.libraries[0]?.libraryTitle || '—'}</p>
+                                            <p className="text-xs text-muted mt-1">{overviewInsights.libraries[0] ? formatReclaimSizeFromGB(overviewInsights.libraries[0].reclaimGB) : 'No data'}</p>
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                                        <div className="bg-black/20 rounded-lg p-3 border border-border">
+                                            <p className="text-xs text-muted font-bold uppercase tracking-wider mb-2">Top Libraries by Reclaim</p>
+                                            <div className="space-y-1.5 max-h-52 overflow-y-auto custom-scrollbar pr-1">
+                                                {overviewInsights.libraries.slice(0, 8).map((lib) => (
+                                                    <div key={`overview-lib-${lib.libraryTitle}`} className="flex items-center justify-between text-xs bg-black/20 border border-border rounded px-2 py-1.5">
+                                                        <span className="text-text line-clamp-1">{lib.libraryTitle}</span>
+                                                        <span className="text-muted ml-2 whitespace-nowrap">{formatReclaimSizeFromGB(lib.reclaimGB)} · {lib.count}</span>
+                                                    </div>
+                                                ))}
+                                                {!overviewInsights.libraries.length && <p className="text-xs text-muted">No matching candidates yet.</p>}
+                                            </div>
+                                        </div>
+                                        <div className="bg-black/20 rounded-lg p-3 border border-border">
+                                            <p className="text-xs text-muted font-bold uppercase tracking-wider mb-2">Top Rules by Reclaim</p>
+                                            <div className="space-y-1.5 max-h-52 overflow-y-auto custom-scrollbar pr-1">
+                                                {overviewInsights.rules.slice(0, 8).map((rule) => (
+                                                    <div key={`overview-rule-${rule.ruleId}`} className="flex items-center justify-between text-xs bg-black/20 border border-border rounded px-2 py-1.5">
+                                                        <span className="text-text line-clamp-1">{rule.ruleName}</span>
+                                                        <span className="text-muted ml-2 whitespace-nowrap">{formatReclaimSizeFromGB(rule.reclaimGB)} · {rule.totalMatches}</span>
+                                                    </div>
+                                                ))}
+                                                {!overviewInsights.rules.length && <p className="text-xs text-muted">No rules with match data yet.</p>}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                        {activeSection === 'rules' && <LibraryMaintenancePanel addToast={addToast} />}
+                        {activeSection === 'collections' && (
+                            <div className="bg-background border border-border rounded-xl p-5 space-y-3">
+                                <h3 className="text-xl font-bold text-plex">Collections</h3>
+                                <p className="text-sm text-muted">Manage collection behavior per rule. Changes save directly to each ruleset.</p>
+                                <div className="space-y-2">
+                                    {rules.map((rule: any) => (
+                                        <div key={`collection-${rule.id}`} className="bg-black/20 border border-border rounded-lg p-3">
+                                            <div className="flex items-center justify-between gap-3">
+                                                <p className="font-semibold text-text text-sm">{rule.name || 'Unnamed Rule'}</p>
+                                                <label className="text-xs text-muted flex items-center gap-2">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={rule?.collection?.enabled !== false}
+                                                        onChange={async (e) => {
+                                                            const next = rules.map((r: any) => r.id === rule.id ? { ...r, collection: { ...(r.collection || {}), enabled: e.target.checked } } : r);
+                                                            setRules(next);
+                                                            await saveAllRules(next);
+                                                            addToast('Collection settings updated.');
+                                                        }}
+                                                    />
+                                                    Enabled
+                                                </label>
+                                            </div>
+                                            <input
+                                                className="mt-2 w-full p-2 rounded border border-border bg-card text-text text-sm"
+                                                value={rule?.collection?.nameTemplate || 'Leaving Soon - {{ruleName}}'}
+                                                onChange={(e) => {
+                                                    const next = rules.map((r: any) => r.id === rule.id ? { ...r, collection: { ...(r.collection || {}), nameTemplate: e.target.value } } : r);
+                                                    setRules(next);
+                                                }}
+                                                onBlur={async () => {
+                                                    await saveAllRules(rules);
+                                                    addToast('Collection template saved.');
+                                                }}
+                                            />
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                        {activeSection === 'candidates' && (
+                            <div className="bg-background border border-border rounded-xl p-3 md:p-5 space-y-3">
+                                <div className="flex flex-wrap items-center justify-between gap-3">
+                                    <h3 className="text-xl font-bold text-plex">Candidates</h3>
+                                    <div className="flex items-center gap-2">
+                                        <input
+                                            className="p-2 rounded border border-border bg-card text-text text-sm"
+                                            placeholder="Search titles..."
+                                            value={candidateSearch}
+                                            onChange={(e) => setCandidateSearch(e.target.value)}
+                                        />
+                                    </div>
+                                </div>
+                                <div className="flex flex-wrap gap-2">
+                                    {rules.map((rule: any) => (
+                                        <button
+                                            key={`candidate-rule-tab-${rule.id}`}
+                                            type="button"
+                                            onClick={() => setCandidateRuleId(rule.id)}
+                                            className={`px-3 py-1.5 text-xs font-semibold rounded-md border transition-colors ${candidateRuleId === rule.id ? 'bg-plex text-background border-plex' : 'bg-black/20 text-text border-border hover:border-plex/40'}`}
+                                        >
+                                            {rule.name || 'Unnamed Rule'}
+                                        </button>
+                                    ))}
+                                    {!rules.length && <p className="text-sm text-muted">No saved rules found. Create a rule in `Rules` first.</p>}
+                                </div>
+                                {selectedCandidateRule && (
+                                    <p className="text-xs text-muted">
+                                        Showing candidates for <span className="text-text font-semibold">{selectedCandidateRule.name || 'Unnamed Rule'}</span> only.
+                                    </p>
+                                )}
+                                {isLoadingCandidates ? <p className="text-sm text-muted">Loading candidates...</p> : (
+                                    <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-7 gap-2 md:gap-3 max-h-[620px] overflow-y-auto custom-scrollbar pr-1">
+                                        {filteredCandidates.map((item: any) => (
+                                            <div key={`candidate-${item._ruleId || candidateRuleId}-${item.ratingKey}`} className="bg-black/20 border border-border rounded-lg overflow-hidden">
+                                                <div className="aspect-[2/3] bg-black/40">
+                                                    {item.thumb ? (
+                                                        <img src={`/api/plex/image?path=${encodeURIComponent(item.thumb)}&width=220&height=330`} alt={item.title} loading="lazy" className="w-full h-full object-cover" />
+                                                    ) : (
+                                                        <div className="w-full h-full flex items-center justify-center text-xs text-muted">No Poster</div>
+                                                    )}
+                                                </div>
+                                                <div className="p-2">
+                                                    <p className="text-xs text-text line-clamp-2">{item.title}</p>
+                                                    <p className="text-[11px] text-muted mt-1">{item.libraryTitle || 'Unknown Library'}</p>
+                                                </div>
+                                            </div>
+                                        ))}
+                                        {!filteredCandidates.length && <p className="text-sm text-muted col-span-full">No matching candidates found for this ruleset.</p>}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                        {activeSection === 'runs' && (
+                            <div className="bg-background border border-border rounded-xl p-5 space-y-3">
+                                <h3 className="text-xl font-bold text-plex">Logs</h3>
+                                <div className="space-y-2 max-h-[620px] overflow-y-auto custom-scrollbar pr-1">
+                                    {runs.map((run: any) => (
+                                        <details key={`run-${run.id}`} className="bg-black/20 border border-border rounded-lg p-3">
+                                            <summary className="cursor-pointer list-none">
+                                                <div className="flex items-center justify-between gap-3">
+                                                    <div>
+                                                        <p className="text-sm font-semibold text-text">{run.ruleName}</p>
+                                                        <p className="text-xs text-muted">{new Date(run.startedAt).toLocaleString()} · {run.dryRun ? 'Dry-run' : 'Destructive'}</p>
+                                                    </div>
+                                                    <span className="text-[11px] px-2 py-1 rounded bg-border text-muted">{run.status}</span>
+                                                </div>
+                                            </summary>
+                                            <div className="mt-3 text-xs text-muted">
+                                                Matched {run.totals?.matched || 0} · Processed {run.totals?.processed || 0} · Deleted {run.totals?.deleted || 0} · Failed {run.totals?.failed || 0}
+                                            </div>
+                                            <div className="mt-2 max-h-52 overflow-y-auto custom-scrollbar pr-1 space-y-1">
+                                                {(run.outcomes || []).slice(0, 120).map((outcome: any, idx: number) => (
+                                                    <div key={`outcome-${run.id}-${idx}`} className="text-xs bg-black/30 border border-border rounded px-2 py-1">
+                                                        {(outcome.title || outcome.type || 'Item')} · {outcome.status || (outcome.success ? 'success' : 'info')}
+                                                        {outcome.reason ? ` · ${outcome.reason}` : ''}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </details>
+                                    ))}
+                                    {!runs.length && <p className="text-sm text-muted">No runs recorded yet.</p>}
+                                </div>
+                            </div>
+                        )}
+                        {activeSection === 'overlays' && (
+                            <div className="bg-background border border-border rounded-xl p-5 space-y-3">
+                                <h3 className="text-xl font-bold text-plex">Overlays</h3>
+                                <p className="text-sm text-muted">Configure per-rule overlay labels (stored with each ruleset).</p>
+                                <div className="space-y-2">
+                                    {rules.map((rule: any) => (
+                                        <div key={`overlay-${rule.id}`} className="bg-black/20 border border-border rounded-lg p-3">
+                                            <p className="text-sm font-semibold text-text mb-2">{rule.name || 'Unnamed Rule'}</p>
+                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                                                <label className="text-xs text-muted flex items-center gap-2">
+                                                    <input type="checkbox" checked={!!rule?.overlay?.enabled} onChange={(e) => setRules(prev => prev.map((r: any) => r.id === rule.id ? { ...r, overlay: { ...(r.overlay || {}), enabled: e.target.checked } } : r))} />
+                                                    Enable overlay
+                                                </label>
+                                                <input className="p-2 rounded border border-border bg-card text-text text-xs" placeholder="Text (e.g. Leaving Soon)" value={rule?.overlay?.text || ''} onChange={(e) => setRules(prev => prev.map((r: any) => r.id === rule.id ? { ...r, overlay: { ...(r.overlay || {}), text: e.target.value } } : r))} />
+                                                <input className="p-2 rounded border border-border bg-card text-text text-xs" placeholder="Color (e.g. #E5A00D)" value={rule?.overlay?.color || ''} onChange={(e) => setRules(prev => prev.map((r: any) => r.id === rule.id ? { ...r, overlay: { ...(r.overlay || {}), color: e.target.value } } : r))} />
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                                <button type="button" className="px-3 py-2 bg-plex text-background rounded-md text-sm font-semibold" onClick={async () => { await saveAllRules(rules); addToast('Overlay settings saved.'); }}>Save Overlay Settings</button>
+                            </div>
+                        )}
+                        {activeSection === 'calendar' && (
+                            <div className="bg-background border border-border rounded-xl p-5 space-y-3">
+                                <h3 className="text-xl font-bold text-plex">Calendar</h3>
+                                <p className="text-sm text-muted">Projected maintenance dates using current candidate age data.</p>
+                                <div className="space-y-2 max-h-[620px] overflow-y-auto custom-scrollbar pr-1">
+                                    {upcomingCalendar.slice(0, 200).map((item: any) => (
+                                        <div key={`calendar-${item.ratingKey}-${item.projectedDate}`} className="bg-black/20 border border-border rounded-lg px-3 py-2 text-sm">
+                                            <span className="text-text font-semibold">{item.projectedDate}</span> · {item.title} <span className="text-muted">({item.libraryTitle})</span>
+                                        </div>
+                                    ))}
+                                    {!upcomingCalendar.length && <p className="text-sm text-muted">No candidate data loaded. Open Candidates tab first.</p>}
+                                </div>
+                            </div>
+                        )}
+                        {activeSection === 'storage' && (
+                            <div className="bg-background border border-border rounded-xl p-5 space-y-4">
+                                <h3 className="text-xl font-bold text-plex">Storage Metrics</h3>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                    <div className="bg-black/20 border border-border rounded-lg p-3">
+                                        <p className="text-xs text-muted">Visible Candidate Count</p>
+                                        <p className="text-2xl font-bold text-text">{filteredCandidates.length}</p>
+                                    </div>
+                                    <div className="bg-black/20 border border-border rounded-lg p-3">
+                                        <p className="text-xs text-muted">Projected Reclaim</p>
+                                        <p className="text-2xl font-bold text-text">{formatReclaimSizeFromGB(storageStats.totalSize)}</p>
+                                    </div>
+                                    <div className="bg-black/20 border border-border rounded-lg p-3">
+                                        <p className="text-xs text-muted">Libraries Impacted</p>
+                                        <p className="text-2xl font-bold text-text">{Object.keys(storageStats.byLibrary).length}</p>
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    {Object.entries(storageStats.byLibrary).sort((a, b) => Number(b[1]) - Number(a[1])).map(([library, size]) => (
+                                        <div key={`storage-${library}`} className="bg-black/20 border border-border rounded-lg px-3 py-2 text-sm flex justify-between">
+                                            <span className="text-text">{library}</span>
+                                            <span className="text-muted">{formatReclaimSizeFromGB(Number(size))}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                        {activeSection === 'library' && (
+                            <div className="bg-background border border-border rounded-xl p-5 space-y-3">
+                                <h3 className="text-xl font-bold text-plex">Rule Library</h3>
+                                <div className="flex flex-wrap gap-2">
+                                    <button
+                                        type="button"
+                                        className="px-3 py-2 bg-border text-text rounded-md text-sm font-semibold"
+                                        onClick={() => {
+                                            const blob = new Blob([JSON.stringify(rules, null, 2)], { type: 'application/json' });
+                                            const url = URL.createObjectURL(blob);
+                                            const a = document.createElement('a');
+                                            a.href = url;
+                                            a.download = `maintenance-rules-${Date.now()}.json`;
+                                            a.click();
+                                            URL.revokeObjectURL(url);
+                                            addToast('Rule export downloaded.');
+                                        }}
+                                    >
+                                        Export Rules JSON
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className="px-3 py-2 bg-plex text-background rounded-md text-sm font-semibold"
+                                        onClick={async () => {
+                                            try {
+                                                const parsed = JSON.parse(libraryJsonInput || '[]');
+                                                if (!Array.isArray(parsed)) throw new Error('JSON must be an array of rules.');
+                                                await saveAllRules(parsed);
+                                                addToast('Imported rules saved.');
+                                            } catch (e: any) {
+                                                addToast(e.message || 'Invalid JSON import.', 'error');
+                                            }
+                                        }}
+                                    >
+                                        Import Rules JSON
+                                    </button>
+                                </div>
+                                <textarea
+                                    className="w-full min-h-[240px] p-3 rounded-lg border border-border bg-card text-text text-xs font-mono"
+                                    placeholder="Paste exported rules JSON here to import."
+                                    value={libraryJsonInput}
+                                    onChange={(e) => setLibraryJsonInput(e.target.value)}
+                                />
+                            </div>
+                        )}
+                        {activeSection === 'exclusions' && (
+                            <div className="bg-background border border-border rounded-xl p-3 md:p-5 space-y-3">
+                                <h3 className="text-xl font-bold text-plex">Exclusions</h3>
+                                <p className="text-sm text-muted">Browse posters by library, search titles, click posters to select, then bulk exclude/unexclude. Excluded items are removed from preview and execution.</p>
+                                <div className="md:bg-black/20 md:border border-border rounded-lg p-2 md:p-3 space-y-3">
+                                    <div className="grid grid-cols-[minmax(0,1fr)_auto] md:grid-cols-[220px_minmax(0,1fr)_auto] gap-1.5 md:gap-2 items-center">
+                                        <div className="min-w-0 md:w-[220px] h-8 md:h-9">
+                                            <CustomSelect
+                                                value={libraryBrowseId}
+                                                onChange={(value) => {
+                                                    setLibraryBrowseId(value);
+                                                    setLibraryBrowsePage(1);
+                                                }}
+                                                options={[
+                                                    { label: 'All Libraries', value: 'all' },
+                                                    ...libraryOptions.map((library) => ({
+                                                        label: `${library.title} (${library.count})`,
+                                                        value: library.id
+                                                    }))
+                                                ]}
+                                            />
+                                        </div>
+                                        <input
+                                            className="col-span-2 md:col-span-1 p-1.5 md:p-2 h-8 md:h-9 rounded border border-border bg-card text-text text-xs md:text-sm min-w-0"
+                                            placeholder="Search title..."
+                                            value={libraryBrowseSearch}
+                                            onChange={(e) => {
+                                                setLibraryBrowseSearch(e.target.value);
+                                                setLibraryBrowsePage(1);
+                                            }}
+                                        />
+                                        <button type="button" className="h-8 md:h-9 px-2.5 md:px-3 bg-border text-text rounded-md text-xs md:text-sm font-semibold whitespace-nowrap" onClick={loadLibraryBrowse}>Refresh</button>
+                                    </div>
+                                    <div className="grid grid-cols-2 md:grid-cols-[auto_auto_auto_minmax(0,1fr)] gap-1.5 md:gap-2 items-center">
+                                        <button
+                                            type="button"
+                                            className="h-8 md:h-9 px-2.5 md:px-3 bg-plex text-background rounded-md text-xs md:text-sm font-semibold whitespace-nowrap"
+                                            onClick={async () => {
+                                                if (!selectedExcludeKeys.length) {
+                                                    addToast('Select posters to exclude first.', 'error');
+                                                    return;
+                                                }
+                                                const merged = Array.from(new Set([...(preferences?.exclusions?.ratingKeys || []).map((v: string) => String(v)), ...selectedExcludeKeys]));
+                                                const next = { ...preferences, exclusions: { ...(preferences.exclusions || {}), ratingKeys: merged } };
+                                                await savePreferences(next);
+                                                await loadExclusionsSummary();
+                                                setSelectedExcludeKeys([]);
+                                                await loadLibraryBrowse();
+                                                addToast(`Excluded ${merged.length} total titles by rating key.`);
+                                            }}
+                                        >
+                                            Exclude Selected ({selectedExcludeKeys.length})
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className="h-8 md:h-9 px-2.5 md:px-3 bg-border text-text rounded-md text-xs md:text-sm font-semibold whitespace-nowrap"
+                                            onClick={async () => {
+                                                if (!selectedExcludeKeys.length) {
+                                                    addToast('Select posters to unexclude first.', 'error');
+                                                    return;
+                                                }
+                                                const remaining = (preferences?.exclusions?.ratingKeys || []).map((v: string) => String(v)).filter((key: string) => !selectedExcludeKeys.includes(key));
+                                                const next = { ...preferences, exclusions: { ...(preferences.exclusions || {}), ratingKeys: remaining } };
+                                                await savePreferences(next);
+                                                await loadExclusionsSummary();
+                                                setSelectedExcludeKeys([]);
+                                                await loadLibraryBrowse();
+                                                addToast('Removed selected exclusions.');
+                                            }}
+                                        >
+                                            Remove Selected Exclusions
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className="h-8 w-8 md:h-9 md:w-9 flex items-center justify-center bg-red-500/15 border border-red-500/40 text-red-300 rounded-md hover:bg-red-500/25 transition-colors"
+                                            onClick={() => setSelectedExcludeKeys([])}
+                                            title="Clear Selection"
+                                            aria-label="Clear Selection"
+                                        >
+                                            <X className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                                        </button>
+                                        <p className="text-[11px] md:text-xs text-muted col-span-2 md:col-span-1 self-center md:justify-self-end md:text-right">Showing {libraryItems.length} of {libraryBrowseTotal} titles · page {libraryBrowsePage}</p>
+                                    </div>
+                                    {libraryBrowseLoading ? (
+                                        <p className="text-sm text-muted">Loading posters...</p>
+                                    ) : (
+                                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-8 gap-2 md:gap-3 max-h-[1240px] overflow-y-auto custom-scrollbar pr-1">
+                                            {libraryItems.map((item: any) => {
+                                                const key = String(item.ratingKey || '');
+                                                const selected = selectedExcludeKeys.includes(key);
+                                                const excluded = item.excluded || excludedRatingKeySet.has(key);
+                                                return (
+                                                    <div key={`exclude-item-${key}`} className={`relative w-[80%] sm:w-full justify-self-center border rounded-lg overflow-hidden transition-colors ${selected ? 'border-plex' : 'border-border'} ${excluded ? 'ring-1 ring-red-500/70' : ''}`}>
+                                                        <button
+                                                            type="button"
+                                                            className="w-full text-left"
+                                                            onClick={() => {
+                                                                setSelectedExcludeKeys((prev) => prev.includes(key) ? prev.filter((v) => v !== key) : [...prev, key]);
+                                                            }}
+                                                        >
+                                                            <div className="aspect-[2/3] bg-black/40">
+                                                                {item.thumb ? (
+                                                                    <img src={`/api/plex/image?path=${encodeURIComponent(item.thumb)}&width=220&height=330`} alt={item.title} loading="lazy" className="w-full h-full object-cover" />
+                                                                ) : (
+                                                                    <div className="w-full h-full flex items-center justify-center text-xs text-muted">No Poster</div>
+                                                                )}
+                                                            </div>
+                                                            <div className="p-2">
+                                                                <p className="text-xs text-text line-clamp-2">{item.title}</p>
+                                                                <p className="text-[11px] text-muted mt-1">{item.libraryTitle}</p>
+                                                            </div>
+                                                        </button>
+                                                        <div className="absolute top-2 left-2 flex gap-1">
+                                                            {selected && <span className="text-[10px] px-1.5 py-0.5 rounded bg-plex text-background font-bold">Selected</span>}
+                                                            {excluded && <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-600 text-white font-bold">Excluded</span>}
+                                                        </div>
+                                                        <button
+                                                            type="button"
+                                                            className={`absolute top-2 right-2 px-2 py-1 rounded text-[11px] font-semibold z-10 ${excluded ? 'bg-border text-text' : 'bg-plex text-background'}`}
+                                                            onClick={async (event) => {
+                                                                event.preventDefault();
+                                                                event.stopPropagation();
+                                                                const currentKeys = (preferences?.exclusions?.ratingKeys || []).map((v: string) => String(v));
+                                                                const nextKeys = excluded ? currentKeys.filter((v: string) => v !== key) : Array.from(new Set([...currentKeys, key]));
+                                                                const next = { ...preferences, exclusions: { ...(preferences.exclusions || {}), ratingKeys: nextKeys } };
+                                                                await savePreferences(next);
+                                                                await loadExclusionsSummary();
+                                                                await loadLibraryBrowse();
+                                                                addToast(excluded ? `Removed exclusion for ${item.title}.` : `Excluded ${item.title}.`);
+                                                            }}
+                                                        >
+                                                            {excluded ? 'Unexclude' : 'Exclude'}
+                                                        </button>
+                                                    </div>
+                                                );
+                                            })}
+                                            {!libraryItems.length && <p className="text-sm text-muted col-span-full">No titles found for the current library/search.</p>}
+                                        </div>
+                                    )}
+                                    <div className="flex items-center justify-between">
+                                        <button
+                                            type="button"
+                                            className="px-3 py-1.5 bg-border text-text rounded-md text-sm font-semibold disabled:opacity-50"
+                                            disabled={libraryBrowsePage <= 1}
+                                            onClick={() => setLibraryBrowsePage((p) => Math.max(1, p - 1))}
+                                        >
+                                            Previous
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className="px-3 py-1.5 bg-border text-text rounded-md text-sm font-semibold disabled:opacity-50"
+                                            disabled={(libraryBrowsePage * libraryBrowseLimit) >= libraryBrowseTotal}
+                                            onClick={() => setLibraryBrowsePage((p) => p + 1)}
+                                        >
+                                            Next
+                                        </button>
+                                    </div>
+                                </div>
+                                <div className="bg-black/20 border border-border rounded-lg p-3 space-y-3">
+                                    <h4 className="text-sm font-bold text-text">Current Exclusions (Resolved)</h4>
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                        <div className="bg-background/40 border border-border rounded-lg p-3 space-y-2">
+                                            <p className="text-xs font-bold text-muted uppercase tracking-wider">Excluded Titles by RatingKey</p>
+                                            <div className="space-y-2 max-h-52 overflow-y-auto custom-scrollbar pr-1">
+                                                {exclusionsSummary.ratingKeys.map((entry: any) => (
+                                                    <div key={`resolved-key-${entry.ratingKey}`} className="flex items-center gap-2 bg-black/20 border border-border rounded-md p-2">
+                                                        <div className="w-10 h-14 rounded overflow-hidden bg-black/40 flex-shrink-0">
+                                                            {entry.thumb ? (
+                                                                <img src={`/api/plex/image?path=${encodeURIComponent(entry.thumb)}&width=80&height=120`} alt={entry.title} className="w-full h-full object-cover" />
+                                                            ) : (
+                                                                <div className="w-full h-full flex items-center justify-center text-[9px] text-muted">No Poster</div>
+                                                            )}
+                                                        </div>
+                                                        <div className="min-w-0">
+                                                            <p className="text-xs text-text line-clamp-2">{entry.title}</p>
+                                                            <p className="text-[10px] text-muted line-clamp-1">{entry.libraryTitle || entry.ratingKey}</p>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                                {!exclusionsSummary.ratingKeys.length && <p className="text-xs text-muted">No ratingKey exclusions set.</p>}
+                                            </div>
+                                        </div>
+                                        <div className="bg-background/40 border border-border rounded-lg p-3 space-y-2">
+                                            <p className="text-xs font-bold text-muted uppercase tracking-wider">Excluded Title Terms</p>
+                                            <div className="space-y-1.5 max-h-52 overflow-y-auto custom-scrollbar pr-1">
+                                                {exclusionsSummary.titles.map((entry: any) => (
+                                                    <div key={`resolved-title-${entry.title}`} className="bg-black/20 border border-border rounded-md px-2 py-1.5">
+                                                        <p className="text-xs text-text line-clamp-1">{entry.title}</p>
+                                                        <p className="text-[10px] text-muted">{entry.matchCount} indexed match(es)</p>
+                                                    </div>
+                                                ))}
+                                                {!exclusionsSummary.titles.length && <p className="text-xs text-muted">No title exclusions set.</p>}
+                                            </div>
+                                        </div>
+                                        <div className="bg-background/40 border border-border rounded-lg p-3 space-y-2">
+                                            <p className="text-xs font-bold text-muted uppercase tracking-wider">Excluded Libraries</p>
+                                            <div className="space-y-1.5 max-h-52 overflow-y-auto custom-scrollbar pr-1">
+                                                {exclusionsSummary.libraries.map((entry: any) => (
+                                                    <div key={`resolved-library-${entry.libraryTitle}`} className="bg-black/20 border border-border rounded-md px-2 py-1.5">
+                                                        <p className="text-xs text-text line-clamp-1">{entry.libraryTitle}</p>
+                                                        <p className="text-[10px] text-muted">{entry.matchCount} indexed item(s)</p>
+                                                    </div>
+                                                ))}
+                                                {!exclusionsSummary.libraries.length && <p className="text-xs text-muted">No library exclusions set.</p>}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                    <div>
+                                        <label className="text-xs text-muted font-bold uppercase">Title Exclusions (advanced, one per line)</label>
+                                        <textarea
+                                            className="w-full min-h-[180px] p-3 rounded-lg border border-border bg-card text-text text-xs"
+                                            value={(preferences?.exclusions?.titles || []).join('\n')}
+                                            onChange={(e) => setPreferences((prev: any) => ({ ...prev, exclusions: { ...(prev.exclusions || {}), titles: e.target.value.split('\n').map(v => v.trim()).filter(Boolean) } }))}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-xs text-muted font-bold uppercase">Library Exclusions (advanced, one per line)</label>
+                                        <textarea
+                                            className="w-full min-h-[180px] p-3 rounded-lg border border-border bg-card text-text text-xs"
+                                            value={(preferences?.exclusions?.libraries || []).join('\n')}
+                                            onChange={(e) => setPreferences((prev: any) => ({ ...prev, exclusions: { ...(prev.exclusions || {}), libraries: e.target.value.split('\n').map(v => v.trim()).filter(Boolean) } }))}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-xs text-muted font-bold uppercase">RatingKey Exclusions (advanced, one per line)</label>
+                                        <textarea
+                                            className="w-full min-h-[180px] p-3 rounded-lg border border-border bg-card text-text text-xs"
+                                            value={(preferences?.exclusions?.ratingKeys || []).join('\n')}
+                                            onChange={(e) => setPreferences((prev: any) => ({ ...prev, exclusions: { ...(prev.exclusions || {}), ratingKeys: e.target.value.split('\n').map(v => v.trim()).filter(Boolean) } }))}
+                                        />
+                                    </div>
+                                </div>
+                                <button type="button" className="px-3 py-2 bg-plex text-background rounded-md text-sm font-semibold" onClick={async () => { await savePreferences(preferences); await loadExclusionsSummary(); addToast('Exclusions saved.'); }}>
+                                    Save Exclusions
+                                </button>
+                            </div>
+                        )}
+                        {activeSection === 'settings' && (
+                            <div className="bg-background border border-border rounded-xl p-5 space-y-4">
+                                <h3 className="text-xl font-bold text-plex">Maintenance Settings</h3>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                    <div className="bg-black/20 border border-border rounded-lg p-3">
+                                        <label className="text-xs text-muted font-bold uppercase block mb-2">Default Dry-run</label>
+                                        <label className="text-sm text-muted flex items-center gap-2">
+                                            <input type="checkbox" checked={!!preferences?.global?.dryRunByDefault} onChange={(e) => setPreferences((prev: any) => ({ ...prev, global: { ...(prev.global || {}), dryRunByDefault: e.target.checked } }))} />
+                                            Enable by default
+                                        </label>
+                                    </div>
+                                    <div className="bg-black/20 border border-border rounded-lg p-3">
+                                        <label className="text-xs text-muted font-bold uppercase block mb-2">Max Actions Per Run</label>
+                                        <input type="number" min={1} className="w-full p-2 rounded border border-border bg-card text-text text-sm" value={preferences?.global?.maxActionsPerRun || 25} onChange={(e) => setPreferences((prev: any) => ({ ...prev, global: { ...(prev.global || {}), maxActionsPerRun: Math.max(1, Number(e.target.value) || 1) } }))} />
+                                    </div>
+                                    <div className="bg-black/20 border border-border rounded-lg p-3">
+                                        <label className="text-xs text-muted font-bold uppercase block mb-2">Require Confirm Token</label>
+                                        <label className="text-sm text-muted flex items-center gap-2">
+                                            <input type="checkbox" checked={!!preferences?.global?.requireConfirmForDestructive} onChange={(e) => setPreferences((prev: any) => ({ ...prev, global: { ...(prev.global || {}), requireConfirmForDestructive: e.target.checked } }))} />
+                                            Required for destructive runs
+                                        </label>
+                                    </div>
+                                </div>
+                                <button type="button" className="px-3 py-2 bg-plex text-background rounded-md text-sm font-semibold" onClick={async () => { await savePreferences(preferences); addToast('Maintenance settings saved.'); }}>
+                                    Save Maintenance Settings
+                                </button>
+                            </div>
+                        )}
+                        </>
+                        )}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 
 interface NavigationProps {
     currentRoute: string;
-    onNavigate: (route: 'admin' | 'user' | 'status' | 'dashboard' | 'settings' | 'logs' | 'analytics' | 'mediastack') => void;
+    onNavigate: (route: 'admin' | 'user' | 'status' | 'dashboard' | 'settings' | 'logs' | 'analytics' | 'mediastack' | 'maintenance') => void;
     onLogout: () => void;
     isAdmin: boolean;
     serverName: string;
@@ -8099,10 +9751,20 @@ const Navigation: React.FC<NavigationProps> = ({ currentRoute, onNavigate, onLog
         'logs': { label: 'Logs', icon: FileText, route: 'logs', adminOnly: true },
         'analytics': { label: 'Analytics', icon: BarChart3, route: 'analytics', adminOnly: false },
         'mediastack': { label: 'Media Stack', icon: Layers, route: 'mediastack', adminOnly: false },
+        'maintenance': { label: 'Maintenance', icon: Shield, route: 'maintenance', adminOnly: true },
         'request': { label: 'Request Content', icon: Sparkles, route: '', adminOnly: false, href: requestUrl },
         'settings': { label: 'Settings', icon: Settings, route: 'settings', adminOnly: true },
         'logout': { label: 'Logout', icon: LogOut, route: '', adminOnly: false, onClick: onLogout }
     };
+    const normalizedNavOrder = (() => {
+        const order = Array.isArray(navOrder) ? [...navOrder] : [];
+        if (isAdmin && !order.includes('maintenance')) {
+            const requestIndex = order.indexOf('request');
+            if (requestIndex >= 0) order.splice(requestIndex, 0, 'maintenance');
+            else order.push('maintenance');
+        }
+        return order;
+    })();
 
     return (
         <>
@@ -8136,7 +9798,7 @@ const Navigation: React.FC<NavigationProps> = ({ currentRoute, onNavigate, onLog
             {/* Desktop Sidebar */}
             <div className="hidden md:flex flex-col w-72 bg-card border-r border-border p-6 sticky top-0 h-screen shadow-2xl">
                 <div className="flex flex-col gap-2 mt-4">
-                    {navOrder.map((key) => {
+                    {normalizedNavOrder.map((key) => {
                         const item = navItemsConfig[key];
                         if (!item) return null;
                         if (item.adminOnly && !isAdmin) return null;
@@ -8204,7 +9866,7 @@ const Navigation: React.FC<NavigationProps> = ({ currentRoute, onNavigate, onLog
             {/* Mobile Bottom Nav */}
             <div className="md:hidden fixed bottom-0 left-0 right-0 w-full bg-[#161b22] border-t border-[#30363d] z-50 pb-[env(safe-area-inset-bottom)]">
                 <div className="flex justify-around items-center h-16">
-                    {navOrder.map((key) => {
+                    {normalizedNavOrder.map((key) => {
                         const item = navItemsConfig[key];
                         if (!item) return null;
                         if (item.adminOnly && !isAdmin) return null;
@@ -8340,11 +10002,31 @@ const PublicInviteClaim: React.FC<{ code: string }> = ({ code }) => {
 
 const MainApp: React.FC = () => {
     const [confirmState, setConfirmState] = useState<{ isOpen: boolean, message: string, onConfirm: () => void }>({ isOpen: false, message: '', onConfirm: () => { } });
+    const [contentMaxWidth, setContentMaxWidth] = useState<string>('100%');
 
     useEffect(() => {
         appConfirm = (message, onConfirm) => {
             setConfirmState({ isOpen: true, message, onConfirm });
         };
+    }, []);
+
+    useEffect(() => {
+        const updateResponsiveContentWidth = () => {
+            const screenWidth = window.screen?.width || window.innerWidth;
+            const screenHeight = window.screen?.height || window.innerHeight;
+            const screenRatio = screenWidth / Math.max(1, screenHeight);
+            const wideThreshold = (16 / 9) + 0.03;
+
+            if (screenRatio > wideThreshold) {
+                setContentMaxWidth(`${Math.round(screenHeight * (16 / 9))}px`);
+            } else {
+                setContentMaxWidth('100%');
+            }
+        };
+
+        updateResponsiveContentWidth();
+        window.addEventListener('resize', updateResponsiveContentWidth);
+        return () => window.removeEventListener('resize', updateResponsiveContentWidth);
     }, []);
 
     const closeConfirm = () => setConfirmState(s => ({ ...s, isOpen: false }));
@@ -8353,7 +10035,7 @@ const MainApp: React.FC = () => {
         closeConfirm();
     };
 
-    const [currentRoute, setCurrentRoute] = useState<'login' | 'admin' | 'user' | 'users' | 'status' | 'dashboard' | 'settings' | 'logs' | 'analytics' | 'mediastack' | 'invite' | 'loading'>('loading');
+    const [currentRoute, setCurrentRoute] = useState<'login' | 'admin' | 'user' | 'users' | 'status' | 'dashboard' | 'settings' | 'logs' | 'analytics' | 'mediastack' | 'maintenance' | 'invite' | 'loading'>('loading');
     const [sessionInfo, setSessionInfo] = useState<any>(null);
     const [publicConfig, setPublicConfig] = useState<any>({});
 
@@ -8375,7 +10057,7 @@ const MainApp: React.FC = () => {
         fetchPublicConfig();
     }, [fetchPublicConfig]);
 
-    const setRoute = useCallback((route: 'login' | 'admin' | 'user' | 'users' | 'status' | 'dashboard' | 'settings' | 'logs' | 'analytics' | 'mediastack' | 'invite' | 'loading') => {
+    const setRoute = useCallback((route: 'login' | 'admin' | 'user' | 'users' | 'status' | 'dashboard' | 'settings' | 'logs' | 'analytics' | 'mediastack' | 'maintenance' | 'invite' | 'loading') => {
         if (route === 'logs') {
             setCurrentRoute('settings');
             window.history.pushState({}, '', '/settings#logs');
@@ -8392,6 +10074,7 @@ const MainApp: React.FC = () => {
             if (route === 'settings') path = '/settings';
             if (route === 'analytics') path = '/analytics';
             if (route === 'mediastack') path = '/mediastack';
+            if (route === 'maintenance') path = '/maintenance';
             window.history.pushState({}, '', path);
         }
     }, []);
@@ -8415,6 +10098,7 @@ const MainApp: React.FC = () => {
                 setCurrentRoute('settings');
             }
             else if (path === '/mediastack') setCurrentRoute('mediastack');
+            else if (path === '/maintenance' && data.session.isAdmin) setCurrentRoute('maintenance');
             else if (path === '/analytics') setCurrentRoute('analytics');
             else if (path === '/settings' && !data.session.isAdmin) setCurrentRoute('user');
             else if (path === '/portal') setCurrentRoute('user');
@@ -8460,6 +10144,7 @@ const MainApp: React.FC = () => {
         if (currentRoute === 'status') return <StatusDashboard onBack={() => isPublicStatus ? setRoute('login') : setRoute('user')} isAdmin={isAdmin} isPublic={isPublicStatus} />;
         if (currentRoute === 'dashboard') return <LibraryDashboard onBack={() => setRoute('user')} isAdmin={isAdmin} />;
         if (currentRoute === 'settings' && isAdmin) return <SettingsDashboard />;
+        if (currentRoute === 'maintenance' && isAdmin) return <MaintenanceDashboard />;
         if (currentRoute === 'logs' && isAdmin) return <LogsDashboard onLogout={handleLogout} />;
         if (currentRoute === 'mediastack') return <MediaStackDashboard isAdmin={isAdmin} />;
         if (currentRoute === 'analytics') return <AnalyticsDashboard isAdmin={isAdmin} sessionInfo={sessionInfo} />;
@@ -8470,9 +10155,11 @@ const MainApp: React.FC = () => {
     return (
         <div className="flex w-full min-h-screen bg-background">
             <ConfirmModal isOpen={confirmState.isOpen} message={confirmState.message} onConfirm={handleConfirm} onCancel={closeConfirm} />
-            {!isPublicView && <Navigation currentRoute={currentRoute} onNavigate={setRoute as any} onLogout={handleLogout} isAdmin={isAdmin} serverName={sessionInfo?.serverName || 'Server Portal'} adminThumb={sessionInfo?.adminThumb} requestUrl={sessionInfo?.requestUrl || 'https://yourdomain.com'} navOrder={sessionInfo?.navOrder || ['home', 'discover', 'status', 'logs', 'analytics', 'mediastack', 'request', 'settings', 'logout']} appVersion={publicConfig.appVersion} />}
-            <div className={`flex-grow flex flex-col items-center p-4 md:p-8 pt-20 pb-[80px] md:pt-8 md:pb-8 w-full overflow-x-clip ${isPublicView ? '!pt-8 !pb-8' : ''}`}>
-                {renderView()}
+            {!isPublicView && <Navigation currentRoute={currentRoute} onNavigate={setRoute as any} onLogout={handleLogout} isAdmin={isAdmin} serverName={sessionInfo?.serverName || 'Server Portal'} adminThumb={sessionInfo?.adminThumb} requestUrl={sessionInfo?.requestUrl || 'https://yourdomain.com'} navOrder={sessionInfo?.navOrder || ['home', 'discover', 'status', 'analytics', 'mediastack', 'maintenance', 'request', 'settings', 'logout']} appVersion={publicConfig.appVersion} />}
+            <div className={`flex-1 min-w-0 flex flex-col items-center px-[2px] pt-20 pb-[80px] md:p-8 md:pt-8 md:pb-8 overflow-x-visible ${isPublicView ? '!pt-8 !pb-8' : ''}`}>
+                <div className="w-full min-w-0" style={{ maxWidth: contentMaxWidth }}>
+                    {renderView()}
+                </div>
 
                 {/* Mobile Bottom Version */}
                 {!isPublicView && publicConfig?.appVersion && (

@@ -171,6 +171,11 @@ const HEALTH_PATH = path.join(process.cwd(), 'subzero-health.json');
 const TRENDING_CACHE_PATH = path.join(process.cwd(), 'trending-cache.json');
 const ANALYTICS_CACHE_PATH = path.join(process.cwd(), 'analytics-cache.json');
 const KILL_RULES_PATH = path.join(process.cwd(), 'kill-rules.json');
+const MAINTENANCE_RULES_PATH = path.join(process.cwd(), 'maintenance-rules.json');
+const MAINTENANCE_MEDIA_INDEX_PATH = path.join(process.cwd(), 'maintenance-media-index.json');
+const MAINTENANCE_RUNS_PATH = path.join(process.cwd(), 'maintenance-runs.json');
+const MAINTENANCE_REQUEST_INDEX_PATH = path.join(process.cwd(), 'maintenance-request-index.json');
+const MAINTENANCE_PREFS_PATH = path.join(process.cwd(), 'maintenance-prefs.json');
 const PLEX_API = 'https://plex.tv/api';
 
 // --- Status App Global State ---
@@ -1317,7 +1322,7 @@ app.get('/api/users/me', requireAuth, async (req, res) => {
     let serverName = 'Plex Server';
     let adminThumb = null;
     let requestUrl = 'https://yourdomain.com';
-    let navOrder = ['home', 'discover', 'users', 'status', 'logs', 'analytics', 'mediastack', 'request', 'settings', 'logout'];
+    let navOrder = ['home', 'discover', 'users', 'status', 'analytics', 'mediastack', 'maintenance', 'request', 'settings', 'logout'];
     try {
         if (config && config.plexToken && config.serverIdentifier) {
             const profile = await getAdminProfile(config);
@@ -1372,6 +1377,9 @@ app.get('/api/config', requireAdmin, async (req, res) => {
                 radarrApiKey: config.radarrApiKey || '',
                 tautulliUrl: config.tautulliUrl || '',
                 tautulliApiKey: config.tautulliApiKey || '',
+                requestAppType: config.requestAppType || 'none',
+                requestAppUrl: config.requestAppUrl || '',
+                requestAppApiKey: config.requestAppApiKey || '',
                 primaryColor: config.primaryColor || '#E5A00D',
                 customLogoUrl: config.customLogoUrl || '',
                 referralEnabled: !!config.referralEnabled,
@@ -1379,13 +1387,14 @@ app.get('/api/config', requireAdmin, async (req, res) => {
                 referralRewardDays: config.referralRewardDays || 7,
                 announcement: config.announcement || '',
                 hideStreamUsers: config.hideStreamUsers === true ? 'anonymous' : (config.hideStreamUsers || 'false'),
-                navOrder: config.navOrder || ['home', 'discover', 'users', 'status', 'logs', 'analytics', 'mediastack', 'request', 'settings', 'logout'],
+                navOrder: config.navOrder || ['home', 'discover', 'users', 'status', 'analytics', 'mediastack', 'maintenance', 'request', 'settings', 'logout'],
                 defaultLibraryIds: config.defaultLibraryIds || null,
                 use24HourClock: !!config.use24HourClock,
                 allowTemporaryAccess: !!config.allowTemporaryAccess,
                 autoBackupEnabled: !!config.autoBackupEnabled,
                 autoBackupIntervalDays: Number(config.autoBackupIntervalDays) > 0 ? Number(config.autoBackupIntervalDays) : 2,
-                autoBackupRetentionCount: Number(config.autoBackupRetentionCount) > 0 ? Number(config.autoBackupRetentionCount) : 10
+                autoBackupRetentionCount: Number(config.autoBackupRetentionCount) > 0 ? Number(config.autoBackupRetentionCount) : 10,
+                maintenanceExperimentalEnabled: !!config.maintenanceExperimentalEnabled
             },
         });
     } else {
@@ -1415,6 +1424,9 @@ app.get('/api/config', requireAdmin, async (req, res) => {
                 radarrApiKey: '',
                 tautulliUrl: '',
                 tautulliApiKey: '',
+                requestAppType: 'none',
+                requestAppUrl: '',
+                requestAppApiKey: '',
                 primaryColor: '#E5A00D',
                 customLogoUrl: '',
                 referralEnabled: false,
@@ -1422,13 +1434,14 @@ app.get('/api/config', requireAdmin, async (req, res) => {
                 referralRewardDays: 7,
                 announcement: '',
                 hideStreamUsers: 'false',
-                navOrder: ['home', 'discover', 'users', 'status', 'logs', 'analytics', 'mediastack', 'request', 'settings', 'logout'],
+                navOrder: ['home', 'discover', 'users', 'status', 'analytics', 'mediastack', 'maintenance', 'request', 'settings', 'logout'],
                 defaultLibraryIds: null,
                 use24HourClock: false,
                 allowTemporaryAccess: false,
                 autoBackupEnabled: false,
                 autoBackupIntervalDays: 2,
-                autoBackupRetentionCount: 10
+                autoBackupRetentionCount: 10,
+                maintenanceExperimentalEnabled: false
             },
         });
     }
@@ -1440,9 +1453,10 @@ app.post('/api/config', setupRateLimit, async (req, res) => {
         smtpHost, smtpPort, smtpUser, smtpPass, smtpFrom, smtpSecure, emailDaysBefore,
         newsletterFrequency, newsletterDay, publicDomain, requestUrl, contactUrl, contactWhatsApp, contactEmail,
         sonarrUrl, sonarrApiKey, radarrUrl, radarrApiKey, tautulliUrl, tautulliApiKey,
+        requestAppType, requestAppUrl, requestAppApiKey,
         inactiveCleanupEnabled, inactiveCleanupDays,
         primaryColor, customLogoUrl, referralEnabled, referralTrialDays, referralRewardDays, announcement, navOrder, hideStreamUsers, defaultLibraryIds, use24HourClock, allowTemporaryAccess,
-        autoBackupEnabled, autoBackupIntervalDays, autoBackupRetentionCount
+        autoBackupEnabled, autoBackupIntervalDays, autoBackupRetentionCount, maintenanceExperimentalEnabled
     } = req.body;
 
     if (!token || !serverIdentifier) {
@@ -1477,10 +1491,21 @@ app.post('/api/config', setupRateLimit, async (req, res) => {
     let safeSonarrUrl = '';
     let safeRadarrUrl = '';
     let safeTautulliUrl = '';
+    let safeRequestAppUrl = '';
+    const resolveConfigIntegrationUrl = (incoming, existing) => {
+        const existingValue = typeof existing === 'string' ? existing : '';
+        // Keep existing URL as-is when caller did not change the value.
+        // This prevents unrelated settings edits from failing on legacy private URLs.
+        if (incoming === undefined || incoming === null) return existingValue;
+        const incomingValue = String(incoming).trim();
+        if (incomingValue === String(existingValue || '').trim()) return existingValue;
+        return sanitizeIntegrationUrl(incomingValue);
+    };
     try {
-        safeSonarrUrl = sonarrUrl !== undefined ? sanitizeIntegrationUrl(sonarrUrl) : sanitizeIntegrationUrl(existingConfig.sonarrUrl || '');
-        safeRadarrUrl = radarrUrl !== undefined ? sanitizeIntegrationUrl(radarrUrl) : sanitizeIntegrationUrl(existingConfig.radarrUrl || '');
-        safeTautulliUrl = tautulliUrl !== undefined ? sanitizeIntegrationUrl(tautulliUrl) : sanitizeIntegrationUrl(existingConfig.tautulliUrl || '');
+        safeSonarrUrl = resolveConfigIntegrationUrl(sonarrUrl, existingConfig.sonarrUrl || '');
+        safeRadarrUrl = resolveConfigIntegrationUrl(radarrUrl, existingConfig.radarrUrl || '');
+        safeTautulliUrl = resolveConfigIntegrationUrl(tautulliUrl, existingConfig.tautulliUrl || '');
+        safeRequestAppUrl = resolveConfigIntegrationUrl(requestAppUrl, existingConfig.requestAppUrl || '');
     } catch (e) {
         return res.status(400).json({ error: `Invalid integration URL: ${e.message}` });
     }
@@ -1512,6 +1537,9 @@ app.post('/api/config', setupRateLimit, async (req, res) => {
         radarrApiKey: radarrApiKey !== undefined ? radarrApiKey : (existingConfig.radarrApiKey || ''),
         tautulliUrl: safeTautulliUrl,
         tautulliApiKey: tautulliApiKey !== undefined ? tautulliApiKey : (existingConfig.tautulliApiKey || ''),
+        requestAppType: ['none', 'overseerr', 'jellyseerr', 'ombi'].includes(String(requestAppType || '').toLowerCase()) ? String(requestAppType).toLowerCase() : (existingConfig.requestAppType || 'none'),
+        requestAppUrl: safeRequestAppUrl,
+        requestAppApiKey: requestAppApiKey !== undefined ? requestAppApiKey : (existingConfig.requestAppApiKey || ''),
         primaryColor: primaryColor || '#E5A00D',
         customLogoUrl: customLogoUrl || '',
         referralEnabled: !!referralEnabled,
@@ -1519,13 +1547,14 @@ app.post('/api/config', setupRateLimit, async (req, res) => {
         referralRewardDays: parseInt(referralRewardDays, 10) || 7,
         announcement: announcement || '',
         hideStreamUsers: hideStreamUsers === true ? 'anonymous' : (hideStreamUsers === false ? 'false' : (hideStreamUsers || 'false')),
-        navOrder: Array.isArray(navOrder) ? navOrder : existingConfig.navOrder || ['home', 'discover', 'users', 'status', 'logs', 'analytics', 'mediastack', 'request', 'settings', 'logout'],
+        navOrder: Array.isArray(navOrder) ? navOrder : existingConfig.navOrder || ['home', 'discover', 'users', 'status', 'analytics', 'mediastack', 'maintenance', 'request', 'settings', 'logout'],
         defaultLibraryIds: Array.isArray(defaultLibraryIds) ? defaultLibraryIds : null,
         use24HourClock: !!use24HourClock,
         allowTemporaryAccess: !!allowTemporaryAccess,
         autoBackupEnabled: !!autoBackupEnabled,
         autoBackupIntervalDays: Math.max(1, parseInt(autoBackupIntervalDays, 10) || 2),
-        autoBackupRetentionCount: Math.max(1, parseInt(autoBackupRetentionCount, 10) || 10)
+        autoBackupRetentionCount: Math.max(1, parseInt(autoBackupRetentionCount, 10) || 10),
+        maintenanceExperimentalEnabled: maintenanceExperimentalEnabled !== undefined ? !!maintenanceExperimentalEnabled : !!existingConfig.maintenanceExperimentalEnabled
     };
     await saveFile(CONFIG_PATH, config);
     cachedAdminId = null;
@@ -2563,6 +2592,7 @@ app.post('/api/tasks/run/:taskId', requireAdmin, async (req, res) => {
             case 'checkAndRevoke': await checkAndRevoke(currentConfig); break;
             case 'checkAndSendNewsletter': await checkAndSendNewsletter(currentConfig, true); break;
             case 'checkAndCleanupInactive': await checkAndCleanupInactive(currentConfig); break;
+            case 'maintenanceRuleRun': await executeMaintenanceRunBatch({ actor: req.user, dryRun: true }); break;
             default: return res.status(400).json({ error: 'Invalid task' });
         }
         markTaskEnd(task, null);
@@ -2586,10 +2616,15 @@ app.get('/api/admin/diagnostics', requireAdmin, async (req, res) => {
             }
         };
 
-        const [analyticsFile, trendingFile, plexStatsFile, usersFile, configFile, backups] = await Promise.all([
+        const [analyticsFile, trendingFile, plexStatsFile, maintenanceIndexFile, maintenanceRulesFile, maintenanceRunsFile, requestIndexFile, maintenancePrefsFile, usersFile, configFile, backups] = await Promise.all([
             statFile(ANALYTICS_CACHE_PATH),
             statFile(TRENDING_CACHE_PATH),
             statFile(PLEX_STATS_CACHE_PATH),
+            statFile(MAINTENANCE_MEDIA_INDEX_PATH),
+            statFile(MAINTENANCE_RULES_PATH),
+            statFile(MAINTENANCE_RUNS_PATH),
+            statFile(MAINTENANCE_REQUEST_INDEX_PATH),
+            statFile(MAINTENANCE_PREFS_PATH),
             statFile(USERS_PATH),
             statFile(CONFIG_PATH),
             listBackupFiles().catch(() => [])
@@ -2607,12 +2642,18 @@ app.get('/api/admin/diagnostics', requireAdmin, async (req, res) => {
                 smtpConfigured: !!(config.smtpHost && config.smtpUser && config.smtpPass),
                 sonarrConfigured: !!(config.sonarrUrl && config.sonarrApiKey),
                 radarrConfigured: !!(config.radarrUrl && config.radarrApiKey),
-                tautulliConfigured: !!(config.tautulliUrl && config.tautulliApiKey)
+                tautulliConfigured: !!(config.tautulliUrl && config.tautulliApiKey),
+                requestAppConfigured: !!(config.requestAppType && config.requestAppType !== 'none' && config.requestAppUrl && config.requestAppApiKey)
             },
             caches: {
                 analytics: analyticsFile,
                 trending: trendingFile,
-                plexStats: plexStatsFile
+                plexStats: plexStatsFile,
+                maintenanceIndex: maintenanceIndexFile,
+                maintenanceRules: maintenanceRulesFile,
+                maintenanceRuns: maintenanceRunsFile,
+                maintenanceRequestIndex: requestIndexFile,
+                maintenancePreferences: maintenancePrefsFile
             },
             files: {
                 users: usersFile,
@@ -2647,7 +2688,12 @@ const BACKUP_TARGETS = [
     { key: 'trendingCache', path: TRENDING_CACHE_PATH },
     { key: 'analyticsCache', path: ANALYTICS_CACHE_PATH },
     { key: 'killRules', path: KILL_RULES_PATH },
-    { key: 'plexStats', path: PLEX_STATS_CACHE_PATH }
+    { key: 'plexStats', path: PLEX_STATS_CACHE_PATH },
+    { key: 'maintenanceRules', path: MAINTENANCE_RULES_PATH },
+    { key: 'maintenanceMediaIndex', path: MAINTENANCE_MEDIA_INDEX_PATH },
+    { key: 'maintenanceRuns', path: MAINTENANCE_RUNS_PATH },
+    { key: 'maintenanceRequestIndex', path: MAINTENANCE_REQUEST_INDEX_PATH },
+    { key: 'maintenancePreferences', path: MAINTENANCE_PREFS_PATH }
 ];
 
 const readBackupPayload = async () => {
@@ -4177,7 +4223,7 @@ const buildSocialMetaTags = async (req) => {
 };
 
 // Serve the main index.html for any other GET request
-app.get(['/', '/portal', '/status', '/admin', '/users', '/dashboard', '/settings', '/analytics', '/logs', '/mediastack', '/auth/*', '/invite/*'], async (req, res) => {
+app.get(['/', '/portal', '/status', '/admin', '/users', '/dashboard', '/settings', '/analytics', '/logs', '/mediastack', '/maintenance', '/maintenance/*', '/auth/*', '/invite/*'], async (req, res) => {
     try {
         const indexPath = path.join(process.cwd(), 'index.html');
         const html = await fs.readFile(indexPath, 'utf8');
@@ -4326,14 +4372,16 @@ let tasksInfo = [
     { id: 'checkAndSendNotifications', name: 'Expiry Notifications', description: 'Sends warning emails to users nearing expiry.', lastRun: null, nextRun: null, running: false, lastDurationMs: null, lastError: null },
     { id: 'checkAndRevoke', name: 'Revoke Access', description: 'Removes Plex access for expired users.', lastRun: null, nextRun: null, running: false, lastDurationMs: null, lastError: null },
     { id: 'checkAndSendNewsletter', name: 'Send Newsletter', description: 'Generates and sends automated newsletters.', lastRun: null, nextRun: null, running: false, lastDurationMs: null, lastError: null },
-    { id: 'checkAndCleanupInactive', name: 'Inactive Cleanup', description: 'Revokes access for users who have not watched anything recently.', lastRun: null, nextRun: null, running: false, lastDurationMs: null, lastError: null }
+    { id: 'checkAndCleanupInactive', name: 'Inactive Cleanup', description: 'Revokes access for users who have not watched anything recently.', lastRun: null, nextRun: null, running: false, lastDurationMs: null, lastError: null },
+    { id: 'maintenanceRuleRun', name: 'Maintenance Rule Run', description: 'Evaluates maintenance rules and executes eligible actions.', lastRun: null, nextRun: null, running: false, lastDurationMs: null, lastError: null }
 ];
 
 const systemJobs = {
     analyticsCache: { id: 'analyticsCache', name: 'Analytics Cache Builder', description: 'Rebuilds server analytics cache snapshots.', lastRun: null, nextRun: null, running: false, lastDurationMs: null, lastError: null },
     trendingCache: { id: 'trendingCache', name: 'Trending Cache Builder', description: 'Rebuilds trending and leaderboard data.', lastRun: null, nextRun: null, running: false, lastDurationMs: null, lastError: null },
     plexStats: { id: 'plexStats', name: 'Plex Stats Builder', description: 'Rebuilds cached library size and usage totals.', lastRun: null, nextRun: null, running: false, lastDurationMs: null, lastError: null },
-    autoBackup: { id: 'autoBackup', name: 'Auto Rolling Backup', description: 'Creates rolling backup snapshots on configured interval.', lastRun: null, nextRun: null, running: false, lastDurationMs: null, lastError: null }
+    autoBackup: { id: 'autoBackup', name: 'Auto Rolling Backup', description: 'Creates rolling backup snapshots on configured interval.', lastRun: null, nextRun: null, running: false, lastDurationMs: null, lastError: null },
+    maintenanceIndex: { id: 'maintenanceIndex', name: 'Maintenance Media Index', description: 'Builds per-item media and request index for cleanup rules.', lastRun: null, nextRun: null, running: false, lastDurationMs: null, lastError: null }
 };
 
 const markTaskStart = (task) => {
@@ -4431,6 +4479,8 @@ const startBackgroundService = async () => {
                 t.nextRun = null;
             } else if (t.id === 'checkAndSendNotifications' && (!currentConfig.smtpHost || !currentConfig.smtpUser || !currentConfig.smtpPass)) {
                 t.nextRun = null;
+            } else if (t.id === 'maintenanceRuleRun') {
+                t.nextRun = isMaintenanceExperimentalEnabled(currentConfig) ? nextRun : null;
             } else {
                 t.nextRun = nextRun;
             }
@@ -4456,6 +4506,14 @@ const startBackgroundService = async () => {
         await runManagedTask('checkAndRevoke', () => checkAndRevoke(currentConfig), 'revoke');
         await runManagedTask('checkAndSendNewsletter', () => checkAndSendNewsletter(currentConfig), 'newsletter');
         await runManagedTask('checkAndCleanupInactive', () => checkAndCleanupInactive(currentConfig), 'inactive cleanup');
+        if (isMaintenanceExperimentalEnabled(currentConfig)) {
+            await runManagedTask('maintenanceRuleRun', async () => {
+                const rules = await loadFile(MAINTENANCE_RULES_PATH, []);
+                const hasEnabledRules = Array.isArray(rules) && rules.some(r => r.enabled !== false);
+                if (!hasEnabledRules) return;
+                await executeMaintenanceRunBatch({ actor: { username: 'System', email: 'system@local' }, dryRun: true });
+            }, 'maintenance rules');
+        }
 
         updateNextRun(currentConfig);
     };
@@ -4621,7 +4679,9 @@ app.get('/api/media-stack/summary', requireAuth, requireMember, async (req, res)
             const fetchArr = async (url, key, endpoint) => {
                 if (!url || !key) return null;
                 try {
-                    const safeBaseUrl = sanitizeIntegrationUrl(url);
+                    // Media Stack integrations are admin-configured server-to-server URLs.
+                    // Allow private network hosts here so local Sonarr/Radarr instances work.
+                    const safeBaseUrl = normalizeExternalBaseUrl(url, { allowPrivate: true, allowHttp: true });
                     const u = new URL(endpoint, safeBaseUrl);
                     const response = await fetch(u.toString(), {
                         headers: { 'X-Api-Key': key }
@@ -4638,22 +4698,83 @@ app.get('/api/media-stack/summary', requireAuth, requireMember, async (req, res)
 
             const firstDay = new Date(targetDate.getFullYear(), targetDate.getMonth(), 1);
             const lastDay = new Date(targetDate.getFullYear(), targetDate.getMonth() + 1, 0);
+            const toLocalYmd = (date) => {
+                const y = date.getFullYear();
+                const m = String(date.getMonth() + 1).padStart(2, '0');
+                const d = String(date.getDate()).padStart(2, '0');
+                return `${y}-${m}-${d}`;
+            };
+            const start = toLocalYmd(firstDay);
+            const end = toLocalYmd(lastDay);
 
-            const start = firstDay.toISOString().split('T')[0];
-            const end = lastDay.toISOString().split('T')[0];
+            const inTargetMonthRange = (dateValue) => {
+                if (!dateValue) return false;
+                const parsed = new Date(dateValue);
+                if (Number.isNaN(parsed.getTime())) return false;
+                const monthStart = new Date(firstDay);
+                monthStart.setHours(0, 0, 0, 0);
+                const monthEnd = new Date(lastDay);
+                monthEnd.setHours(23, 59, 59, 999);
+                return parsed >= monthStart && parsed <= monthEnd;
+            };
 
-            const [sonarrStatus, sonarrQueue, sonarrHistory, sonarrDisk, sonarrCalendar, radarrStatus, radarrQueue, radarrHistory, radarrDisk, radarrCalendar] = await Promise.all([
+            const [sonarrStatus, sonarrQueue, sonarrHistory, sonarrDisk, sonarrCalendarRaw, radarrStatus, radarrQueue, radarrHistory, radarrDisk, radarrCalendarRaw] = await Promise.all([
                 fetchArr(config.sonarrUrl, config.sonarrApiKey, '/api/v3/system/status'),
                 fetchArr(config.sonarrUrl, config.sonarrApiKey, '/api/v3/queue'),
                 fetchArr(config.sonarrUrl, config.sonarrApiKey, '/api/v3/history?page=1&pageSize=10&includeSeries=true&includeEpisode=true'),
                 fetchArr(config.sonarrUrl, config.sonarrApiKey, '/api/v3/diskspace'),
-                fetchArr(config.sonarrUrl, config.sonarrApiKey, `/api/v3/calendar?start=${start}&end=${end}&includeSeries=true`),
+                fetchArr(config.sonarrUrl, config.sonarrApiKey, `/api/v3/calendar?start=${start}&end=${end}&includeSeries=true&includeEpisode=true&unmonitored=true`),
                 fetchArr(config.radarrUrl, config.radarrApiKey, '/api/v3/system/status'),
                 fetchArr(config.radarrUrl, config.radarrApiKey, '/api/v3/queue'),
                 fetchArr(config.radarrUrl, config.radarrApiKey, '/api/v3/history?page=1&pageSize=10&includeMovie=true'),
                 fetchArr(config.radarrUrl, config.radarrApiKey, '/api/v3/diskspace'),
-                fetchArr(config.radarrUrl, config.radarrApiKey, `/api/v3/calendar?start=${start}&end=${end}`)
+                fetchArr(config.radarrUrl, config.radarrApiKey, `/api/v3/calendar?start=${start}&end=${end}&unmonitored=true`)
             ]);
+
+            let sonarrCalendar = Array.isArray(sonarrCalendarRaw)
+                ? sonarrCalendarRaw
+                : (Array.isArray(sonarrCalendarRaw?.records) ? sonarrCalendarRaw.records : []);
+            let radarrCalendar = Array.isArray(radarrCalendarRaw)
+                ? radarrCalendarRaw
+                : (Array.isArray(radarrCalendarRaw?.records) ? radarrCalendarRaw.records : []);
+
+            if (sonarrCalendar.length === 0 && config.sonarrUrl && config.sonarrApiKey) {
+                const sonarrSeries = await fetchArr(config.sonarrUrl, config.sonarrApiKey, '/api/v3/series');
+                if (Array.isArray(sonarrSeries)) {
+                    sonarrCalendar = sonarrSeries
+                        .filter((series) => inTargetMonthRange(series?.nextAiring))
+                        .map((series) => ({
+                            id: `fallback-sonarr-${series.id}`,
+                            title: 'Upcoming Episode',
+                            airDateUtc: series.nextAiring,
+                            airDate: series.nextAiring,
+                            monitored: series.monitored !== false,
+                            hasFile: false,
+                            seasonNumber: 0,
+                            episodeNumber: 0,
+                            series: {
+                                title: series.title || 'Unknown Series',
+                                network: series.network || '',
+                                images: Array.isArray(series.images) ? series.images : []
+                            }
+                        }));
+                }
+            }
+
+            if (radarrCalendar.length === 0 && config.radarrUrl && config.radarrApiKey) {
+                const radarrMovies = await fetchArr(config.radarrUrl, config.radarrApiKey, '/api/v3/movie');
+                if (Array.isArray(radarrMovies)) {
+                    radarrCalendar = radarrMovies
+                        .map((movie) => {
+                            const releaseDate = movie.digitalRelease || movie.physicalRelease || movie.inCinemas || movie.added || null;
+                            return {
+                                ...movie,
+                                _releaseDate: releaseDate
+                            };
+                        })
+                        .filter((movie) => inTargetMonthRange(movie._releaseDate));
+                }
+            }
 
             return {
                 sonarr: {
@@ -4662,7 +4783,7 @@ app.get('/api/media-stack/summary', requireAuth, requireMember, async (req, res)
                     queue: sonarrQueue,
                     history: sonarrHistory,
                     disk: sonarrDisk,
-                    calendar: sonarrCalendar || []
+                    calendar: sonarrCalendar
                 },
                 radarr: {
                     configured: !!(config.radarrUrl && config.radarrApiKey),
@@ -4670,7 +4791,7 @@ app.get('/api/media-stack/summary', requireAuth, requireMember, async (req, res)
                     queue: radarrQueue,
                     history: radarrHistory,
                     disk: radarrDisk,
-                    calendar: radarrCalendar || []
+                    calendar: radarrCalendar
                 }
             };
         });
@@ -5120,6 +5241,938 @@ app.get('/api/plex/stats/trending', requireAuth, requireMember, async (req, res)
     }
 });
 
+// --- Library Maintenance (Maintainerr-style) ---
+const MAINTENANCE_DEFAULTS = {
+    enabled: false,
+    dryRunByDefault: true,
+    maxActionsPerRun: 25,
+    requireConfirmForDestructive: true
+};
+const isMaintenanceExperimentalEnabled = (config) => !!config?.maintenanceExperimentalEnabled;
+const MAINTENANCE_PREFS_DEFAULTS = {
+    global: {
+        dryRunByDefault: true,
+        maxActionsPerRun: 25,
+        requireConfirmForDestructive: true
+    },
+    exclusions: {
+        ratingKeys: [],
+        titles: [],
+        libraries: []
+    }
+};
+
+const MAINTENANCE_FILTER_CATALOG = [
+    { field: 'mediaType', label: 'Media Type', type: 'select', options: ['movie', 'show', 'episode', 'season'], operators: ['equals', 'not_equals', 'in', 'not_in'] },
+    { field: 'libraryTitle', label: 'Library', type: 'text', operators: ['equals', 'not_equals', 'contains', 'not_contains', 'in', 'not_in'] },
+    { field: 'title', label: 'Title', type: 'text', operators: ['contains', 'not_contains', 'equals', 'not_equals', 'regex'] },
+    { field: 'year', label: 'Year', type: 'number', operators: ['equals', 'not_equals', 'greater_than', 'less_than', 'between'] },
+    { field: 'watchCount', label: 'Watch Count', type: 'number', operators: ['equals', 'not_equals', 'greater_than', 'less_than', 'between'] },
+    { field: 'watchedEver', label: 'Watched Ever', type: 'boolean', operators: ['equals'] },
+    { field: 'daysSinceLastWatch', label: 'Days Since Last Watch', type: 'number', operators: ['greater_than', 'less_than', 'between'] },
+    { field: 'daysSinceAdded', label: 'Days Since Added', type: 'number', operators: ['greater_than', 'less_than', 'between'] },
+    { field: 'durationMinutes', label: 'Duration (minutes)', type: 'number', operators: ['greater_than', 'less_than', 'between'] },
+    { field: 'sizeGB', label: 'File Size (GB)', type: 'number', operators: ['greater_than', 'less_than', 'between'] },
+    { field: 'videoResolution', label: 'Resolution', type: 'select', options: ['4k', '2160', '1440', '1080', '720', '576', '480', 'sd'], operators: ['equals', 'not_equals', 'in', 'not_in', 'contains'] },
+    { field: 'videoCodec', label: 'Video Codec', type: 'text', operators: ['equals', 'not_equals', 'contains', 'not_contains'] },
+    { field: 'audioCodec', label: 'Audio Codec', type: 'text', operators: ['equals', 'not_equals', 'contains', 'not_contains'] },
+    { field: 'bitrateKbps', label: 'Bitrate (Kbps)', type: 'number', operators: ['greater_than', 'less_than', 'between'] },
+    { field: 'genres', label: 'Genres', type: 'array', operators: ['contains', 'not_contains', 'in', 'not_in', 'is_empty', 'not_empty'] },
+    { field: 'collections', label: 'Collections', type: 'array', operators: ['contains', 'not_contains', 'in', 'not_in', 'is_empty', 'not_empty'] },
+    { field: 'labels', label: 'Labels', type: 'array', operators: ['contains', 'not_contains', 'in', 'not_in', 'is_empty', 'not_empty'] },
+    { field: 'studio', label: 'Studio/Network', type: 'text', operators: ['contains', 'not_contains', 'equals', 'not_equals'] },
+    { field: 'contentRating', label: 'Content Rating', type: 'text', operators: ['equals', 'not_equals', 'contains', 'not_contains'] },
+    { field: 'arrType', label: 'ARR Mapping Type', type: 'select', options: ['radarr', 'sonarr', 'none'], operators: ['equals', 'not_equals'] },
+    { field: 'arrMapped', label: 'ARR Mapped', type: 'boolean', operators: ['equals'] },
+    { field: 'requestStatus', label: 'Request Status', type: 'text', operators: ['equals', 'not_equals', 'contains', 'not_contains', 'is_empty', 'not_empty'] },
+    { field: 'requestType', label: 'Request Type', type: 'text', operators: ['equals', 'not_equals'] },
+    { field: 'daysSinceRequested', label: 'Days Since Requested', type: 'number', operators: ['greater_than', 'less_than', 'between'] },
+    { field: 'requestedBy', label: 'Requested By', type: 'text', operators: ['contains', 'not_contains', 'equals', 'not_equals'] },
+    { field: 'is4k', label: '4K Item', type: 'boolean', operators: ['equals'] }
+];
+
+const maintenanceRunState = { running: false, lastRunAt: null, lastError: null };
+const mToLower = (value) => String(value ?? '').toLowerCase();
+const mAsArray = (value) => Array.isArray(value) ? value : (value === undefined || value === null ? [] : [value]);
+const mToNumber = (value) => {
+    const n = Number(value);
+    return Number.isFinite(n) ? n : null;
+};
+const daysSince = (timestamp) => {
+    if (!timestamp) return null;
+    const t = Date.parse(timestamp);
+    if (!Number.isFinite(t)) return null;
+    return Math.floor((Date.now() - t) / (24 * 60 * 60 * 1000));
+};
+
+const loadMaintenancePreferences = async () => {
+    const raw = await loadFile(MAINTENANCE_PREFS_PATH, MAINTENANCE_PREFS_DEFAULTS);
+    return {
+        global: {
+            ...MAINTENANCE_PREFS_DEFAULTS.global,
+            ...(raw?.global || {})
+        },
+        exclusions: {
+            ratingKeys: Array.isArray(raw?.exclusions?.ratingKeys) ? raw.exclusions.ratingKeys.map(v => String(v)) : [],
+            titles: Array.isArray(raw?.exclusions?.titles) ? raw.exclusions.titles.map(v => String(v)) : [],
+            libraries: Array.isArray(raw?.exclusions?.libraries) ? raw.exclusions.libraries.map(v => String(v)) : []
+        }
+    };
+};
+
+const applyMaintenanceExclusions = (items = [], preferences = MAINTENANCE_PREFS_DEFAULTS) => {
+    const excludedKeys = new Set((preferences?.exclusions?.ratingKeys || []).map(v => String(v)));
+    const excludedTitles = new Set((preferences?.exclusions?.titles || []).map(v => normalized(v)));
+    const excludedLibraries = new Set((preferences?.exclusions?.libraries || []).map(v => normalized(v)));
+    return (items || []).filter((item) => {
+        if (!item) return false;
+        if (excludedKeys.has(String(item.ratingKey || ''))) return false;
+        if (excludedTitles.has(normalized(item.title))) return false;
+        if (excludedLibraries.has(normalized(item.libraryTitle))) return false;
+        return true;
+    });
+};
+
+const parsePlexGuidIds = (guids = []) => {
+    const parsed = { imdb: null, tmdb: null, tvdb: null };
+    for (const g of guids) {
+        const id = String(g?.id || '');
+        if (!id) continue;
+        const match = id.match(/^([a-z0-9]+):\/\/(.+)$/i);
+        if (!match) continue;
+        const kind = mToLower(match[1]);
+        const raw = match[2];
+        if (kind === 'imdb' && !parsed.imdb) parsed.imdb = raw;
+        if (kind === 'tmdb' && !parsed.tmdb) parsed.tmdb = raw;
+        if (kind === 'tvdb' && !parsed.tvdb) parsed.tvdb = raw;
+    }
+    return parsed;
+};
+
+const normalizeRequestItem = (input = {}) => ({
+    id: input.id || input.requestId || input.mediaRequestId || null,
+    status: input.status || input.requestStatus || input.state || '',
+    type: input.type || input.mediaType || '',
+    requestedBy: input.requestedBy || input.requestedByUsername || input.username || input.requestedByEmail || '',
+    requestedAt: input.requestedAt || input.createdAt || input.requestDate || null,
+    fulfilledAt: input.fulfilledAt || input.updatedAt || null,
+    imdbId: input.imdbId || null,
+    tmdbId: input.tmdbId ? String(input.tmdbId) : null,
+    tvdbId: input.tvdbId ? String(input.tvdbId) : null
+});
+
+const getMaintenanceSettings = (rule) => ({
+    ...MAINTENANCE_DEFAULTS,
+    ...(rule?.settings || {})
+});
+
+const maintenanceValueMap = (item, field) => {
+    switch (field) {
+        case 'mediaType': return item.mediaType || '';
+        case 'libraryTitle': return item.libraryTitle || '';
+        case 'title': return item.title || '';
+        case 'year': return item.year ?? null;
+        case 'watchCount': return item.watchCount ?? 0;
+        case 'watchedEver': return !!item.watchedEver;
+        case 'daysSinceLastWatch': return item.daysSinceLastWatch ?? null;
+        case 'daysSinceAdded': return item.daysSinceAdded ?? null;
+        case 'durationMinutes': return item.durationMinutes ?? null;
+        case 'sizeGB': return item.sizeGB ?? null;
+        case 'videoResolution': return item.videoResolution || '';
+        case 'videoCodec': return item.videoCodec || '';
+        case 'audioCodec': return item.audioCodec || '';
+        case 'bitrateKbps': return item.bitrateKbps ?? null;
+        case 'genres': return item.genres || [];
+        case 'collections': return item.collections || [];
+        case 'labels': return item.labels || [];
+        case 'studio': return item.studio || '';
+        case 'contentRating': return item.contentRating || '';
+        case 'arrType': return item.arrType || 'none';
+        case 'arrMapped': return !!item.arrMapped;
+        case 'requestStatus': return item.request?.status || '';
+        case 'requestType': return item.request?.type || '';
+        case 'daysSinceRequested': return item.request?.daysSinceRequested ?? null;
+        case 'requestedBy': return item.request?.requestedBy || '';
+        case 'is4k': return !!item.is4k;
+        default: return null;
+    }
+};
+
+const compareMaintenanceValue = (itemValue, operator, expectedValue) => {
+    if (operator === 'is_empty') return mAsArray(itemValue).filter(Boolean).length === 0 || itemValue === '' || itemValue === null;
+    if (operator === 'not_empty') return !(mAsArray(itemValue).filter(Boolean).length === 0 || itemValue === '' || itemValue === null);
+    if (operator === 'equals') return mToLower(itemValue) === mToLower(expectedValue);
+    if (operator === 'not_equals') return mToLower(itemValue) !== mToLower(expectedValue);
+    if (operator === 'contains') {
+        if (Array.isArray(itemValue)) return itemValue.map(v => mToLower(v)).includes(mToLower(expectedValue));
+        return mToLower(itemValue).includes(mToLower(expectedValue));
+    }
+    if (operator === 'not_contains') {
+        if (Array.isArray(itemValue)) return !itemValue.map(v => mToLower(v)).includes(mToLower(expectedValue));
+        return !mToLower(itemValue).includes(mToLower(expectedValue));
+    }
+    if (operator === 'in') {
+        const expectedList = mAsArray(expectedValue).map(v => mToLower(v));
+        if (Array.isArray(itemValue)) return itemValue.some(v => expectedList.includes(mToLower(v)));
+        return expectedList.includes(mToLower(itemValue));
+    }
+    if (operator === 'not_in') {
+        const expectedList = mAsArray(expectedValue).map(v => mToLower(v));
+        if (Array.isArray(itemValue)) return !itemValue.some(v => expectedList.includes(mToLower(v)));
+        return !expectedList.includes(mToLower(itemValue));
+    }
+    if (operator === 'regex') {
+        try {
+            const re = new RegExp(String(expectedValue || ''), 'i');
+            return re.test(String(itemValue || ''));
+        } catch (e) {
+            return false;
+        }
+    }
+    const left = mToNumber(itemValue);
+    if (operator === 'greater_than') return left !== null && left > Number(expectedValue);
+    if (operator === 'less_than') return left !== null && left < Number(expectedValue);
+    if (operator === 'between') {
+        const expected = mAsArray(expectedValue);
+        const low = Number(expected[0]);
+        const high = Number(expected[1]);
+        return left !== null && Number.isFinite(low) && Number.isFinite(high) && left >= low && left <= high;
+    }
+    return false;
+};
+
+const evaluateMaintenanceFilterNode = (item, node) => {
+    if (!node) return true;
+    if (Array.isArray(node.conditions)) {
+        const logic = String(node.logic || 'AND').toUpperCase();
+        const outcomes = node.conditions.map((child) => evaluateMaintenanceFilterNode(item, child));
+        if (logic === 'OR') return outcomes.some(Boolean);
+        if (logic === 'NOT') return !outcomes.some(Boolean);
+        return outcomes.every(Boolean);
+    }
+    const field = node.field;
+    const operator = node.operator || 'equals';
+    const value = node.value;
+    const itemValue = maintenanceValueMap(item, field);
+    return compareMaintenanceValue(itemValue, operator, value);
+};
+
+const evaluateMaintenanceRule = (item, rule) => {
+    if (!rule || rule.enabled === false) return false;
+    const root = rule.filterTree || rule.filter || null;
+    if (!root) return false;
+    return evaluateMaintenanceFilterNode(item, root);
+};
+
+const fetchPlexLibraryItemsForMaintenance = async (config, uri) => {
+    const sectionsRes = await fetch(`${uri}/library/sections?X-Plex-Token=${config.plexToken}`, { headers: { Accept: 'application/json' } })
+        .then(r => r.json())
+        .catch(() => null);
+    const sections = sectionsRes?.MediaContainer?.Directory || [];
+    const includeTypes = new Set(['movie', 'show']);
+    const items = [];
+
+    for (const section of sections) {
+        if (!includeTypes.has(String(section.type || ''))) continue;
+        const sectionKey = section.key;
+        let start = 0;
+        const pageSize = 200;
+        let total = Infinity;
+        while (start < total) {
+            const listRes = await fetch(`${uri}/library/sections/${sectionKey}/all?X-Plex-Token=${config.plexToken}&X-Plex-Container-Start=${start}&X-Plex-Container-Size=${pageSize}`, {
+                headers: { Accept: 'application/json' }
+            }).then(r => r.json()).catch(() => null);
+            const container = listRes?.MediaContainer || {};
+            const page = container.Metadata || [];
+            total = Number(container.totalSize || page.length || 0);
+            if (!Array.isArray(page) || page.length === 0) break;
+            for (const media of page) {
+                const guids = media.Guid || [];
+                const ids = parsePlexGuidIds(guids);
+                const part = media?.Media?.[0]?.Part?.[0] || {};
+                const mediaInfo = media?.Media?.[0] || {};
+                const item = {
+                    ratingKey: String(media.ratingKey || ''),
+                    title: media.title || media.grandparentTitle || media.originalTitle || 'Unknown',
+                    thumb: media.thumb || media.grandparentThumb || '',
+                    mediaType: media.type || section.type || 'movie',
+                    libraryId: String(sectionKey),
+                    libraryTitle: section.title || 'Library',
+                    year: media.year || null,
+                    watchCount: Number(media.viewCount || 0),
+                    watchedEver: Number(media.viewCount || 0) > 0,
+                    addedAt: media.addedAt ? new Date(media.addedAt * 1000).toISOString() : null,
+                    lastViewedAt: media.lastViewedAt ? new Date(media.lastViewedAt * 1000).toISOString() : null,
+                    daysSinceAdded: media.addedAt ? Math.floor((Date.now() - (media.addedAt * 1000)) / (24 * 60 * 60 * 1000)) : null,
+                    daysSinceLastWatch: media.lastViewedAt ? Math.floor((Date.now() - (media.lastViewedAt * 1000)) / (24 * 60 * 60 * 1000)) : null,
+                    durationMinutes: media.duration ? Math.round(media.duration / 60000) : null,
+                    bitrateKbps: Number(mediaInfo.bitrate || 0),
+                    videoResolution: String(mediaInfo.videoResolution || '').toLowerCase(),
+                    videoCodec: String(mediaInfo.videoCodec || '').toLowerCase(),
+                    audioCodec: String(mediaInfo.audioCodec || '').toLowerCase(),
+                    sizeBytes: Number(part.size || 0),
+                    sizeGB: part.size ? Math.round((Number(part.size) / (1024 * 1024 * 1024)) * 100) / 100 : 0,
+                    filePath: part.file || '',
+                    genres: (media.Genre || []).map(g => g.tag).filter(Boolean),
+                    collections: (media.Collection || []).map(c => c.tag).filter(Boolean),
+                    labels: (media.Label || []).map(l => l.tag).filter(Boolean),
+                    studio: media.studio || '',
+                    contentRating: media.contentRating || '',
+                    imdbId: ids.imdb,
+                    tmdbId: ids.tmdb,
+                    tvdbId: ids.tvdb,
+                    arrType: section.type === 'movie' ? 'radarr' : 'sonarr',
+                    arrMapped: !!(ids.tmdb || ids.tvdb || ids.imdb),
+                    request: null,
+                    is4k: String(mediaInfo.videoResolution || '').toLowerCase().includes('4k') || String(mediaInfo.videoResolution || '').toLowerCase().includes('2160')
+                };
+                items.push(item);
+            }
+            start += page.length;
+            if (page.length < pageSize) break;
+        }
+    }
+    return items;
+};
+
+const fetchRequestIndex = async (config) => {
+    const requestAppType = String(config.requestAppType || 'none').toLowerCase();
+    const baseUrlRaw = config.requestAppUrl || '';
+    const apiKey = config.requestAppApiKey || '';
+    if (!baseUrlRaw || !apiKey || requestAppType === 'none') {
+        return { generatedAt: new Date().toISOString(), type: requestAppType, items: [] };
+    }
+    const baseUrl = sanitizeIntegrationUrl(baseUrlRaw);
+    const headers = { Accept: 'application/json', 'Content-Type': 'application/json', 'X-Api-Key': apiKey };
+    const items = [];
+
+    if (requestAppType === 'overseerr' || requestAppType === 'jellyseerr') {
+        let page = 1;
+        let totalPages = 1;
+        while (page <= totalPages && page <= 20) {
+            const take = 50;
+            const skip = (page - 1) * take;
+            const payload = await fetch(`${baseUrl}/api/v1/request?take=${take}&skip=${skip}`, { headers }).then(r => r.json()).catch(() => null);
+            const results = payload?.results || [];
+            const pageInfo = payload?.pageInfo || {};
+            totalPages = Math.max(1, Math.ceil(Number(pageInfo.results || results.length || 0) / take));
+            results.forEach((reqItem) => {
+                const media = reqItem?.media || {};
+                const requestedBy = reqItem?.requestedBy?.displayName || reqItem?.requestedBy?.username || reqItem?.requestedBy?.email || '';
+                items.push(normalizeRequestItem({
+                    id: reqItem?.id,
+                    status: reqItem?.status || '',
+                    type: reqItem?.type || media?.mediaType || '',
+                    requestedBy,
+                    requestedAt: reqItem?.createdAt || reqItem?.createdAtUtc || null,
+                    fulfilledAt: reqItem?.updatedAt || null,
+                    imdbId: media?.imdbId || null,
+                    tmdbId: media?.tmdbId || null,
+                    tvdbId: media?.tvdbId || null
+                }));
+            });
+            page += 1;
+            if (!results.length) break;
+        }
+    } else if (requestAppType === 'ombi') {
+        const [movieReqs, tvReqs] = await Promise.all([
+            fetch(`${baseUrl}/api/v1/Request/movie`, { headers }).then(r => r.json()).catch(() => []),
+            fetch(`${baseUrl}/api/v1/Request/tv`, { headers }).then(r => r.json()).catch(() => [])
+        ]);
+        for (const reqItem of [...(Array.isArray(movieReqs) ? movieReqs : []), ...(Array.isArray(tvReqs) ? tvReqs : [])]) {
+            const requester = reqItem?.requestedUserName || reqItem?.requestedByAlias || reqItem?.requestedBy || '';
+            items.push(normalizeRequestItem({
+                id: reqItem?.id || reqItem?.requestId,
+                status: reqItem?.status || reqItem?.requestStatus || '',
+                type: reqItem?.requestType || (reqItem?.theMovieDbId ? 'movie' : 'tv'),
+                requestedBy: requester,
+                requestedAt: reqItem?.requestedDate || reqItem?.createdAt || null,
+                fulfilledAt: reqItem?.availableDate || null,
+                imdbId: reqItem?.imdbId || null,
+                tmdbId: reqItem?.theMovieDbId || null,
+                tvdbId: reqItem?.tvDbId || null
+            }));
+        }
+    }
+    return { generatedAt: new Date().toISOString(), type: requestAppType, items };
+};
+
+const attachRequestsToMediaIndex = (mediaItems, requestIndex) => {
+    const map = new Map();
+    for (const reqItem of requestIndex.items || []) {
+        const keys = [reqItem.tmdbId ? `tmdb:${reqItem.tmdbId}` : null, reqItem.tvdbId ? `tvdb:${reqItem.tvdbId}` : null, reqItem.imdbId ? `imdb:${reqItem.imdbId}` : null].filter(Boolean);
+        keys.forEach((key) => map.set(key, reqItem));
+    }
+    return mediaItems.map((item) => {
+        const req =
+            (item.tmdbId && map.get(`tmdb:${item.tmdbId}`)) ||
+            (item.tvdbId && map.get(`tvdb:${item.tvdbId}`)) ||
+            (item.imdbId && map.get(`imdb:${item.imdbId}`)) ||
+            null;
+        return {
+            ...item,
+            request: req ? {
+                ...req,
+                daysSinceRequested: daysSince(req.requestedAt),
+                daysSinceFulfilled: daysSince(req.fulfilledAt)
+            } : null
+        };
+    });
+};
+
+const buildMaintenanceMediaIndex = async ({ actor = null, force = false } = {}) => {
+    markTaskStart(systemJobs.maintenanceIndex);
+    try {
+        const config = await loadFile(CONFIG_PATH, {});
+        if (!isMaintenanceExperimentalEnabled(config)) {
+            const payload = {
+                generatedAt: null,
+                itemCount: 0,
+                requestItemCount: 0,
+                force: !!force,
+                items: []
+            };
+            markTaskEnd(systemJobs.maintenanceIndex, null);
+            return payload;
+        }
+        if (!config?.plexToken || !config?.serverIdentifier) {
+            throw new Error('Plex integration is not configured.');
+        }
+        const uri = await getPlexConnectionUri(config);
+        if (!uri) throw new Error('Unable to resolve Plex server URI.');
+        const rawMedia = await fetchPlexLibraryItemsForMaintenance(config, uri);
+        const requestIndex = await fetchRequestIndex(config);
+        const merged = attachRequestsToMediaIndex(rawMedia, requestIndex);
+        const payload = {
+            generatedAt: new Date().toISOString(),
+            itemCount: merged.length,
+            requestItemCount: (requestIndex.items || []).length,
+            force: !!force,
+            items: merged
+        };
+        await saveFile(MAINTENANCE_MEDIA_INDEX_PATH, payload);
+        await saveFile(MAINTENANCE_REQUEST_INDEX_PATH, requestIndex);
+        markTaskEnd(systemJobs.maintenanceIndex, null);
+        await appendAuditLog('maintenance_index_rebuilt', actor, null, { itemCount: merged.length, requestItemCount: requestIndex.items?.length || 0 });
+        return payload;
+    } catch (error) {
+        markTaskEnd(systemJobs.maintenanceIndex, error);
+        throw error;
+    }
+};
+
+const getArrCatalog = async (config) => {
+    const [radarrItems, sonarrItems] = await Promise.all([
+        config.radarrUrl && config.radarrApiKey
+            ? fetch(`${sanitizeIntegrationUrl(config.radarrUrl)}/api/v3/movie`, { headers: { 'X-Api-Key': config.radarrApiKey, Accept: 'application/json' } }).then(r => r.json()).catch(() => [])
+            : [],
+        config.sonarrUrl && config.sonarrApiKey
+            ? fetch(`${sanitizeIntegrationUrl(config.sonarrUrl)}/api/v3/series`, { headers: { 'X-Api-Key': config.sonarrApiKey, Accept: 'application/json' } }).then(r => r.json()).catch(() => [])
+            : []
+    ]);
+
+    return {
+        radarr: Array.isArray(radarrItems) ? radarrItems : [],
+        sonarr: Array.isArray(sonarrItems) ? sonarrItems : []
+    };
+};
+
+const resolveArrEntity = (item, catalog) => {
+    const matchByIds = (entry) => {
+        const imdb = entry?.imdbId || null;
+        const tmdb = entry?.tmdbId ? String(entry.tmdbId) : null;
+        const tvdb = entry?.tvdbId ? String(entry.tvdbId) : null;
+        return (item.imdbId && imdb && item.imdbId === imdb)
+            || (item.tmdbId && tmdb && item.tmdbId === tmdb)
+            || (item.tvdbId && tvdb && item.tvdbId === tvdb);
+    };
+
+    if (item.mediaType === 'movie') {
+        const radarrMatch = catalog.radarr.find(matchByIds);
+        if (radarrMatch) return { type: 'radarr', entity: radarrMatch };
+    } else {
+        const sonarrMatch = catalog.sonarr.find(matchByIds);
+        if (sonarrMatch) return { type: 'sonarr', entity: sonarrMatch };
+    }
+    return { type: 'none', entity: null };
+};
+
+const applyArrActions = async (config, resolved, actions = {}) => {
+    if (!resolved?.entity || !resolved?.type || resolved.type === 'none') {
+        return { success: false, reason: 'No Sonarr/Radarr mapping found' };
+    }
+    const deleteFiles = actions.deleteFiles !== false;
+    const shouldDelete = actions.deleteFromArr !== false;
+    const shouldUnmonitor = !!actions.unmonitor;
+    const qualityProfileId = Number(actions.qualityProfileId || 0);
+
+    const baseUrl = resolved.type === 'radarr' ? sanitizeIntegrationUrl(config.radarrUrl) : sanitizeIntegrationUrl(config.sonarrUrl);
+    const apiKey = resolved.type === 'radarr' ? config.radarrApiKey : config.sonarrApiKey;
+    const headers = { 'X-Api-Key': apiKey, Accept: 'application/json', 'Content-Type': 'application/json' };
+    const id = resolved.entity.id;
+
+    if (qualityProfileId > 0) {
+        const body = { ...resolved.entity, qualityProfileId };
+        await fetch(`${baseUrl}/api/v3/${resolved.type === 'radarr' ? 'movie' : 'series'}/${id}`, { method: 'PUT', headers, body: JSON.stringify(body) });
+    }
+    if (shouldUnmonitor) {
+        const body = { ...resolved.entity, monitored: false };
+        await fetch(`${baseUrl}/api/v3/${resolved.type === 'radarr' ? 'movie' : 'series'}/${id}`, { method: 'PUT', headers, body: JSON.stringify(body) });
+    }
+    if (shouldDelete) {
+        const deletePath = resolved.type === 'radarr'
+            ? `/api/v3/movie/${id}?deleteFiles=${deleteFiles ? 'true' : 'false'}&addImportExclusion=false`
+            : `/api/v3/series/${id}?deleteFiles=${deleteFiles ? 'true' : 'false'}&addImportListExclusion=false`;
+        const delRes = await fetch(`${baseUrl}${deletePath}`, { method: 'DELETE', headers });
+        if (!delRes.ok && delRes.status !== 404) {
+            return { success: false, reason: `ARR delete failed (${delRes.status})` };
+        }
+    }
+    return { success: true };
+};
+
+const syncRulePlexCollection = async (config, uri, rule, items) => {
+    const collectionSettings = rule?.collection || {};
+    if (!collectionSettings.enabled || !items.length) return { success: true, updated: false };
+
+    const sectionGroups = new Map();
+    items.forEach((item) => {
+        if (!item.libraryId || !item.ratingKey) return;
+        const key = `${item.libraryId}:${item.mediaType === 'movie' ? 1 : 2}`;
+        if (!sectionGroups.has(key)) sectionGroups.set(key, []);
+        sectionGroups.get(key).push(item.ratingKey);
+    });
+
+    let updated = 0;
+    for (const [sectionKey, ratingKeys] of sectionGroups.entries()) {
+        const [libraryId, typeId] = sectionKey.split(':');
+        const nameTemplate = collectionSettings.nameTemplate || 'Maintenance - {{ruleName}}';
+        const title = String(nameTemplate).replace('{{ruleName}}', rule.name || 'Rule').replace('{{date}}', new Date().toISOString().split('T')[0]);
+        const uniqueKeys = [...new Set(ratingKeys)].slice(0, 500);
+        if (!uniqueKeys.length) continue;
+        const sourceUri = `server://${config.serverIdentifier}/com.plexapp.plugins.library/library/metadata/${uniqueKeys.join(',')}`;
+        const targetUrl = `${uri}/library/collections?title=${encodeURIComponent(title)}&type=${typeId}&smart=0&sectionId=${encodeURIComponent(libraryId)}&uri=${encodeURIComponent(sourceUri)}&X-Plex-Token=${encodeURIComponent(config.plexToken)}`;
+        const createRes = await fetch(targetUrl, { method: 'POST', headers: { Accept: 'application/json' } }).catch(() => null);
+        if (createRes && (createRes.ok || createRes.status === 201 || createRes.status === 200)) {
+            updated += 1;
+        }
+    }
+    return { success: true, updated: updated > 0, updatedCollections: updated };
+};
+
+const createRunRecord = (rule, dryRun, actor) => ({
+    id: randomUUID(),
+    ruleId: rule.id,
+    ruleName: rule.name || 'Unnamed Rule',
+    dryRun,
+    startedAt: new Date().toISOString(),
+    completedAt: null,
+    status: 'running',
+    actor: actor ? { id: actor.id || null, username: actor.username || null, email: actor.email || null } : null,
+    totals: { matched: 0, processed: 0, deleted: 0, skipped: 0, failed: 0 },
+    outcomes: [],
+    errors: []
+});
+
+const runMaintenanceRule = async ({ rule, dryRun, actor, confirmToken }) => {
+    const config = await loadFile(CONFIG_PATH, {});
+    const indexPayload = await loadFile(MAINTENANCE_MEDIA_INDEX_PATH, { items: [] });
+    const preferences = await loadMaintenancePreferences();
+    const items = Array.isArray(indexPayload.items) ? indexPayload.items : [];
+    const settings = getMaintenanceSettings(rule);
+    const effectiveDryRun = dryRun ?? !!preferences.global?.dryRunByDefault ?? !!settings.dryRunByDefault;
+    const destructive = !effectiveDryRun && (rule?.actions?.deleteFromArr !== false || !!rule?.actions?.unmonitor || Number(rule?.actions?.qualityProfileId || 0) > 0);
+    const confirmRequired = preferences.global?.requireConfirmForDestructive ?? settings.requireConfirmForDestructive;
+    if (destructive && confirmRequired && String(confirmToken || '') !== 'CONFIRM_MAINTENANCE_DELETE') {
+        throw new Error('Destructive run requires confirm token.');
+    }
+
+    const matched = applyMaintenanceExclusions(items.filter(item => evaluateMaintenanceRule(item, rule)), preferences);
+    const run = createRunRecord(rule, effectiveDryRun, actor);
+    run.totals.matched = matched.length;
+
+    const maxActions = Math.max(1, Number(preferences.global?.maxActionsPerRun || settings.maxActionsPerRun || MAINTENANCE_DEFAULTS.maxActionsPerRun));
+    const candidates = matched.slice(0, maxActions);
+    const catalog = (!effectiveDryRun && destructive) ? await getArrCatalog(config) : { radarr: [], sonarr: [] };
+    const uri = (!effectiveDryRun && rule?.collection?.enabled) ? await getPlexConnectionUri(config) : null;
+
+    if (!effectiveDryRun && uri && rule?.collection?.enabled) {
+        const collectionResult = await syncRulePlexCollection(config, uri, rule, candidates);
+        run.outcomes.push({ type: 'collection_sync', success: !!collectionResult.success, details: collectionResult });
+    }
+
+    for (const item of candidates) {
+        const minGrace = Math.max(0, Number(rule?.graceDays || 0));
+        const graceOk = minGrace === 0 || ((item.daysSinceLastWatch ?? item.daysSinceAdded ?? 0) >= minGrace);
+        if (!graceOk) {
+            run.totals.skipped += 1;
+            run.outcomes.push({ ratingKey: item.ratingKey, title: item.title, status: 'skipped', reason: `Grace period not met (${minGrace} days)` });
+            continue;
+        }
+        if (effectiveDryRun) {
+            run.totals.processed += 1;
+            run.outcomes.push({ ratingKey: item.ratingKey, title: item.title, status: 'dry_run', proposedActions: rule.actions || {} });
+            continue;
+        }
+
+        const resolved = resolveArrEntity(item, catalog);
+        if (!resolved.entity) {
+            run.totals.skipped += 1;
+            run.outcomes.push({ ratingKey: item.ratingKey, title: item.title, status: 'unactionable', reason: 'No Sonarr/Radarr mapping available' });
+            continue;
+        }
+
+        const actionResult = await applyArrActions(config, resolved, rule.actions || {});
+        run.totals.processed += 1;
+        if (actionResult.success) {
+            run.totals.deleted += 1;
+            run.outcomes.push({ ratingKey: item.ratingKey, title: item.title, status: 'deleted', arrType: resolved.type, arrId: resolved.entity.id });
+            await appendAuditLog('maintenance_item_actioned', actor, null, {
+                ruleId: rule.id,
+                ruleName: rule.name,
+                ratingKey: item.ratingKey,
+                title: item.title,
+                arrType: resolved.type,
+                arrId: resolved.entity.id,
+                actions: rule.actions || {}
+            });
+        } else {
+            run.totals.failed += 1;
+            run.outcomes.push({ ratingKey: item.ratingKey, title: item.title, status: 'failed', reason: actionResult.reason || 'ARR action failed' });
+        }
+    }
+
+    run.completedAt = new Date().toISOString();
+    run.status = run.totals.failed > 0 ? 'completed_with_errors' : 'completed';
+    return run;
+};
+
+const requireMaintenanceExperimental = async (req, res, next) => {
+    try {
+        const config = await loadFile(CONFIG_PATH, {});
+        if (!isMaintenanceExperimentalEnabled(config)) {
+            return res.status(403).json({ error: 'Maintenance Experimental Mode is disabled. Enable it in Settings first.' });
+        }
+        return next();
+    } catch (e) {
+        return res.status(500).json({ error: 'Failed to check Maintenance feature flag.' });
+    }
+};
+
+app.use('/api/maintenance', requireAdmin, requireMaintenanceExperimental);
+
+app.get('/api/maintenance/filter-options', requireAdmin, async (req, res) => {
+    res.json({
+        fields: MAINTENANCE_FILTER_CATALOG,
+        operators: ['equals', 'not_equals', 'contains', 'not_contains', 'greater_than', 'less_than', 'between', 'in', 'not_in', 'is_empty', 'not_empty', 'regex'],
+        groupLogic: ['AND', 'OR', 'NOT']
+    });
+});
+
+app.get('/api/maintenance/rules', requireAdmin, async (req, res) => {
+    try {
+        const rules = await loadFile(MAINTENANCE_RULES_PATH, []);
+        res.json(Array.isArray(rules) ? rules : []);
+    } catch (e) {
+        res.status(500).json({ error: `Failed to load maintenance rules: ${e.message}` });
+    }
+});
+
+app.post('/api/maintenance/rules', requireAdmin, async (req, res) => {
+    try {
+        const rules = req.body;
+        if (!Array.isArray(rules)) return res.status(400).json({ error: 'Rules must be an array.' });
+        await saveFile(MAINTENANCE_RULES_PATH, rules.map((rule) => ({
+            ...rule,
+            id: rule.id || randomUUID(),
+            name: rule.name || 'Unnamed Rule',
+            enabled: rule.enabled !== false,
+            settings: getMaintenanceSettings(rule)
+        })));
+        await appendAuditLog('maintenance_rules_updated', req.user, null, { count: rules.length });
+        res.json({ success: true });
+    } catch (e) {
+        res.status(500).json({ error: `Failed to save maintenance rules: ${e.message}` });
+    }
+});
+
+app.post('/api/maintenance/index/rebuild', requireAdmin, async (req, res) => {
+    try {
+        const payload = await buildMaintenanceMediaIndex({ actor: req.user, force: true });
+        res.json({ success: true, generatedAt: payload.generatedAt, itemCount: payload.itemCount, requestItemCount: payload.requestItemCount });
+    } catch (e) {
+        res.status(500).json({ error: `Failed to rebuild maintenance index: ${e.message}` });
+    }
+});
+
+app.get('/api/maintenance/index', requireAdmin, async (req, res) => {
+    try {
+        const payload = await loadFile(MAINTENANCE_MEDIA_INDEX_PATH, { generatedAt: null, itemCount: 0, items: [] });
+        const requestIndex = await loadFile(MAINTENANCE_REQUEST_INDEX_PATH, { generatedAt: null, items: [] });
+        res.json({
+            generatedAt: payload.generatedAt || null,
+            itemCount: payload.itemCount || 0,
+            requestGeneratedAt: requestIndex.generatedAt || null,
+            requestItemCount: Array.isArray(requestIndex.items) ? requestIndex.items.length : 0
+        });
+    } catch (e) {
+        res.status(500).json({ error: `Failed to load maintenance index: ${e.message}` });
+    }
+});
+
+app.get('/api/maintenance/library-items', requireAdmin, async (req, res) => {
+    try {
+        const payload = await loadFile(MAINTENANCE_MEDIA_INDEX_PATH, { generatedAt: null, items: [] });
+        const preferences = await loadMaintenancePreferences();
+        const allItems = Array.isArray(payload.items) ? payload.items : [];
+        const libraryId = String(req.query.libraryId || 'all');
+        const search = normalized(String(req.query.search || ''));
+        const page = Math.max(1, Number(req.query.page || 1));
+        const limit = Math.min(120, Math.max(12, Number(req.query.limit || 48)));
+        const includeExcluded = String(req.query.includeExcluded || 'true') !== 'false';
+
+        const excludedKeys = new Set((preferences?.exclusions?.ratingKeys || []).map(v => String(v)));
+        const excludedTitles = new Set((preferences?.exclusions?.titles || []).map(v => normalized(v)));
+        const excludedLibraries = new Set((preferences?.exclusions?.libraries || []).map(v => normalized(v)));
+
+        const librariesMap = allItems.reduce((acc, item) => {
+            const key = String(item?.libraryId || '');
+            if (!key) return acc;
+            if (!acc[key]) {
+                acc[key] = { id: key, title: item?.libraryTitle || `Library ${key}`, count: 0 };
+            }
+            acc[key].count += 1;
+            return acc;
+        }, {});
+
+        const filtered = allItems
+            .filter((item) => {
+                if (!item) return false;
+                if (libraryId !== 'all' && String(item.libraryId || '') !== libraryId) return false;
+                if (search && !normalized(item.title).includes(search)) return false;
+                return true;
+            })
+            .map((item) => {
+                const excluded = excludedKeys.has(String(item.ratingKey || ''))
+                    || excludedTitles.has(normalized(item.title))
+                    || excludedLibraries.has(normalized(item.libraryTitle));
+                return {
+                    ratingKey: String(item.ratingKey || ''),
+                    title: item.title || 'Unknown',
+                    thumb: item.thumb || '',
+                    year: item.year || null,
+                    libraryId: String(item.libraryId || ''),
+                    libraryTitle: item.libraryTitle || 'Library',
+                    watchCount: Number(item.watchCount || 0),
+                    sizeGB: Number(item.sizeGB || 0),
+                    lastViewedAt: item.lastViewedAt || null,
+                    excluded
+                };
+            })
+            .filter(item => includeExcluded ? true : !item.excluded)
+            .sort((a, b) => String(a.title || '').localeCompare(String(b.title || ''), undefined, { sensitivity: 'base' }));
+
+        const start = (page - 1) * limit;
+        const pageItems = filtered.slice(start, start + limit);
+        res.json({
+            generatedAt: payload.generatedAt || null,
+            total: filtered.length,
+            page,
+            limit,
+            libraries: Object.values(librariesMap).sort((a, b) => String(a.title).localeCompare(String(b.title), undefined, { sensitivity: 'base' })),
+            items: pageItems
+        });
+    } catch (e) {
+        res.status(500).json({ error: `Failed to load maintenance library items: ${e.message}` });
+    }
+});
+
+app.post('/api/maintenance/preview', requireAdmin, async (req, res) => {
+    try {
+        const { ruleId, rule, limit = 300, includeAll = false } = req.body || {};
+        const rules = await loadFile(MAINTENANCE_RULES_PATH, []);
+        const payload = await loadFile(MAINTENANCE_MEDIA_INDEX_PATH, { items: [] });
+        const preferences = await loadMaintenancePreferences();
+        const allItems = Array.isArray(payload.items) ? payload.items : [];
+        const selectedRules = rule
+            ? [rule]
+            : (ruleId ? rules.filter(r => r.id === ruleId) : rules.filter(r => r.enabled !== false));
+        const previews = selectedRules.map((rule) => {
+            const matches = applyMaintenanceExclusions(allItems.filter(item => evaluateMaintenanceRule(item, rule)), preferences);
+            return {
+                ruleId: rule.id,
+                ruleName: rule.name,
+                totalMatches: matches.length,
+                sample: includeAll ? matches : matches.slice(0, Math.max(1, Number(limit)))
+            };
+        });
+        res.json({
+            generatedAt: new Date().toISOString(),
+            indexGeneratedAt: payload.generatedAt || null,
+            preferences,
+            previews
+        });
+    } catch (e) {
+        res.status(500).json({ error: `Failed to generate maintenance preview: ${e.message}` });
+    }
+});
+
+app.get('/api/maintenance/preferences', requireAdmin, async (req, res) => {
+    try {
+        const prefs = await loadMaintenancePreferences();
+        res.json(prefs);
+    } catch (e) {
+        res.status(500).json({ error: `Failed to load maintenance preferences: ${e.message}` });
+    }
+});
+
+app.get('/api/maintenance/exclusions/summary', requireAdmin, async (req, res) => {
+    try {
+        const prefs = await loadMaintenancePreferences();
+        const payload = await loadFile(MAINTENANCE_MEDIA_INDEX_PATH, { generatedAt: null, items: [] });
+        const allItems = Array.isArray(payload.items) ? payload.items : [];
+
+        const byRatingKey = new Map(allItems.map((item) => [String(item?.ratingKey || ''), item]));
+        const byNormalizedTitle = new Map();
+        allItems.forEach((item) => {
+            const key = normalized(item?.title || '');
+            if (!key) return;
+            if (!byNormalizedTitle.has(key)) byNormalizedTitle.set(key, []);
+            byNormalizedTitle.get(key).push(item);
+        });
+
+        const ratingKeyEntries = (prefs?.exclusions?.ratingKeys || []).map((ratingKey) => {
+            const key = String(ratingKey || '');
+            const item = byRatingKey.get(key);
+            return {
+                ratingKey: key,
+                found: !!item,
+                title: item?.title || '(Missing from current index)',
+                libraryTitle: item?.libraryTitle || '',
+                thumb: item?.thumb || ''
+            };
+        });
+
+        const titleEntries = (prefs?.exclusions?.titles || []).map((title) => {
+            const key = normalized(title || '');
+            const matches = byNormalizedTitle.get(key) || [];
+            const sample = matches[0] || null;
+            return {
+                title: String(title || ''),
+                matchCount: matches.length,
+                sampleTitle: sample?.title || null,
+                sampleLibraryTitle: sample?.libraryTitle || null,
+                sampleThumb: sample?.thumb || null
+            };
+        });
+
+        const libraryEntries = (prefs?.exclusions?.libraries || []).map((library) => {
+            const normalizedLibrary = normalized(library || '');
+            const count = allItems.filter((item) => normalized(item?.libraryTitle || '') === normalizedLibrary).length;
+            return {
+                libraryTitle: String(library || ''),
+                matchCount: count
+            };
+        });
+
+        res.json({
+            generatedAt: payload.generatedAt || null,
+            ratingKeys: ratingKeyEntries,
+            titles: titleEntries,
+            libraries: libraryEntries
+        });
+    } catch (e) {
+        res.status(500).json({ error: `Failed to load exclusions summary: ${e.message}` });
+    }
+});
+
+app.post('/api/maintenance/preferences', requireAdmin, async (req, res) => {
+    try {
+        const body = req.body || {};
+        const next = {
+            global: {
+                dryRunByDefault: body?.global?.dryRunByDefault !== undefined ? !!body.global.dryRunByDefault : MAINTENANCE_PREFS_DEFAULTS.global.dryRunByDefault,
+                maxActionsPerRun: Math.max(1, Number(body?.global?.maxActionsPerRun || MAINTENANCE_PREFS_DEFAULTS.global.maxActionsPerRun)),
+                requireConfirmForDestructive: body?.global?.requireConfirmForDestructive !== undefined ? !!body.global.requireConfirmForDestructive : MAINTENANCE_PREFS_DEFAULTS.global.requireConfirmForDestructive
+            },
+            exclusions: {
+                ratingKeys: Array.isArray(body?.exclusions?.ratingKeys) ? body.exclusions.ratingKeys.map(v => String(v)) : [],
+                titles: Array.isArray(body?.exclusions?.titles) ? body.exclusions.titles.map(v => String(v)) : [],
+                libraries: Array.isArray(body?.exclusions?.libraries) ? body.exclusions.libraries.map(v => String(v)) : []
+            }
+        };
+        await saveFile(MAINTENANCE_PREFS_PATH, next);
+        await appendAuditLog('maintenance_preferences_updated', req.user, null, {
+            titleExclusions: next.exclusions.titles.length,
+            libraryExclusions: next.exclusions.libraries.length,
+            keyExclusions: next.exclusions.ratingKeys.length
+        });
+        res.json({ success: true, preferences: next });
+    } catch (e) {
+        res.status(500).json({ error: `Failed to save maintenance preferences: ${e.message}` });
+    }
+});
+
+app.get('/api/maintenance/runs', requireAdmin, async (req, res) => {
+    try {
+        const runs = await loadFile(MAINTENANCE_RUNS_PATH, []);
+        res.json(Array.isArray(runs) ? runs : []);
+    } catch (e) {
+        res.status(500).json({ error: `Failed to load maintenance runs: ${e.message}` });
+    }
+});
+
+const executeMaintenanceRunBatch = async ({ actor, ruleId = null, dryRun = undefined, confirmToken = null }) => {
+    const config = await loadFile(CONFIG_PATH, {});
+    if (!isMaintenanceExperimentalEnabled(config)) {
+        throw new Error('Maintenance Experimental Mode is disabled. Enable it in Settings first.');
+    }
+    const rules = await loadFile(MAINTENANCE_RULES_PATH, []);
+    const selected = ruleId ? rules.filter(r => r.id === ruleId) : rules.filter(r => r.enabled !== false);
+    if (!selected.length) {
+        throw new Error('No enabled maintenance rule found.');
+    }
+    const existingRuns = await loadFile(MAINTENANCE_RUNS_PATH, []);
+    const newRuns = [];
+    for (const rule of selected) {
+        const run = await runMaintenanceRule({ rule, dryRun, actor, confirmToken });
+        newRuns.push(run);
+    }
+    const updatedRuns = [...newRuns, ...existingRuns].slice(0, 400);
+    await saveFile(MAINTENANCE_RUNS_PATH, updatedRuns);
+    return newRuns;
+};
+
+app.post('/api/maintenance/run', requireAdmin, async (req, res) => {
+    if (maintenanceRunState.running) {
+        return res.status(409).json({ error: 'A maintenance run is already in progress.' });
+    }
+    const task = tasksInfo.find(t => t.id === 'maintenanceRuleRun');
+    try {
+        const { ruleId, dryRun, confirmToken } = req.body || {};
+        maintenanceRunState.running = true;
+        maintenanceRunState.lastRunAt = new Date().toISOString();
+        maintenanceRunState.lastError = null;
+        if (task) markTaskStart(task);
+        const newRuns = await executeMaintenanceRunBatch({ actor: req.user, ruleId, dryRun, confirmToken });
+        if (task) {
+            task.nextRun = null;
+            markTaskEnd(task, null);
+        }
+        maintenanceRunState.running = false;
+        await appendAuditLog('maintenance_run_completed', req.user, null, {
+            runCount: newRuns.length,
+            dryRun: dryRun !== false
+        });
+        res.json({ success: true, runs: newRuns });
+    } catch (e) {
+        maintenanceRunState.running = false;
+        maintenanceRunState.lastError = e.message;
+        if (task) markTaskEnd(task, e);
+        res.status(500).json({ error: `Maintenance run failed: ${e.message}` });
+    }
+});
+
 // --- Stream Kill Rules Engine ---
 function sessionMatchesCondition(session, condition) {
     const { field, operator, value } = condition;
@@ -5335,6 +6388,22 @@ app.listen(PORT, BIND_HOST, async () => {
         systemJobs.analyticsCache.nextRun = new Date(Date.now() + (30 * 60 * 1000)).toISOString();
         calculateAnalyticsStats();
     }, 30 * 60 * 1000);
+    systemJobs.maintenanceIndex.nextRun = new Date(Date.now() + (20 * 1000)).toISOString();
+    setTimeout(async () => {
+        try {
+            await buildMaintenanceMediaIndex({ actor: { username: 'System', email: 'system@local' }, force: false });
+        } catch (e) {
+            log(`Initial maintenance index build failed: ${e.message}`);
+        }
+    }, 20000);
+    setInterval(async () => {
+        systemJobs.maintenanceIndex.nextRun = new Date(Date.now() + (6 * 60 * 60 * 1000)).toISOString();
+        try {
+            await buildMaintenanceMediaIndex({ actor: { username: 'System', email: 'system@local' }, force: false });
+        } catch (e) {
+            log(`Scheduled maintenance index build failed: ${e.message}`);
+        }
+    }, 6 * 60 * 60 * 1000);
 
     const backupConfig = await loadFile(CONFIG_PATH, {});
     systemJobs.autoBackup.nextRun = backupConfig.autoBackupEnabled ? computeNextBackupRun(backupConfig) : null;
