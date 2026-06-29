@@ -920,11 +920,11 @@ const StreamKillRulesPanel: React.FC<{ addToast: (m: string, t?: 'success' | 'er
                 })}
             </div>
             <div className="flex items-center gap-3 mt-6 pt-4 border-t border-border">
-                <button onClick={addRule} className="flex items-center gap-2 px-4 py-2.5 bg-border text-text rounded-lg font-bold text-sm hover:bg-opacity-80 transition-all">
+                <button onClick={addRule} className="flex items-center gap-2 px-3 py-2 bg-border text-text rounded-lg font-bold text-xs hover:bg-opacity-80 transition-all">
                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>
                     Add New Rule
                 </button>
-                <button onClick={() => saveRules(rules)} disabled={saving} className="flex items-center gap-2 px-6 py-2.5 bg-plex text-background rounded-lg font-bold text-sm hover:opacity-90 transition-all disabled:opacity-50">
+                <button onClick={() => saveRules(rules)} disabled={saving} className="flex items-center gap-2 px-4 py-2 bg-plex text-background rounded-lg font-bold text-xs hover:opacity-90 transition-all disabled:opacity-50">
                     {saving ? <span className="w-4 h-4 border-2 border-background/50 border-t-transparent rounded-full animate-spin" /> : <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" /><polyline points="17 21 17 13 7 13 7 21" /><polyline points="7 3 7 8 15 8" /></svg>}
                     Save Rules
                 </button>
@@ -939,6 +939,7 @@ const mkMaintenanceRule = () => ({
     name: 'New Maintenance Rule',
     enabled: true,
     graceDays: 7,
+    createdAt: new Date().toISOString(),
     settings: { enabled: false, dryRunByDefault: true, maxActionsPerRun: 25, requireConfirmForDestructive: true },
     collection: { enabled: true, nameTemplate: 'Leaving Soon - {{ruleName}}' },
     actions: { deleteFromArr: true, deleteFiles: true, unmonitor: false, qualityProfileId: 0 },
@@ -961,7 +962,7 @@ const MaintenanceConditionRow: React.FC<{
         onChange({ ...condition, field, operator: nextOperator, value: defaultValue });
     };
     return (
-        <div className="grid grid-cols-1 md:grid-cols-[1.5fr_1fr_2fr_auto] gap-2 p-3 border border-border rounded-lg bg-black/20">
+        <div className="grid grid-cols-1 md:grid-cols-[1.5fr_1fr_2fr_auto] gap-2 p-1">
             <CustomSelect
                 value={condition.field}
                 onChange={updateField}
@@ -1001,7 +1002,7 @@ const MaintenanceConditionRow: React.FC<{
                     placeholder={selectedOperator === 'between' ? 'min,max' : (selectedOperator === 'in' || selectedOperator === 'not_in') ? 'v1,v2' : 'value'}
                 />
             )}
-            <button type="button" onClick={onDelete} className="px-3 py-2 rounded-lg border border-red-500/40 text-red-300 hover:bg-red-500/10">Remove</button>
+            <button type="button" onClick={onDelete} className="px-2.5 py-1.5 text-xs rounded-lg border border-red-500/40 text-red-300 hover:bg-red-500/10">Remove</button>
         </div>
     );
 };
@@ -1017,6 +1018,7 @@ const LibraryMaintenancePanel: React.FC<{ addToast: (m: string, t?: 'success' | 
     const [saving, setSaving] = useState(false);
     const [runningRuleId, setRunningRuleId] = useState<string | null>(null);
     const [previewRuleId, setPreviewRuleId] = useState<string | null>(null);
+    const [resettingRuleId, setResettingRuleId] = useState<string | null>(null);
     const [pinCollectionOnDestructiveRun, setPinCollectionOnDestructiveRun] = useState(false);
 
     const selectedRule = useMemo(() => rules.find((rule: any) => rule.id === selectedRuleId) || null, [rules, selectedRuleId]);
@@ -1220,6 +1222,28 @@ const LibraryMaintenancePanel: React.FC<{ addToast: (m: string, t?: 'success' | 
         await runNow();
     };
 
+    const resetRuleGraceTimer = async (ruleId: string, event?: React.MouseEvent) => {
+        event?.preventDefault();
+        event?.stopPropagation();
+        const target = rules.find((rule: any) => rule.id === ruleId);
+        if (!target) return;
+        const previousRules = rules;
+        const resetAt = new Date().toISOString();
+        const nextRules = rules.map((rule: any) => rule.id === ruleId ? { ...rule, createdAt: resetAt } : rule);
+        setRules(nextRules);
+        setResettingRuleId(ruleId);
+        try {
+            await apiFetch('/api/maintenance/rules', { method: 'POST', body: JSON.stringify(nextRules) });
+            addToast(`Grace timer reset for "${target.name || 'Unnamed Rule'}".`);
+            await Promise.all([refreshRules(), runPreview(ruleId)]);
+        } catch (e: any) {
+            setRules(previousRules);
+            addToast(e.message || 'Failed to reset grace timer', 'error');
+        } finally {
+            setResettingRuleId(null);
+        }
+    };
+
     if (loading) return <div className="flex justify-center py-16"><div className="w-8 h-8 border-4 border-plex border-t-transparent rounded-full animate-spin" /></div>;
 
     return (
@@ -1230,8 +1254,8 @@ const LibraryMaintenancePanel: React.FC<{ addToast: (m: string, t?: 'success' | 
                     <p className="text-xs text-muted mt-1">Saved filters are listed below. Click one to edit, preview, and run.</p>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                    <button type="button" className="px-3 py-2 bg-border text-text rounded-md font-semibold hover:bg-opacity-80" onClick={(e) => rebuildIndex(e)}>Rebuild Index</button>
-                    <button type="button" className="px-3 py-2 bg-border text-text rounded-md font-semibold hover:bg-opacity-80" onClick={(e) => addRule(e)}>Add Filter</button>
+                    <button type="button" className="px-2.5 py-1.5 text-xs bg-border text-text rounded-md font-semibold hover:bg-opacity-80" onClick={(e) => rebuildIndex(e)}>Rebuild Index</button>
+                    <button type="button" className="px-2.5 py-1.5 text-xs bg-border text-text rounded-md font-semibold hover:bg-opacity-80" onClick={(e) => addRule(e)}>Add Filter</button>
                 </div>
             </div>
 
@@ -1258,6 +1282,9 @@ const LibraryMaintenancePanel: React.FC<{ addToast: (m: string, t?: 'success' | 
                                     </span>
                                 </div>
                                 <p className="text-[11px] text-muted mt-2">Matches: {preview?.totalMatches ?? '—'}</p>
+                                <p className="text-[11px] text-muted mt-1" title="Grace countdown starts when the rule is created.">
+                                    Grace: {Math.max(0, Number(rule?.graceDays || 0))} day(s) {rule?.createdAt ? `from ${new Date(rule.createdAt).toLocaleDateString()}` : 'from creation'}
+                                </p>
                                 <div className="flex gap-2 mt-3">
                                     <button
                                         type="button"
@@ -1272,6 +1299,15 @@ const LibraryMaintenancePanel: React.FC<{ addToast: (m: string, t?: 'success' | 
                                         onClick={(e) => runPreview(rule.id, e)}
                                     >
                                         Refresh Matches
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className="px-2.5 py-1.5 text-xs rounded border border-amber-500/40 text-amber-300 hover:bg-amber-500/10 disabled:opacity-50"
+                                        title="Reset this rule's grace countdown to now."
+                                        onClick={(e) => resetRuleGraceTimer(rule.id, e)}
+                                        disabled={saving || resettingRuleId === rule.id}
+                                    >
+                                        {resettingRuleId === rule.id ? 'Resetting...' : 'Reset Grace Timer'}
                                     </button>
                                     <button
                                         type="button"
@@ -1302,10 +1338,10 @@ const LibraryMaintenancePanel: React.FC<{ addToast: (m: string, t?: 'success' | 
                             />
                         </div>
                         <div className="mt-6 flex gap-2">
-                            <button type="button" className="px-3 py-2 text-xs border border-border text-text rounded hover:bg-white/5" onClick={() => setSelectedRuleId(null)}>Close Editor</button>
+                            <button type="button" className="px-2.5 py-1.5 text-xs border border-border text-text rounded hover:bg-white/5" onClick={() => setSelectedRuleId(null)}>Close Editor</button>
                             <button
                                 type="button"
-                                className="px-3 py-2 text-xs border border-red-500/40 text-red-300 rounded hover:bg-red-500/10 disabled:opacity-50"
+                                className="px-2.5 py-1.5 text-xs border border-red-500/40 text-red-300 rounded hover:bg-red-500/10 disabled:opacity-50"
                                 onClick={(e) => deleteRule(selectedRule.id, e)}
                                 disabled={saving}
                             >
@@ -1316,7 +1352,7 @@ const LibraryMaintenancePanel: React.FC<{ addToast: (m: string, t?: 'success' | 
 
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
                         <div>
-                            <label className="text-xs text-muted font-bold uppercase">Match Logic</label>
+                            <label className="text-xs text-muted font-bold uppercase" title="How rule conditions are combined.">Match Logic</label>
                             <CustomSelect
                                 value={selectedRule?.filterTree?.logic || 'AND'}
                                 onChange={(value) => updateRule(selectedRule.id, { filterTree: { ...(selectedRule.filterTree || {}), logic: value } })}
@@ -1324,8 +1360,8 @@ const LibraryMaintenancePanel: React.FC<{ addToast: (m: string, t?: 'success' | 
                             />
                         </div>
                         <div>
-                            <label className="text-xs text-muted font-bold uppercase">Grace Days</label>
-                            <input type="number" min={0} className="w-full p-3 rounded-lg border border-border bg-card text-text" value={selectedRule.graceDays || 0} onChange={(e) => updateRule(selectedRule.id, { graceDays: Number(e.target.value) })} />
+                            <label className="text-xs text-muted font-bold uppercase" title="Global grace period for this ruleset. Matching items become eligible this many days after the rule was created.">Grace Days</label>
+                            <input type="number" min={0} className="w-full p-3 rounded-lg border border-border bg-card text-text" value={selectedRule?.graceDays || 0} onChange={(e) => updateRule(selectedRule.id, { graceDays: Number(e.target.value) })} />
                         </div>
                         <div>
                             <label className="text-xs text-muted font-bold uppercase">Max Actions</label>
@@ -1347,7 +1383,7 @@ const LibraryMaintenancePanel: React.FC<{ addToast: (m: string, t?: 'success' | 
                         {(selectedRule?.filterTree?.conditions || []).map((cond: any, idx: number) => (
                             <MaintenanceConditionRow key={`${selectedRule.id}-${idx}`} condition={cond} fields={fields} onChange={(next) => updateCondition(selectedRule.id, idx, next)} onDelete={() => removeCondition(selectedRule.id, idx)} />
                         ))}
-                        <button type="button" onClick={() => addCondition(selectedRule.id)} className="px-3 py-2 border border-border rounded-lg text-sm text-plex font-semibold">Add Filter Condition</button>
+                        <button type="button" onClick={() => addCondition(selectedRule.id)} className="px-2.5 py-1.5 border border-border rounded-lg text-xs text-plex font-semibold">Add Filter Condition</button>
                     </div>
 
                     <div className="bg-black/20 border border-border rounded-lg p-3">
@@ -1362,12 +1398,12 @@ const LibraryMaintenancePanel: React.FC<{ addToast: (m: string, t?: 'success' | 
                     </div>
 
                     <div className="flex flex-wrap gap-2 pt-1">
-                        <button type="button" className="px-3 py-2 bg-plex text-background rounded-md text-sm font-semibold hover:opacity-90 disabled:opacity-50" onClick={(e) => saveRules(e)} disabled={saving}>
+                        <button type="button" className="px-2.5 py-1.5 bg-plex text-background rounded-md text-xs font-semibold hover:opacity-90 disabled:opacity-50" onClick={(e) => saveRules(e)} disabled={saving}>
                             {saving ? 'Saving...' : 'Save Filter'}
                         </button>
-                        <button type="button" className="px-3 py-2 bg-border text-text rounded-md text-sm font-semibold hover:bg-opacity-80 disabled:opacity-50" onClick={(e) => runPreview(selectedRule.id, e)} disabled={previewRuleId === selectedRule.id}>{previewRuleId === selectedRule.id ? 'Refreshing Preview...' : 'Preview Matches'}</button>
-                        <button type="button" className="px-3 py-2 bg-blue-500/20 text-blue-300 rounded-md text-sm font-semibold border border-blue-500/30 disabled:opacity-50" onClick={(e) => runRule(selectedRule.id, true, e)} disabled={runningRuleId === selectedRule.id}>{runningRuleId === selectedRule.id ? 'Running...' : 'Run Dry-Run'}</button>
-                        <button type="button" className="px-3 py-2 bg-red-500/20 text-red-300 rounded-md text-sm font-semibold border border-red-500/30 disabled:opacity-50" onClick={(e) => runRule(selectedRule.id, false, e)} disabled={runningRuleId === selectedRule.id}>{runningRuleId === selectedRule.id ? 'Executing...' : 'Run Destructive'}</button>
+                        <button type="button" className="px-2.5 py-1.5 bg-border text-text rounded-md text-xs font-semibold hover:bg-opacity-80 disabled:opacity-50" onClick={(e) => runPreview(selectedRule.id, e)} disabled={previewRuleId === selectedRule.id}>{previewRuleId === selectedRule.id ? 'Refreshing Preview...' : 'Preview Matches'}</button>
+                        <button type="button" className="px-2.5 py-1.5 bg-blue-500/20 text-blue-300 rounded-md text-xs font-semibold border border-blue-500/30 disabled:opacity-50" onClick={(e) => runRule(selectedRule.id, true, e)} disabled={runningRuleId === selectedRule.id}>{runningRuleId === selectedRule.id ? 'Running...' : 'Run Dry-Run'}</button>
+                        <button type="button" className="px-2.5 py-1.5 bg-red-500/20 text-red-300 rounded-md text-xs font-semibold border border-red-500/30 disabled:opacity-50" onClick={(e) => runRule(selectedRule.id, false, e)} disabled={runningRuleId === selectedRule.id}>{runningRuleId === selectedRule.id ? 'Executing...' : 'Run Destructive'}</button>
                     </div>
                 </div>
             )}
@@ -9004,42 +9040,82 @@ const MaintenanceDashboard: React.FC = () => {
         return `${Math.ceil(safeGB * 1024)} MB`;
     };
 
-    const upcomingCalendar = useMemo(() => {
-        const entries = filteredCandidates.map((item: any) => {
-            const daysSince = Number(item.daysSinceLastWatch ?? item.daysSinceAdded ?? 0);
-            const projectedDays = Math.max(0, 365 - daysSince);
-            const etaDate = new Date(Date.now() + (projectedDays * 24 * 60 * 60 * 1000));
-            return {
-                ...item,
-                projectedDate: etaDate.toISOString().split('T')[0]
-            };
-        });
-        return entries.slice(0, 300).sort((a: any, b: any) => (a.projectedDate < b.projectedDate ? -1 : 1));
-    }, [filteredCandidates]);
+    const getEligibilityTooltip = (item: any) => {
+        const daysUntilEligible = Math.max(0, Number(item?.daysUntilEligible || 0));
+        const watchDays = Number(item?.daysSinceLastWatch);
+        const addedDays = Number(item?.daysSinceAdded);
+        const base = daysUntilEligible > 0
+            ? `Not eligible yet. Rule grace has ${daysUntilEligible} day(s) remaining.`
+            : 'Eligible now for this rule.';
+        if (Number.isFinite(watchDays) && watchDays >= 0) {
+            return `${base} Last watched ${watchDays} day(s) ago.`;
+        }
+        if (Number.isFinite(addedDays) && addedDays >= 0) {
+            return `${base} Added ${addedDays} day(s) ago.`;
+        }
+        return base;
+    };
 
-    const calendarByDay = useMemo(() => {
-        const grouped = new Map<string, any[]>();
-        upcomingCalendar.forEach((item: any) => {
-            const key = String(item.projectedDate || '');
-            if (!key) return;
-            if (!grouped.has(key)) grouped.set(key, []);
-            grouped.get(key)?.push(item);
+    const ELIGIBLE_NOW_KEY = 'eligible-now';
+    const calendarEligibility = useMemo(() => {
+        const graceDays = Math.max(0, Number(selectedCandidateRule?.graceDays || 0));
+        const createdAtMs = Date.parse(String(selectedCandidateRule?.createdAt || ''));
+        const hasRuleCreatedAt = Number.isFinite(createdAtMs);
+        const daysSinceRuleCreated = hasRuleCreatedAt
+            ? Math.max(0, Math.floor((Date.now() - createdAtMs) / (24 * 60 * 60 * 1000)))
+            : graceDays;
+        const daysUntilEligible = Math.max(0, graceDays - daysSinceRuleCreated);
+        const nowItems: any[] = [];
+        const byDay = new Map<string, any[]>();
+        filteredCandidates.forEach((item: any) => {
+            if (daysUntilEligible <= 0) {
+                nowItems.push({ ...item, daysUntilEligible: 0, eligibleDate: null });
+                return;
+            }
+            const etaDate = new Date(Date.now() + (daysUntilEligible * 24 * 60 * 60 * 1000));
+            const dateKey = etaDate.toISOString().split('T')[0];
+            const enriched = { ...item, daysUntilEligible, eligibleDate: dateKey };
+            if (!byDay.has(dateKey)) byDay.set(dateKey, []);
+            byDay.get(dateKey)?.push(enriched);
         });
-        return Array.from(grouped.entries())
+        const laterByDay = Array.from(byDay.entries())
             .sort((a, b) => (a[0] < b[0] ? -1 : 1))
             .map(([date, items]) => ({
                 date,
                 items,
                 count: items.length,
                 reclaimGB: items.reduce((sum: number, item: any) => sum + Number(item.sizeGB || 0), 0),
-                preview: items.slice(0, 4)
+                preview: items.slice(0, 4),
+                minDaysUntil: Math.min(...items.map((item: any) => Number(item.daysUntilEligible || 0)))
             }));
-    }, [upcomingCalendar]);
+        return {
+            graceDays,
+            daysSinceRuleCreated,
+            daysUntilEligible,
+            eligibleNow: nowItems.sort((a, b) => String(a.title || '').localeCompare(String(b.title || ''))),
+            eligibleLaterByDay: laterByDay
+        };
+    }, [filteredCandidates, selectedCandidateRule?.createdAt, selectedCandidateRule?.graceDays]);
 
-    const selectedCalendarGroup = useMemo(
-        () => calendarByDay.find((group) => group.date === selectedCalendarDate) || null,
-        [calendarByDay, selectedCalendarDate]
-    );
+    const selectedCalendarGroup = useMemo(() => {
+        if (!selectedCalendarDate) return null;
+        if (selectedCalendarDate === ELIGIBLE_NOW_KEY) {
+            const items = calendarEligibility.eligibleNow;
+            return {
+                date: ELIGIBLE_NOW_KEY,
+                title: 'Eligible Now',
+                items,
+                count: items.length,
+                reclaimGB: items.reduce((sum: number, item: any) => sum + Number(item.sizeGB || 0), 0)
+            };
+        }
+        const day = calendarEligibility.eligibleLaterByDay.find((group) => group.date === selectedCalendarDate);
+        if (!day) return null;
+        return {
+            ...day,
+            title: new Date(`${day.date}T00:00:00`).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
+        };
+    }, [calendarEligibility, selectedCalendarDate]);
 
     const renderScaffoldPage = (title: string, description: string, bullets: string[]) => (
         <div className="bg-background border border-border rounded-xl p-5">
@@ -9351,9 +9427,53 @@ const MaintenanceDashboard: React.FC = () => {
                         {activeSection === 'calendar' && (
                             <div className="bg-background border border-border rounded-xl p-5 space-y-3">
                                 <h3 className="text-xl font-bold text-plex">Calendar</h3>
-                                <p className="text-sm text-muted">Projected removal days based on current candidates. Click a day to view all posters for that date.</p>
+                                <p className="text-sm text-muted">Rule-based eligibility schedule. Grace days are applied from this rule's creation date.</p>
+                                <div className="flex flex-wrap gap-2">
+                                    {rules.map((rule: any) => (
+                                        <button
+                                            key={`calendar-rule-tab-${rule.id}`}
+                                            type="button"
+                                            onClick={() => setCandidateRuleId(rule.id)}
+                                            className={`px-3 py-1.5 text-xs font-semibold rounded-md border transition-colors ${candidateRuleId === rule.id ? 'bg-plex text-background border-plex' : 'bg-black/20 text-text border-border hover:border-plex/40'}`}
+                                        >
+                                            {rule.name || 'Unnamed Rule'}
+                                        </button>
+                                    ))}
+                                </div>
+                                {selectedCandidateRule && (
+                                    <p className="text-xs text-muted">
+                                        Current rule: <span className="text-text font-semibold">{selectedCandidateRule.name || 'Unnamed Rule'}</span> · Grace Days: <span className="text-text font-semibold">{calendarEligibility.graceDays}</span> · Rule Age: <span className="text-text font-semibold">{calendarEligibility.daysSinceRuleCreated}</span> day(s)
+                                    </p>
+                                )}
+                                <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                                    <button
+                                        type="button"
+                                        onClick={() => setSelectedCalendarDate(ELIGIBLE_NOW_KEY)}
+                                        className="text-left bg-black/20 border border-border rounded-lg p-3 hover:border-plex/50 transition-colors"
+                                        title="Titles that match this rule and whose grace window has elapsed."
+                                    >
+                                        <p className="text-xs text-muted">Eligible Now</p>
+                                        <p className="text-2xl font-bold text-text mt-1">{calendarEligibility.eligibleNow.length}</p>
+                                        <p className="text-[11px] text-muted mt-1">{formatReclaimSizeFromGB(calendarEligibility.eligibleNow.reduce((sum: number, item: any) => sum + Number(item.sizeGB || 0), 0))} reclaim now</p>
+                                    </button>
+                                    <div className="bg-black/20 border border-border rounded-lg p-3" title="Number of future dates with delayed eligibility while this rule's grace period is active.">
+                                        <p className="text-xs text-muted">Eligible Later Days</p>
+                                        <p className="text-2xl font-bold text-text mt-1">{calendarEligibility.eligibleLaterByDay.length}</p>
+                                    </div>
+                                    <div className="bg-black/20 border border-border rounded-lg p-3" title="Titles currently matching this rule but still waiting for grace to expire.">
+                                        <p className="text-xs text-muted">Later Titles</p>
+                                        <p className="text-2xl font-bold text-text mt-1">{calendarEligibility.eligibleLaterByDay.reduce((sum: number, day: any) => sum + Number(day.count || 0), 0)}</p>
+                                    </div>
+                                    <div className="bg-black/20 border border-border rounded-lg p-3" title="Reclaim estimate from matches that are delayed by active grace days.">
+                                        <p className="text-xs text-muted">Later Reclaim</p>
+                                        <p className="text-2xl font-bold text-text mt-1">{formatReclaimSizeFromGB(calendarEligibility.eligibleLaterByDay.reduce((sum: number, day: any) => sum + Number(day.reclaimGB || 0), 0))}</p>
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <p className="text-xs uppercase tracking-wider text-muted font-bold" title="Dates when currently matched titles become eligible once this rule's grace period expires.">Eligible Later by Date</p>
+                                </div>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 max-h-[700px] overflow-y-auto custom-scrollbar pr-1">
-                                    {calendarByDay.slice(0, 120).map((day) => {
+                                    {calendarEligibility.eligibleLaterByDay.slice(0, 120).map((day) => {
                                         const dateLabel = new Date(`${day.date}T00:00:00`).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
                                         return (
                                             <button
@@ -9364,12 +9484,12 @@ const MaintenanceDashboard: React.FC = () => {
                                             >
                                                 <div className="flex items-center justify-between gap-2">
                                                     <p className="text-sm font-semibold text-text">{dateLabel}</p>
-                                                    <span className="text-[11px] px-2 py-0.5 rounded bg-plex/20 text-plex font-semibold">{day.count}</span>
+                                                    <span className="text-[11px] px-2 py-0.5 rounded bg-plex/20 text-plex font-semibold" title="Number of titles becoming eligible on this date.">{day.count}</span>
                                                 </div>
-                                                <p className="text-[11px] text-muted mt-1">{formatReclaimSizeFromGB(day.reclaimGB)} projected reclaim</p>
+                                                <p className="text-[11px] text-muted mt-1">{day.minDaysUntil} day(s) until eligible · {formatReclaimSizeFromGB(day.reclaimGB)} reclaim</p>
                                                 <div className="mt-2 flex -space-x-2">
                                                     {day.preview.map((item: any, idx: number) => (
-                                                        <div key={`calendar-preview-${day.date}-${item.ratingKey}-${idx}`} className="w-8 h-8 rounded-full overflow-hidden border border-border bg-black/50">
+                                                        <div key={`calendar-preview-${day.date}-${item.ratingKey}-${idx}`} className="w-8 h-8 rounded-full overflow-hidden border border-border bg-black/50" title={`${item.title || 'Unknown Title'} • ${getEligibilityTooltip(item)}`}>
                                                             {item.thumb ? (
                                                                 <img
                                                                     src={`/api/plex/image?path=${encodeURIComponent(item.thumb)}&width=64&height=64`}
@@ -9386,7 +9506,7 @@ const MaintenanceDashboard: React.FC = () => {
                                             </button>
                                         );
                                     })}
-                                    {!calendarByDay.length && <p className="text-sm text-muted col-span-full">No candidate data loaded. Open Candidates tab first.</p>}
+                                    {!calendarEligibility.eligibleLaterByDay.length && <p className="text-sm text-muted col-span-full">No delayed dates. Current matches are eligible now.</p>}
                                 </div>
                             </div>
                         )}
@@ -9396,10 +9516,10 @@ const MaintenanceDashboard: React.FC = () => {
                                     <div className="flex items-start justify-between gap-3 mb-3">
                                         <div>
                                             <h4 className="text-xl font-bold text-plex">
-                                                {new Date(`${selectedCalendarGroup.date}T00:00:00`).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+                                                {selectedCalendarGroup.title || new Date(`${selectedCalendarGroup.date}T00:00:00`).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
                                             </h4>
-                                            <p className="text-sm text-muted mt-1">
-                                                {selectedCalendarGroup.count} title(s) · {formatReclaimSizeFromGB(selectedCalendarGroup.reclaimGB)} projected reclaim
+                                            <p className="text-sm text-muted mt-1" title={selectedCalendarGroup.date === ELIGIBLE_NOW_KEY ? 'These titles currently match this rule and are eligible now.' : 'These titles match this rule but are waiting for the grace period to elapse.'}>
+                                                {selectedCalendarGroup.count} title(s) · {formatReclaimSizeFromGB(selectedCalendarGroup.reclaimGB)} reclaim
                                             </p>
                                         </div>
                                         <button
@@ -9412,7 +9532,7 @@ const MaintenanceDashboard: React.FC = () => {
                                     </div>
                                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-7 gap-3">
                                         {selectedCalendarGroup.items.map((item: any, idx: number) => (
-                                            <div key={`calendar-modal-item-${selectedCalendarGroup.date}-${item.ratingKey}-${idx}`} className="bg-black/20 border border-border rounded-lg overflow-hidden">
+                                            <div key={`calendar-modal-item-${selectedCalendarGroup.date}-${item.ratingKey}-${idx}`} className="bg-black/20 border border-border rounded-lg overflow-hidden" title={getEligibilityTooltip(item)}>
                                                 <div className="aspect-[2/3] bg-black/40">
                                                     {item.thumb ? (
                                                         <img
@@ -9428,6 +9548,9 @@ const MaintenanceDashboard: React.FC = () => {
                                                 <div className="p-2">
                                                     <p className="text-xs text-text line-clamp-2">{item.title}</p>
                                                     <p className="text-[11px] text-muted mt-1">{item.libraryTitle || 'Unknown Library'}</p>
+                                                    <p className="text-[11px] text-muted mt-1" title="Eligibility detail used by the backend.">
+                                                        Last watch: {Number.isFinite(Number(item.daysSinceLastWatch)) ? `${Number(item.daysSinceLastWatch)}d ago` : 'n/a'} · Added: {Number.isFinite(Number(item.daysSinceAdded)) ? `${Number(item.daysSinceAdded)}d ago` : 'n/a'}
+                                                    </p>
                                                 </div>
                                             </div>
                                         ))}

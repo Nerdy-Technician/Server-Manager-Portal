@@ -5963,12 +5963,23 @@ const runMaintenanceRule = async ({ rule, dryRun, actor, confirmToken, runOption
         run.outcomes.push({ type: 'collection_sync', success: !!collectionResult.success, details: collectionResult });
     }
 
+    const minGrace = Math.max(0, Number(rule?.graceDays || 0));
+    const createdAtMs = Date.parse(String(rule?.createdAt || ''));
+    const hasRuleCreatedAt = Number.isFinite(createdAtMs);
+    const daysSinceRuleCreated = hasRuleCreatedAt
+        ? Math.max(0, Math.floor((Date.now() - createdAtMs) / (24 * 60 * 60 * 1000)))
+        : minGrace;
+    const graceRemainingDays = Math.max(0, minGrace - daysSinceRuleCreated);
+
     for (const item of candidates) {
-        const minGrace = Math.max(0, Number(rule?.graceDays || 0));
-        const graceOk = minGrace === 0 || ((item.daysSinceLastWatch ?? item.daysSinceAdded ?? 0) >= minGrace);
-        if (!graceOk) {
+        if (graceRemainingDays > 0) {
             run.totals.skipped += 1;
-            run.outcomes.push({ ratingKey: item.ratingKey, title: item.title, status: 'skipped', reason: `Grace period not met (${minGrace} days)` });
+            run.outcomes.push({
+                ratingKey: item.ratingKey,
+                title: item.title,
+                status: 'skipped',
+                reason: `Rule grace period active (${graceRemainingDays} day(s) remaining)`
+            });
             continue;
         }
         if (effectiveDryRun) {
@@ -6034,7 +6045,20 @@ app.get('/api/maintenance/filter-options', requireAdmin, async (req, res) => {
 app.get('/api/maintenance/rules', requireAdmin, async (req, res) => {
     try {
         const rules = await loadFile(MAINTENANCE_RULES_PATH, []);
-        res.json(Array.isArray(rules) ? rules : []);
+        const source = Array.isArray(rules) ? rules : [];
+        let changed = false;
+        const normalized = source.map((rule) => {
+            const graceDays = Math.max(0, Number(rule?.graceDays || 0));
+            const createdAt = rule?.createdAt || new Date().toISOString();
+            if (graceDays !== Number(rule?.graceDays || 0) || !rule?.createdAt) changed = true;
+            return {
+                ...rule,
+                graceDays,
+                createdAt
+            };
+        });
+        if (changed) await saveFile(MAINTENANCE_RULES_PATH, normalized);
+        res.json(normalized);
     } catch (e) {
         res.status(500).json({ error: `Failed to load maintenance rules: ${e.message}` });
     }
@@ -6044,11 +6068,22 @@ app.post('/api/maintenance/rules', requireAdmin, async (req, res) => {
     try {
         const rules = req.body;
         if (!Array.isArray(rules)) return res.status(400).json({ error: 'Rules must be an array.' });
+        const existingRules = await loadFile(MAINTENANCE_RULES_PATH, []);
+        const existingById = new Map((Array.isArray(existingRules) ? existingRules : []).map((rule) => [String(rule?.id || ''), rule]));
         await saveFile(MAINTENANCE_RULES_PATH, rules.map((rule) => ({
             ...rule,
             id: rule.id || randomUUID(),
             name: rule.name || 'Unnamed Rule',
             enabled: rule.enabled !== false,
+            graceDays: Math.max(0, Number(rule?.graceDays || 0)),
+            createdAt: (() => {
+                const currentId = String(rule?.id || '');
+                const prev = existingById.get(currentId);
+                if (prev?.createdAt) return prev.createdAt;
+                if (rule?.createdAt) return rule.createdAt;
+                return new Date().toISOString();
+            })(),
+            updatedAt: new Date().toISOString(),
             settings: getMaintenanceSettings(rule)
         })));
         await appendAuditLog('maintenance_rules_updated', req.user, null, { count: rules.length });
@@ -6369,7 +6404,20 @@ const executeMaintenanceRunBatch = async ({ actor, ruleId = null, dryRun = undef
     if (!isMaintenanceExperimentalEnabled(config)) {
         throw new Error('Maintenance Experimental Mode is disabled. Enable it in Settings first.');
     }
-    const rules = await loadFile(MAINTENANCE_RULES_PATH, []);
+    const rawRules = await loadFile(MAINTENANCE_RULES_PATH, []);
+    const sourceRules = Array.isArray(rawRules) ? rawRules : [];
+    let rulesChanged = false;
+    const rules = sourceRules.map((rule) => {
+        const graceDays = Math.max(0, Number(rule?.graceDays || 0));
+        const createdAt = rule?.createdAt || new Date().toISOString();
+        if (graceDays !== Number(rule?.graceDays || 0) || !rule?.createdAt) rulesChanged = true;
+        return {
+            ...rule,
+            graceDays,
+            createdAt
+        };
+    });
+    if (rulesChanged) await saveFile(MAINTENANCE_RULES_PATH, rules);
     const selected = ruleId ? rules.filter(r => r.id === ruleId) : rules.filter(r => r.enabled !== false);
     if (!selected.length) {
         throw new Error('No enabled maintenance rule found.');
@@ -6416,20 +6464,27 @@ app.post('/api/maintenance/run', requireAdmin, async (req, res) => {
 });
 
 // --- Stream Kill Rules Engine ---
-function normalizeRuleResolution(rawResolution, transcodeWidth, transcodeHeight, isTranscoding) {
-    if (isTranscoding && (Number(transcodeWidth) > 0 || Number(transcodeHeight) > 0)) {
-        const w = Number(transcodeWidth || 0);
-        const h = Number(transcodeHeight || 0);
-        const maxDim = Math.max(w, h);
-        if (maxDim >= 3800) return '4k';
-        if (maxDim >= 2500) return '1440';
-        if (maxDim >= 1800) return '1080';
-        if (maxDim >= 1200) return '720';
-        if (maxDim >= 900) return '576';
-        if (maxDim >= 700) return '480';
-        return 'sd';
+function normalizeRuleResolution(rawResolution, isTranscoding, transcodeResolutionRaw) {
+    const normalizeBucket = (value) => {
+        const text = String(value || '').toLowerCase().trim();
+        if (!text) return '';
+        if (text.includes('4k') || text.includes('2160')) return '4k';
+        if (text.includes('1440')) return '1440';
+        if (text.includes('1080')) return '1080';
+        if (text.includes('720')) return '720';
+        if (text.includes('576')) return '576';
+        if (text.includes('480')) return '480';
+        if (text.includes('sd')) return 'sd';
+        return text;
+    };
+    if (isTranscoding) {
+        const hinted = normalizeBucket(transcodeResolutionRaw);
+        if (hinted) return hinted;
+        // Conservative behavior: never infer transcode output resolution from source metadata.
+        // If output resolution is unknown, strict resolution rules should not match.
+        return 'unknown';
     }
-    return String(rawResolution || '').toLowerCase();
+    return normalizeBucket(rawResolution);
 }
 
 function sessionMatchesCondition(session, condition) {
@@ -6543,15 +6598,14 @@ async function monitorConcurrentSessions() {
                     const isTranscode = !!(m.TranscodeSession || (m.Media && m.Media[0] && m.Media[0].Part && m.Media[0].Part[0] && m.Media[0].Part[0].Stream && m.Media[0].Part[0].Stream.some(s => s.decision === 'transcode')));
                     const player = m.Player || {};
                     const session = m.Session || {};
-                    const transcodeWidth = Number(m?.TranscodeSession?.width || 0);
-                    const transcodeHeight = Number(m?.TranscodeSession?.height || 0);
+                    const transcodeResolutionRaw = m?.TranscodeSession?.videoResolution || '';
                     const sourceResolution = m.Media && m.Media[0] ? m.Media[0].videoResolution : null;
                     return {
                         sessionId: session.id || m.sessionKey,
                         user: m.User ? m.User.title : 'Unknown',
                         isTranscoding: isTranscode,
                         sourceResolution: sourceResolution ? String(sourceResolution).toLowerCase() : null,
-                        resolution: normalizeRuleResolution(sourceResolution, transcodeWidth, transcodeHeight, isTranscode),
+                        resolution: normalizeRuleResolution(sourceResolution, isTranscode, transcodeResolutionRaw),
                         bandwidth: (session && session.bandwidth) || (m.Media && m.Media[0] && m.Media[0].bitrate) || 0,
                         playerProduct: player.product || '',
                         playerTitle: player.title || '',
