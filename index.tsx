@@ -1480,6 +1480,7 @@ const SettingsDashboard: React.FC = () => {
         const hash = window.location.hash.replace('#', '');
         return ['plex', 'smtp', 'newsletter', 'cleanup', 'mediastack', 'branding', 'navigation', 'status', 'invites', 'tasks', 'system', 'contact', 'broadcast', 'stream-rules', 'logs'].includes(hash) ? hash : 'plex';
     });
+    const [highlightMaintenanceToggle, setHighlightMaintenanceToggle] = useState(false);
     const [settingsSearch, setSettingsSearch] = useState('');
 
     const settingsTabGroups = [
@@ -1534,6 +1535,18 @@ const SettingsDashboard: React.FC = () => {
 
     useEffect(() => {
         window.location.hash = activeTab;
+    }, [activeTab]);
+
+    useEffect(() => {
+        if (activeTab !== 'system') return;
+        const url = new URL(window.location.href);
+        if (url.searchParams.get('focus') !== 'maintenance-toggle') return;
+        setHighlightMaintenanceToggle(true);
+        const timer = window.setTimeout(() => setHighlightMaintenanceToggle(false), 4200);
+        url.searchParams.delete('focus');
+        const nextUrl = `${url.pathname}${url.search}${url.hash || ''}`;
+        window.history.replaceState({}, '', nextUrl);
+        return () => window.clearTimeout(timer);
     }, [activeTab]);
 
     // SMTP States
@@ -2796,7 +2809,7 @@ const SettingsDashboard: React.FC = () => {
                                     )}
                                 </div>
                             </div>
-                            <div className="bg-background border border-border rounded-xl p-4">
+                            <div className={`bg-background border rounded-xl p-4 transition-all duration-300 ${highlightMaintenanceToggle ? 'border-plex ring-2 ring-plex/50 shadow-[0_0_24px_rgba(229,160,13,0.25)]' : 'border-border'}`}>
                                 <h4 className="font-bold text-text mb-3">Maintenance Experimental Mode</h4>
                                 <div className="bg-black/20 rounded-lg p-3 flex items-center justify-between gap-3">
                                     <div>
@@ -2814,6 +2827,7 @@ const SettingsDashboard: React.FC = () => {
                                 <p className={`text-xs mt-2 font-semibold ${maintenanceExperimentalEnabled ? 'text-green-300' : 'text-yellow-300'}`}>
                                     Current status: {maintenanceExperimentalEnabled ? 'ON' : 'OFF'}
                                 </p>
+                                <p className="text-[11px] text-muted mt-1">After changing this toggle, click the main Save Settings button.</p>
                             </div>
                             <div className="bg-background border border-border rounded-xl p-4">
                                 <h4 className="font-bold text-text mb-3">Backup & Restore</h4>
@@ -9002,7 +9016,14 @@ const MaintenanceDashboard: React.FC = () => {
                             <div className="bg-background border border-yellow-500/30 rounded-xl p-5">
                                 <h3 className="text-xl font-bold text-plex mb-2">Maintenance Disabled</h3>
                                 <p className="text-sm text-muted mb-3">Experimental Maintenance Mode is currently OFF.</p>
-                                <p className="text-xs text-muted">Enable it in `Settings` → `Maintenance Overview` and click Save Settings to unlock this module.</p>
+                                <p className="text-xs text-muted">Enable it in `Settings` → `System` under `Maintenance Experimental Mode`, then click Save Settings.</p>
+                                <button
+                                    type="button"
+                                    onClick={() => { window.location.href = '/settings?focus=maintenance-toggle#system'; }}
+                                    className="mt-3 px-3 py-1.5 bg-plex text-background rounded-md text-xs font-semibold hover:bg-plex-hover transition-colors"
+                                >
+                                    Open Settings
+                                </button>
                             </div>
                         )}
                         {maintenanceFeatureEnabled && (
