@@ -9255,20 +9255,6 @@ const MaintenanceDashboard: React.FC = () => {
                                         </div>
                                     </div>
                                 </div>
-                                <div className="bg-background border border-border rounded-xl p-5">
-                                    <h4 className="font-bold text-text mb-2">Run Logs</h4>
-                                    <p className="text-sm text-muted">Execution history has moved to the dedicated `Logs` page for full log visibility.</p>
-                                    <div className="mt-3 flex items-center gap-3">
-                                        <button
-                                            type="button"
-                                            className="px-3 py-1.5 bg-plex text-background rounded-md font-semibold"
-                                            onClick={() => setActiveSection('runs')}
-                                        >
-                                            Open Logs
-                                        </button>
-                                        <button type="button" className="px-3 py-1.5 bg-border text-text rounded-md font-semibold hover:bg-opacity-80" onClick={loadOverview}>Refresh</button>
-                                    </div>
-                                </div>
                                 <div className="bg-background border border-border rounded-xl p-5 space-y-4">
                                     <h4 className="font-bold text-text">Reclaim & Impact Overview</h4>
                                     <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
