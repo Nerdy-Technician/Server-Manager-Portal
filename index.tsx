@@ -6027,7 +6027,7 @@ const LivePlexStats: React.FC = () => {
     useEffect(() => {
         const fetchStats = async () => {
             try {
-                const res = await apiFetch('/api/plex/stats');
+                const res = await apiFetch('/api/public/plex/stats');
                 if (res && res.movies !== undefined) {
                     setStats(res);
                 }
@@ -8385,7 +8385,7 @@ const LibraryDashboard: React.FC<{ onBack: () => void, isAdmin?: boolean, public
 
                 {/* SUMMARY CARDS */}
                 {dashboardData && totalStreams > 0 && (
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                         <div className="bg-white/5 border border-white/10 rounded-xl py-2 px-3 flex flex-col items-center justify-center gap-0.5 shadow-lg backdrop-blur-sm">
                             <span className="text-plex font-bold text-2xl">{totalStreams}</span>
                             <span className="text-muted text-[10px] uppercase tracking-wider font-bold">Total Streams</span>
@@ -8409,9 +8409,10 @@ const LibraryDashboard: React.FC<{ onBack: () => void, isAdmin?: boolean, public
                 <section className="mb-12 w-full">
                     <h2 className="text-plex text-sm uppercase tracking-[2px] mb-6 font-bold border-b border-white/10 pb-2">ACTIVITY</h2>
                     {dashboardData && dashboardData.activeSessions && dashboardData.activeSessions.length > 0 ? (
-                        <div className="flex flex-col md:flex-row md:flex-wrap gap-3 md:gap-6">
+                        <div className="w-full">
+                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 md:gap-6">
                             {dashboardData.activeSessions.map((session, i) => (
-                                <div key={i} onClick={() => setSelectedSession(session)} className="w-full md:w-[320px] md:flex-none bg-card rounded-xl border border-border flex flex-col overflow-hidden shadow-lg hover:border-plex/50 hover:shadow-plex/20 transition-all cursor-pointer select-none">
+                                <div key={i} onClick={() => setSelectedSession(session)} className="bg-card rounded-xl border border-border flex flex-col overflow-hidden shadow-lg hover:border-plex/50 hover:shadow-plex/20 transition-all cursor-pointer select-none">
                                     <div className="flex flex-row flex-grow relative">
                                         <div className="w-36 md:w-44 flex-shrink-0 relative overflow-hidden bg-card">
                                             <div className="w-full pb-[150%]"></div>
@@ -8505,6 +8506,7 @@ const LibraryDashboard: React.FC<{ onBack: () => void, isAdmin?: boolean, public
                                     })()}
                                 </div>
                             ))}
+                            </div>
                         </div>
                     ) : (
                         <div className="text-center text-muted p-8 border border-dashed border-border rounded-xl mt-4 w-full">No active streams</div>

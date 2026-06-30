@@ -3187,6 +3187,20 @@ app.get('/api/public/info', publicReadRateLimit, async (req, res) => {
     }
 });
 
+app.get('/api/public/plex/stats', publicReadRateLimit, async (req, res) => {
+    if (cachedPlexStats) {
+        return res.json(cachedPlexStats);
+    }
+    const disk = await loadPlexStatsFromDisk();
+    if (disk) return res.json(disk);
+    return res.json({
+        movies: 0, shows: 0, music: 0,
+        moviesBytes: 0, showsBytes: 0, musicBytes: 0,
+        fourKPercent: 0,
+        isBuilding: true
+    });
+});
+
 app.get('/api/health', (req, res) => res.json({ status: 'ok', uptime: process.uptime() }));
 app.get('/api/status', publicReadRateLimit, (req, res) => {
     const publicServices = (statusConfig.services || []).map(service => ({
