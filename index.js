@@ -762,11 +762,15 @@ const syncUsers = async (config) => {
 };
 
 const revokePlexAccess = async (user, config) => {
-    if (!user.id || !config.serverIdentifier) {
+    // The Plex friends list keys users by their Plex account id, which is stored
+    // in plexId. Invite/referral users keep a portal UUID in `id`, so always
+    // prefer plexId when matching against the Plex API.
+    const plexUserId = user.plexId || user.id;
+    if (!plexUserId || !config.serverIdentifier) {
         log(`Error: Cannot revoke access for ${user.username} due to missing user ID or server ID.`);
         return false;
     }
-    log(`Revoking Plex access for expired user: ${user.username} (ID: ${user.id})`);
+    log(`Revoking Plex access for expired user: ${user.username} (ID: ${plexUserId})`);
 
     try {
         // Step 1: Find the Share ID for the user on the specific server by fetching ALL users
@@ -783,7 +787,7 @@ const revokePlexAccess = async (user, config) => {
 
         const xmlText = await usersListRes.text();
 
-        const userBlockRegex = new RegExp(`<User\\b[^>]*id="${user.id}"[^>]*>.*?<\\/User>`, 's');
+        const userBlockRegex = new RegExp(`<User\\b[^>]*id="${plexUserId}"[^>]*>.*?<\\/User>`, 's');
         const userBlockMatch = xmlText.match(userBlockRegex);
 
         if (!userBlockMatch) {
@@ -1611,6 +1615,11 @@ app.post('/api/config', setupRateLimit, async (req, res) => {
     };
     await saveFile(CONFIG_PATH, config);
     cachedAdminId = null;
+    // Invalidate caches tied to the Plex token/server so changes take effect immediately.
+    cachedPlexConnectionUri = null;
+    lastPlexConnectionUriFetch = 0;
+    cachedAdminProfile = null;
+    lastAdminProfileFetch = 0;
     systemJobs.autoBackup.nextRun = config.autoBackupEnabled ? computeNextBackupRun(config) : null;
     log('Configuration saved successfully.');
     startBackgroundService(); // (Re)start service with new config
@@ -3518,7 +3527,7 @@ app.post('/api/announcements/push', requireAdmin, async (req, res) => {
 
         if (shouldSendEmail && text) {
             const users = await loadFile(USERS_PATH, []);
-            const activeUsers = users.filter(u => u.status === 'active' && u.email);
+            const activeUsers = users.filter(u => u.plexAccessStatus === 'active' && u.email);
             if (activeUsers.length > 0) {
                 // Email sending staggered over half an hour
                 const totalDuration = 30 * 60 * 1000; // 30 minutes in ms
@@ -4427,11 +4436,14 @@ const checkAndCleanupInactive = async (config) => {
     if (!uri) return;
 
     for (const user of users) {
-        if (user.isAdmin || user.exemptFromCleanup || !user.id || !user.isLinked) continue;
+        const plexUserId = user.plexId || user.id;
+        if (user.isAdmin || user.exemptFromCleanup || !plexUserId) continue;
+        // Only consider users with active access; pending/revoked users aren't relevant.
+        if (user.plexAccessStatus !== 'active') continue;
 
         try {
             // Get last session from Plex directly
-            const historyRes = await fetch(`${uri}/status/sessions/history/all?X-Plex-Token=${config.plexToken}&accountID=${user.id}&sort=viewedAt:desc&limit=1`, { headers: { 'Accept': 'application/json' } }).then(r => r.json()).catch(() => null);
+            const historyRes = await fetch(`${uri}/status/sessions/history/all?X-Plex-Token=${config.plexToken}&accountID=${plexUserId}&sort=viewedAt:desc&limit=1`, { headers: { 'Accept': 'application/json' } }).then(r => r.json()).catch(() => null);
 
             let lastWatchedMs = 0;
             if (historyRes && historyRes.MediaContainer && historyRes.MediaContainer.Metadata && historyRes.MediaContainer.Metadata.length > 0) {
@@ -4441,7 +4453,7 @@ const checkAndCleanupInactive = async (config) => {
 
             // Only act if we know they have a lastWatched date AND it's older than cutoff
             // (If they've literally never watched anything ever, lastWatchedMs is 0. We'll count that as inactive too if they've been on the server long enough)
-            const joinedAtMs = new Date(user.linkedAt || user.createdAt || Date.now()).getTime();
+            const joinedAtMs = new Date(user.joiningDate || user.linkedAt || user.createdAt || Date.now()).getTime();
 
             if ((lastWatchedMs > 0 && lastWatchedMs < cutoffMs) || (lastWatchedMs === 0 && joinedAtMs < cutoffMs)) {
                 log(`[INACTIVE CLEANUP] User ${user.email} last watched: ${lastWatchedMs > 0 ? new Date(lastWatchedMs).toISOString() : 'Never'}. Removing access.`);
@@ -4585,7 +4597,14 @@ const startBackgroundService = async () => {
         });
     };
 
+    let batchRunning = false;
     const runBatch = async (currentConfig) => {
+        if (batchRunning) {
+            log('Skipping scheduled check: a previous run is still in progress.');
+            return;
+        }
+        batchRunning = true;
+        try {
         const runManagedTask = async (taskId, runner, logPrefix) => {
             const task = tasksInfo.find(t => t.id === taskId);
             if (!task) return;
@@ -4614,6 +4633,9 @@ const startBackgroundService = async () => {
         }
 
         updateNextRun(currentConfig);
+        } finally {
+            batchRunning = false;
+        }
     };
 
     log(`Service started successfully. Checks will run every ${intervalMinutes} minute(s).`);
@@ -4906,7 +4928,15 @@ app.get('/api/media-stack/trending', requireAuth, requireMember, async (req, res
 
 // (Endpoints moved up before wildcard route)
 
+let isBuildingAnalyticsStats = false;
+let isBuildingTrendingStats = false;
+
 async function calculateAnalyticsStats() {
+    if (isBuildingAnalyticsStats) {
+        log('[AnalyticsStats] Build already in progress, skipping.');
+        return;
+    }
+    isBuildingAnalyticsStats = true;
     try {
         markTaskStart(systemJobs.analyticsCache);
         const config = await loadFile(CONFIG_PATH, null);
@@ -5106,10 +5136,17 @@ async function calculateAnalyticsStats() {
     } catch (e) {
         log(`Error calculating analytics stats: ${e.message}`);
         markTaskEnd(systemJobs.analyticsCache, e);
+    } finally {
+        isBuildingAnalyticsStats = false;
     }
 }
 
 async function calculateTrendingStats() {
+    if (isBuildingTrendingStats) {
+        log('[TrendingStats] Build already in progress, skipping.');
+        return;
+    }
+    isBuildingTrendingStats = true;
     try {
         markTaskStart(systemJobs.trendingCache);
         const config = await loadFile(CONFIG_PATH, null);
@@ -5285,15 +5322,22 @@ async function calculateTrendingStats() {
             totalActiveUsers[period] = sortedUsers.length;
         });
 
-        const trending7Days = getTopUnique(counts.trending7Days);
-        const movies30Days = getTopUnique(counts.movies30Days);
-        const shows30Days = getTopUnique(counts.shows30Days);
-        const top365Days = getTopUnique(counts.top365Days);
-        const allTime = getTopUnique(counts.allTime);
-        const weekendWarriors = getTopUnique(counts.weekendWarriors);
-        const nightOwls = getTopUnique(counts.nightOwls);
-        const retroHits = getTopUnique(counts.retroHits);
-        const cultClassics = getCultClassicsUnique(counts.cultClassics);
+        // Replace the in-memory `users` Set with a serializable count, since a Set
+        // becomes {} under JSON.stringify and loses its size on reload.
+        const stripUsers = (arr) => arr.map(({ users, ...rest }) => ({
+            ...rest,
+            userCount: users instanceof Set ? users.size : (rest.userCount || 0)
+        }));
+
+        const trending7Days = stripUsers(getTopUnique(counts.trending7Days));
+        const movies30Days = stripUsers(getTopUnique(counts.movies30Days));
+        const shows30Days = stripUsers(getTopUnique(counts.shows30Days));
+        const top365Days = stripUsers(getTopUnique(counts.top365Days));
+        const allTime = stripUsers(getTopUnique(counts.allTime));
+        const weekendWarriors = stripUsers(getTopUnique(counts.weekendWarriors));
+        const nightOwls = stripUsers(getTopUnique(counts.nightOwls));
+        const retroHits = stripUsers(getTopUnique(counts.retroHits));
+        const cultClassics = stripUsers(getCultClassicsUnique(counts.cultClassics));
 
         const stats = {
             trending7Days,
@@ -5317,6 +5361,8 @@ async function calculateTrendingStats() {
     } catch (e) {
         log(`Error calculating trending stats: ${e.message}`);
         markTaskEnd(systemJobs.trendingCache, e);
+    } finally {
+        isBuildingTrendingStats = false;
     }
 }
 

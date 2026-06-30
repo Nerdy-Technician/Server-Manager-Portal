@@ -255,11 +255,11 @@ const addYears = (date: Date, years: number): Date => {
 
 const formatTime = (date) => {
     try {
-        const is24 = typeof window !== 'undefined' && window.window.__USE_24_HOUR_CLOCK__ === true;
+        const is24 = typeof window !== 'undefined' && (window as any).__USE_24_HOUR_CLOCK__ === true;
         const str = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: !is24 });
         return is24 ? str : str.replace(/^0:/, '12:');
     } catch (e) {
-        return formatTime(date);
+        return '--:--';
     }
 };
 
@@ -765,7 +765,7 @@ function krGetOps(field: any) {
     if (field.type === 'select') return KR_OP_SELECT;
     return KR_OP_TEXT;
 }
-function krMkCond() { return { field: 'isTranscoding', operator: 'equals', value: 'true' }; }
+function krMkCond() { return { id: (typeof crypto !== 'undefined' && (crypto as any).randomUUID ? (crypto as any).randomUUID() : Math.random().toString(36).slice(2)), field: 'isTranscoding', operator: 'equals', value: 'true' }; }
 function krMkRule(): any { return { id: Date.now().toString(), name: 'New Rule', enabled: true, conditionLogic: 'AND', conditions: [krMkCond()], killMessage: 'Your stream has been stopped by the server administrator.' }; }
 
 const KRConditionRow: React.FC<{ cond: any; onCh: (c: any) => void; onDel: () => void }> = ({ cond, onCh, onDel }) => {
@@ -851,9 +851,9 @@ const StreamKillRulesPanel: React.FC<{ addToast: (m: string, t?: 'success' | 'er
     const addRule = () => { const r = krMkRule(); const u = [...rules, r]; setRules(u); setExpanded(r.id); };
     const upd = (id: string, p: any) => setRules(prev => prev.map(r => r.id === id ? { ...r, ...p } : r));
     const del = (id: string) => setRules(prev => prev.filter(r => r.id !== id));
-    const addCond = (id: string) => upd(id, { conditions: [...(rules.find(r => r.id === id)?.conditions ?? []), krMkCond()] });
-    const updCond = (rId: string, i: number, c: any) => { const rule = rules.find(r => r.id === rId); if (!rule) return; const cs = [...rule.conditions]; cs[i] = c; upd(rId, { conditions: cs }); };
-    const delCond = (rId: string, i: number) => { const rule = rules.find(r => r.id === rId); if (!rule) return; upd(rId, { conditions: rule.conditions.filter((_: any, j: number) => j !== i) }); };
+    const addCond = (id: string) => setRules(prev => prev.map(r => r.id === id ? { ...r, conditions: [...(r.conditions ?? []), krMkCond()] } : r));
+    const updCond = (rId: string, i: number, c: any) => setRules(prev => prev.map(r => { if (r.id !== rId) return r; const cs = [...(r.conditions ?? [])]; cs[i] = c; return { ...r, conditions: cs }; }));
+    const delCond = (rId: string, i: number) => setRules(prev => prev.map(r => r.id === rId ? { ...r, conditions: (r.conditions ?? []).filter((_: any, j: number) => j !== i) } : r));
 
     useEffect(() => {
         if (!registerSaveHandler) return;
@@ -917,7 +917,7 @@ const StreamKillRulesPanel: React.FC<{ addToast: (m: string, t?: 'success' | 'er
                                     </div>
                                     <div className="flex flex-col gap-2">
                                         {(rule.conditions || []).map((c: any, i: number) => (
-                                            <KRConditionRow key={i} cond={c} onCh={nc => updCond(rule.id, i, nc)} onDel={() => delCond(rule.id, i)} />
+                                            <KRConditionRow key={c.id ?? i} cond={c} onCh={nc => updCond(rule.id, i, nc)} onDel={() => delCond(rule.id, i)} />
                                         ))}
                                         <button onClick={() => addCond(rule.id)} className="flex items-center gap-2 text-plex text-sm font-bold hover:text-plex/80 transition-colors mt-1 w-fit py-1">
                                             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>
@@ -3529,12 +3529,17 @@ const BroadcastSettingsTab: React.FC<{ selectedUserIds: string[]; users: User[];
 const UserAnalyticsModal: React.FC<{ userId: string, username: string, thumb: string | null, days: string, onClose: () => void }> = ({ userId, username, thumb, days, onClose }) => {
     const [data, setData] = useState<any>(null);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(false);
 
     useEffect(() => {
+        let cancelled = false;
+        setLoading(true);
+        setError(false);
         apiFetch(`/api/plex/analytics/user/${userId}?days=${days}`)
-            .then(res => setData(res))
-            .catch(() => { })
-            .finally(() => setLoading(false));
+            .then(res => { if (!cancelled) setData(res); })
+            .catch(() => { if (!cancelled) setError(true); })
+            .finally(() => { if (!cancelled) setLoading(false); });
+        return () => { cancelled = true; };
     }, [userId, days]);
 
     return (
@@ -3558,13 +3563,18 @@ const UserAnalyticsModal: React.FC<{ userId: string, username: string, thumb: st
                 <div className="p-6 overflow-y-auto flex-1 min-h-0 flex flex-col gap-8 custom-scrollbar">
                     {loading ? (
                         <div className="flex justify-center items-center h-40"><Loader isLoading={true} /></div>
+                    ) : (error || !data) ? (
+                        <div className="flex flex-col items-center justify-center h-40 text-center gap-2">
+                            <AlertCircle className="w-8 h-8 text-red-500" />
+                            <p className="text-muted text-sm">Failed to load analytics for this user.</p>
+                        </div>
                     ) : (
                         <>
                             {/* Top row */}
                             <div>
                                 <h3 className="text-lg font-bold text-text mb-4 uppercase tracking-wider flex items-center gap-2"><PlaySquare className="text-plex w-4 h-4" /> Favorite Libraries</h3>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-6">
-                                    {data.topLibraries.length === 0 ? <p className="text-muted text-sm col-span-full">No library data.</p> : data.topLibraries.map((lib: any, i: number) => (
+                                    {(data.topLibraries ?? []).length === 0 ? <p className="text-muted text-sm col-span-full">No library data.</p> : data.topLibraries.map((lib: any, i: number) => (
                                         <div key={lib.id} className="flex justify-between items-center bg-black/20 p-2 rounded border border-white/5">
                                             <span className="font-bold text-sm text-text"><span className="text-muted mr-2">#{i + 1}</span>{lib.title}</span>
                                             <span className="text-plex text-xs font-mono">{lib.plays} plays</span>
@@ -3789,14 +3799,18 @@ const ReportIssueModal: React.FC<{ item: any, onClose: () => void }> = ({ item, 
 const PersonalAnalyticsDashboard: React.FC<{ username: string, thumb: string | null }> = ({ username, thumb }) => {
     const [data, setData] = useState<any>(null);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(false);
     const [days, setDays] = useState<string>('30');
 
     useEffect(() => {
+        let cancelled = false;
         setLoading(true);
+        setError(false);
         apiFetch(`/api/plex/analytics/me?days=${days}`)
-            .then(res => setData(res))
-            .catch(() => { })
-            .finally(() => setLoading(false));
+            .then(res => { if (!cancelled) setData(res); })
+            .catch(() => { if (!cancelled) setError(true); })
+            .finally(() => { if (!cancelled) setLoading(false); });
+        return () => { cancelled = true; };
     }, [days]);
 
     return (
@@ -3838,12 +3852,17 @@ const PersonalAnalyticsDashboard: React.FC<{ username: string, thumb: string | n
                 <div className="p-6 overflow-y-auto flex-1 min-h-0 flex flex-col gap-8 custom-scrollbar">
                     {loading ? (
                         <div className="flex justify-center items-center h-40"><Loader isLoading={true} /></div>
+                    ) : (error || !data) ? (
+                        <div className="flex flex-col items-center justify-center h-40 text-center gap-2">
+                            <AlertCircle className="w-8 h-8 text-red-500" />
+                            <p className="text-muted text-sm">Failed to load your analytics. Please try again later.</p>
+                        </div>
                     ) : (
                         <>
                             <div>
                                 <h3 className="text-lg font-bold text-text mb-4 uppercase tracking-wider flex items-center gap-2"><PlaySquare className="text-plex w-4 h-4" /> Favorite Libraries</h3>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-6">
-                                    {data.topLibraries.length === 0 ? <p className="text-muted text-sm col-span-full">No library data.</p> : data.topLibraries.map((lib: any, i: number) => (
+                                    {(data.topLibraries ?? []).length === 0 ? <p className="text-muted text-sm col-span-full">No library data.</p> : data.topLibraries.map((lib: any, i: number) => (
                                         <div key={lib.id} className="flex justify-between items-center bg-black/20 p-2 rounded border border-white/5">
                                             <span className="font-bold text-sm text-text"><span className="text-muted mr-2">#{i + 1}</span>{lib.title}</span>
                                             <span className="text-plex text-xs font-mono">{lib.plays} plays</span>
@@ -4522,17 +4541,21 @@ const TautulliGraphsTab: React.FC = () => {
     const [yAxis, setYAxis] = useState<'plays' | 'duration'>('plays');
 
     useEffect(() => {
+        let cancelled = false;
         setIsLoading(true);
         setError('');
         apiFetch(`/api/tautulli/graphs?days=${days}&y_axis=${yAxis}`)
             .then(data => {
+                if (cancelled) return;
                 setGraphs(data);
                 setIsLoading(false);
             })
             .catch(err => {
+                if (cancelled) return;
                 setError(err.message || 'Failed to load graphs');
                 setIsLoading(false);
             });
+        return () => { cancelled = true; };
     }, [days, yAxis]);
 
     if (isLoading) {
@@ -4914,30 +4937,34 @@ const AnalyticsDashboard: React.FC<{ isAdmin: boolean, sessionInfo: any }> = ({ 
     }, []);
 
     useEffect(() => {
+        let cancelled = false;
         const fetchAnalytics = async () => {
             setLoading(true);
             try {
                 const data = await apiFetch(`/api/plex/analytics?days=${days}`);
+                if (cancelled) return;
                 setAnalyticsData(data);
 
                 if (isAdmin) {
                     try {
                         const tData = await apiFetch('/api/tautulli/stats');
+                        if (cancelled) return;
                         setTautulliData(tData);
                     } catch (e) {
                         // Tautulli might not be configured, ignore error
-                        setTautulliData(null);
+                        if (!cancelled) setTautulliData(null);
                     }
                 } else {
                     setTautulliData(null);
                 }
             } catch (err: any) {
-                setError(err.message);
+                if (!cancelled) setError(err.message);
             } finally {
-                setLoading(false);
+                if (!cancelled) setLoading(false);
             }
         };
         fetchAnalytics();
+        return () => { cancelled = true; };
     }, [days, isAdmin]);
 
     const topUsersLength = analyticsData?.topUsers?.length || 0;
@@ -5849,11 +5876,8 @@ const AdminDashboard: React.FC<{ onLogout: () => void, onViewUserPortal: () => v
                     <div className="flex flex-col md:flex-row gap-4 md:items-center mb-8 bg-card border border-border p-4 rounded-xl shadow-md">
                         <span className="font-bold text-muted uppercase tracking-wider text-sm hidden md:inline-block mr-2">Quick Actions:</span>
                         <div className="grid grid-cols-2 md:flex md:flex-row gap-3 w-full md:w-auto flex-1">
-                            <button className="col-span-1 px-3 py-2 bg-plex text-background rounded-md font-bold hover:bg-plex-hover transition-colors flex items-center justify-center gap-2 text-sm md:text-base" onClick={handleImportUsers} disabled={isLoading}>
+                            <button className="col-span-2 md:col-span-1 px-3 py-2 bg-plex text-background rounded-md font-bold hover:bg-plex-hover transition-colors flex items-center justify-center gap-2 text-sm md:text-base" onClick={handleImportUsers} disabled={isLoading}>
                                 Sync Plex Users
-                            </button>
-                            <button className="col-span-1 px-3 py-2 bg-border text-text rounded-md font-medium hover:bg-opacity-80 transition-colors flex items-center justify-center gap-2 text-sm md:text-base md:ml-auto" onClick={() => { setEditingUser(null); setUserModalOpen(true); }}>
-                                + Add Custom User
                             </button>
                         </div>
                     </div>
@@ -7063,15 +7087,21 @@ const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onLogout: 
         }
     };
 
-    // Auto-request invite if user is totally new
+    // Auto-request invite if user is totally new — but only once per browser
+    // session, so remounts/navigation don't repeatedly POST invite requests.
     useEffect(() => {
         if (!user && !isLoading && !sessionInfo.session.isAdmin) {
-            handleRequestInvite();
+            const alreadyRequested = sessionStorage.getItem('autoInviteRequested') === 'true';
+            if (!alreadyRequested) {
+                sessionStorage.setItem('autoInviteRequested', 'true');
+                handleRequestInvite();
+            }
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     useEffect(() => {
+        let cancelled = false;
         const fetchAnalytics = async () => {
             if (!sessionInfo?.session?.isAdmin && !user) {
                 setAnalyticsLoading(false);
@@ -7080,16 +7110,18 @@ const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onLogout: 
             try {
                 setAnalyticsLoading(true);
                 const res = await apiFetch(`/api/plex/analytics/me?days=${analyticsDays}`);
+                if (cancelled) return;
                 setAnalytics(res);
                 setTopContentPage(0);
                 setRecentHistoryPage(0);
             } catch (e) {
-                console.error("Failed to fetch analytics", e);
+                if (!cancelled) console.error("Failed to fetch analytics", e);
             } finally {
-                setAnalyticsLoading(false);
+                if (!cancelled) setAnalyticsLoading(false);
             }
         };
         fetchAnalytics();
+        return () => { cancelled = true; };
     }, [user, sessionInfo.session.isAdmin, analyticsDays]);
 
     useEffect(() => {
@@ -7948,6 +7980,7 @@ const ServiceCustomSelect = ({ value, onChange, options }: { value: string, onCh
 const StatusDashboard: React.FC<{ onBack: () => void, isAdmin: boolean, isPublic?: boolean }> = ({ onBack, isAdmin, isPublic }) => {
     const [statusData, setStatusData] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [hasError, setHasError] = useState(false);
     const [activeTab, setActiveTab] = useState<'overview' | 'history' | 'analytics'>('overview');
     const [selectedServiceId, setSelectedServiceId] = useState<string | null>(null);
 
@@ -7955,8 +7988,10 @@ const StatusDashboard: React.FC<{ onBack: () => void, isAdmin: boolean, isPublic
         try {
             const data = await apiFetch('/api/status');
             setStatusData(data);
+            setHasError(false);
         } catch (e) {
             console.error(e);
+            setHasError(true);
         } finally {
             setIsLoading(false);
         }
@@ -7988,7 +8023,15 @@ const StatusDashboard: React.FC<{ onBack: () => void, isAdmin: boolean, isPublic
                     )}
                     <h2 className="text-2xl font-bold text-text">Server Status</h2>
                 </header>
-                <Loader isLoading={true} />
+                {!isLoading && hasError ? (
+                    <div className="w-full bg-red-500/10 border border-red-500 text-red-400 p-6 rounded-xl flex flex-col items-center gap-3 mt-4">
+                        <AlertCircle className="w-8 h-8" />
+                        <p className="font-semibold">Failed to load server status.</p>
+                        <button onClick={() => { setIsLoading(true); fetchStatus(); }} className="px-4 py-2 bg-white/5 hover:bg-white/10 rounded-lg text-text text-sm font-medium transition-colors">Retry</button>
+                    </div>
+                ) : (
+                    <Loader isLoading={true} />
+                )}
             </div>
         );
     }
@@ -8424,7 +8467,7 @@ const LibraryDashboard: React.FC<{ onBack: () => void, isAdmin?: boolean, public
                         <div className="w-full">
                             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 md:gap-6">
                             {dashboardData.activeSessions.map((session, i) => (
-                                <div key={i} onClick={() => setSelectedSession(session)} className="bg-card rounded-xl border border-border flex flex-col overflow-hidden shadow-lg hover:border-plex/50 hover:shadow-plex/20 transition-all cursor-pointer select-none">
+                                <div key={session.sessionId ?? i} onClick={() => setSelectedSession(session)} className="bg-card rounded-xl border border-border flex flex-col overflow-hidden shadow-lg hover:border-plex/50 hover:shadow-plex/20 transition-all cursor-pointer select-none">
                                     <div className="flex flex-row flex-grow relative">
                                         <div className="w-36 md:w-44 flex-shrink-0 relative overflow-hidden bg-card">
                                             <div className="w-full pb-[150%]"></div>
