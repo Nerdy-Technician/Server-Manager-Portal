@@ -53,5 +53,19 @@ test*.cjs
 # Runtime cache files
 plex-stats.json
 trending-cache.json
+analytics-cache.json
 patch.cjs
 static/bundle.js
+
+# Kill rules and maintenance data (may contain usernames, IPs, internal paths)
+kill-rules.json
+maintenance-rules.json
+maintenance-media-index.json
+maintenance-runs.json
+maintenance-request-index.json
+maintenance-prefs.json
+
+# Plex stats & status operational data
+subzero-status-config.json
+subzero-health.json
+status-config.json

@@ -57,7 +57,7 @@ app.use((req, res, next) => {
     res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
     res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
     res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self'; frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self'");
-    if (req.secure) {
+    if (req.secure || FORCE_SECURE_COOKIES) {
         res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
     }
     if (req.path.startsWith('/api/')) {
@@ -71,6 +71,11 @@ app.use((req, res, next) => {
 const getClientIp = (req) => req.ip || req.socket.remoteAddress || 'unknown';
 const createRateLimiter = (windowMs, maxRequests) => {
     const store = new Map();
+    // Prune stale IP entries every window to prevent unbounded memory growth under high unique-IP load
+    setInterval(() => {
+        const now = Date.now();
+        store.forEach((record, ip) => { if (now > record.resetAt) store.delete(ip); });
+    }, windowMs).unref();
     return (req, res, next) => {
         const ip = getClientIp(req);
         const now = Date.now();
@@ -87,7 +92,7 @@ const createRateLimiter = (windowMs, maxRequests) => {
         next();
     };
 };
-const authRateLimit = createRateLimiter(15 * 60 * 1000, 20);
+const authRateLimit = createRateLimiter(15 * 60 * 1000, 10); // Reduced from 20 — tighter brute-force window
 const publicReadRateLimit = createRateLimiter(60 * 1000, 120);
 const speedtestRateLimit = createRateLimiter(60 * 1000, 12);
 const setupRateLimit = createRateLimiter(15 * 60 * 1000, 30);
@@ -328,7 +333,7 @@ const appendAuditLog = async (event, actor, target = null, details = {}) => {
             } : null,
             details
         });
-        await saveFile(AUDIT_LOG_PATH, auditLog.slice(0, 1000));
+        await saveFile(AUDIT_LOG_PATH, auditLog.slice(0, 5000));
     } catch (error) {
         log(`Failed to write audit log: ${error.message}`);
     }
@@ -648,7 +653,7 @@ const requireAdmin = async (req, res, next) => {
         // or allow if we want. We will block here to be safe.
         return res.status(403).json({ error: 'Forbidden: App not configured' });
     }
-    if (!req.user || req.user.plexId !== adminId) {
+    if (!req.user || String(req.user.plexId) !== String(adminId)) {
         return res.status(403).json({ error: 'Forbidden: Admins only' });
     }
     req.user.isAdmin = true;
@@ -892,36 +897,37 @@ const sendExpiryEmail = async (config, user, hasLogo) => {
                         </table>
                     </div>
 
+                    ${config.contactEmail || config.contactWhatsApp ? `
                     <p style="font-size: 16px; font-weight: 600; color: #282A2D; margin-bottom: 5px;">Want to renew your access?</p>
                     <p>If you'd like to continue enjoying all the content, simply get in touch using any of the methods below and we'll get you set up again:</p>
 
                     <div style="background-color: #fcf8f2; border-radius: 8px; padding: 20px; margin: 20px 0;">
                         <table style="width: 100%; border-collapse: collapse; font-size: 15px;">
-                            <tr>
+                            ${config.contactEmail ? `<tr>
                                 <td style="padding: 10px 0; vertical-align: middle;">
                                     <span style="font-size: 20px; margin-right: 10px;">📧</span>
                                     <strong style="color: #2d3748;">Email:</strong>
                                 </td>
                                 <td style="padding: 10px 0; text-align: right; vertical-align: middle;">
-                                    <a href="mailto:jasonlucas58@gmail.com" style="color: #e5a00d; text-decoration: none; font-weight: 600;">jasonlucas58@gmail.com</a>
+                                    <a href="mailto:${escapeHtmlAttr(config.contactEmail)}" style="color: #e5a00d; text-decoration: none; font-weight: 600;">${escapeHtmlAttr(config.contactEmail)}</a>
                                 </td>
-                            </tr>
-                            <tr>
+                            </tr>` : ''}
+                            ${config.contactWhatsApp ? `<tr>
                                 <td style="padding: 10px 0; vertical-align: middle; border-top: 1px solid #edf2f7;">
                                     <span style="font-size: 20px; margin-right: 10px;">💬</span>
                                     <strong style="color: #2d3748;">WhatsApp:</strong>
                                 </td>
                                 <td style="padding: 10px 0; text-align: right; vertical-align: middle; border-top: 1px solid #edf2f7;">
-                                    <a href="https://wa.me/447305697245" style="color: #25d366; text-decoration: none; font-weight: 600;">07305 697 245</a>
+                                    <a href="https://wa.me/${escapeHtmlAttr(String(config.contactWhatsApp).replace(/\D/g, ''))}" style="color: #25d366; text-decoration: none; font-weight: 600;">${escapeHtmlAttr(config.contactWhatsApp)}</a>
                                 </td>
-                            </tr>
+                            </tr>` : ''}
                         </table>
                     </div>
 
                     <div style="text-align: center; margin: 30px 0 15px 0;">
-                        <a href="https://wa.me/447305697245" style="background-color: #25d366; color: #ffffff; text-decoration: none; padding: 14px 35px; font-weight: bold; border-radius: 6px; display: inline-block; font-size: 16px; box-shadow: 0 4px 6px rgba(37, 211, 102, 0.2); margin-right: 10px;">WhatsApp Me</a>
-                        <a href="mailto:jasonlucas58@gmail.com" style="background-color: #e5a00d; color: #ffffff; text-decoration: none; padding: 14px 35px; font-weight: bold; border-radius: 6px; display: inline-block; font-size: 16px; box-shadow: 0 4px 6px rgba(229, 160, 13, 0.2);">Email Me</a>
-                    </div>
+                        ${config.contactWhatsApp ? `<a href="https://wa.me/${escapeHtmlAttr(String(config.contactWhatsApp).replace(/\D/g, ''))}" style="background-color: #25d366; color: #ffffff; text-decoration: none; padding: 14px 35px; font-weight: bold; border-radius: 6px; display: inline-block; font-size: 16px; box-shadow: 0 4px 6px rgba(37, 211, 102, 0.2); margin-right: 10px;">WhatsApp Me</a>` : ''}
+                        ${config.contactEmail ? `<a href="mailto:${escapeHtmlAttr(config.contactEmail)}" style="background-color: #e5a00d; color: #ffffff; text-decoration: none; padding: 14px 35px; font-weight: bold; border-radius: 6px; display: inline-block; font-size: 16px; box-shadow: 0 4px 6px rgba(229, 160, 13, 0.2);">Email Me</a>` : ''}
+                    </div>` : ''}
                 </div>
                 <div style="background-color: #f7fafc; padding: 20px 30px; border-top: 1px solid #edf2f7; text-align: center; font-size: 12px; color: #a0aec0;">
                     <p style="margin: 0 0 5px 0;">Automated notification from the Plex Expiry Service.</p>
@@ -1049,6 +1055,25 @@ const checkAndRevoke = async (config) => {
     }
 };
 
+// --- Security: Sanitise admin-authored HTML before broadcast email delivery ---
+// Strips dangerous scripting/injection vectors while preserving safe formatting tags.
+const sanitizeBroadcastHtml = (html) => {
+    if (!html || typeof html !== 'string') return '';
+    return html
+        .replace(/<script[\s\S]*?<\/script\s*>/gi, '')
+        .replace(/<iframe[\s\S]*?<\/iframe\s*>/gi, '')
+        .replace(/<object[\s\S]*?<\/object\s*>/gi, '')
+        .replace(/<embed[^>]*>/gi, '')
+        .replace(/<form[\s\S]*?<\/form\s*>/gi, '')
+        .replace(/<input[^>]*>/gi, '')
+        .replace(/<link[^>]*>/gi, '')
+        .replace(/<meta[^>]*>/gi, '')
+        .replace(/<base[^>]*>/gi, '')
+        .replace(/\s+on\w+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]*)/gi, '') // strip event handlers
+        .replace(/\shref\s*=\s*["']?\s*javascript\s*:[^"'\s>]*/gi, ' href="#"')  // block javascript: URIs in href
+        .replace(/\ssrc\s*=\s*["']?\s*javascript\s*:[^"'\s>]*/gi, '');  // block javascript: URIs in src
+};
+
 // --- API Routes ---
 
 app.post('/api/users/broadcast', requireAdmin, async (req, res) => {
@@ -1110,7 +1135,7 @@ app.post('/api/users/broadcast', requireAdmin, async (req, res) => {
 
             for (const user of targetUsers) {
                 try {
-                    await sendEmail(config, user.email, subject, body, bulkTransporter);
+                    await sendEmail(config, user.email, subject, sanitizeBroadcastHtml(body), bulkTransporter);
                     // Add a tiny throttle so it doesn't look like a burst attack
                     await new Promise(resolve => setTimeout(resolve, 2000));
                 } catch (e) {
@@ -1622,10 +1647,20 @@ app.get('/api/config/public', async (req, res) => {
 
 app.post('/api/config/logo', requireAdmin, express.raw({ type: 'image/*', limit: '5mb' }), async (req, res) => {
     try {
+        const buf = req.body;
+        if (!Buffer.isBuffer(buf) || buf.length < 4) {
+            return res.status(400).json({ error: 'Invalid image file.' });
+        }
+        // Verify PNG (89 50 4E 47) or JPEG (FF D8 FF) magic bytes — Content-Type header alone is spoofable
+        const isPng  = buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4E && buf[3] === 0x47;
+        const isJpeg = buf[0] === 0xFF && buf[1] === 0xD8 && buf[2] === 0xFF;
+        if (!isPng && !isJpeg) {
+            return res.status(400).json({ error: 'Invalid image format. Only PNG and JPEG files are accepted.' });
+        }
         const logoDir = path.join(process.cwd(), 'static');
         await fs.mkdir(logoDir, { recursive: true });
         const logoPath = path.join(logoDir, 'logo.png');
-        await fs.writeFile(logoPath, req.body);
+        await fs.writeFile(logoPath, buf);
         res.json({ message: 'Logo uploaded successfully.' });
     } catch (e) {
         log('Failed to upload logo: ' + e.message);
@@ -4342,7 +4377,7 @@ const checkAndSendNewsletter = async (config, force = false) => {
 
         let sentCount = 0;
         for (const user of recipients) {
-            const personalizedHtml = html.replace(/{{USERNAME}}/g, user.username || 'User');
+            const personalizedHtml = html.replace(/{{USERNAME}}/g, escapeHtmlAttr(user.username || 'User'));
 
             try {
                 await transporter.sendMail({
@@ -5484,8 +5519,13 @@ const compareMaintenanceValue = (itemValue, operator, expectedValue) => {
     }
     if (operator === 'regex') {
         try {
-            const re = new RegExp(String(expectedValue || ''), 'i');
-            return re.test(String(itemValue || ''));
+            const patternStr = String(expectedValue || '');
+            // Guard against ReDoS: reject overly-long or structurally catastrophic patterns
+            if (patternStr.length > 250) return false;
+            if (/\(.*[+*]\).*[+*]|\(.*[+*]\)\{/.test(patternStr)) return false; // catastrophic backtracking heuristic
+            const re = new RegExp(patternStr, 'i');
+            // Limit input string length to cap worst-case backtracking
+            return re.test(String(itemValue || '').slice(0, 1000));
         } catch (e) {
             return false;
         }
@@ -6596,6 +6636,29 @@ async function evaluateKillRules(config, uri, sessions) {
     }
 }
 
+// --- Security: Schema validation for kill rules ---
+const VALID_KILL_RULE_FIELDS    = new Set(['isTranscoding', 'videoResolution', 'user', 'bandwidth', 'playerProduct', 'state', 'mediaType', 'sessionLocation', 'playerTitle', 'videoCodec', 'audioCodec', 'transcodeVideoDecision']);
+const VALID_KILL_RULE_OPERATORS = new Set(['equals', 'not_equals', 'contains', 'not_contains', 'greater_than', 'less_than']);
+
+const validateKillRulesSchema = (rules) => {
+    if (!Array.isArray(rules)) throw new Error('Rules must be an array');
+    for (const rule of rules) {
+        if (typeof rule !== 'object' || rule === null) throw new Error('Each rule must be an object');
+        if (!Array.isArray(rule.conditions))           throw new Error(`Rule "${rule.name || 'unnamed'}": conditions must be an array`);
+        if (rule.conditionLogic && !['AND', 'OR'].includes(String(rule.conditionLogic))) {
+            throw new Error(`Rule "${rule.name || 'unnamed'}": invalid conditionLogic "${rule.conditionLogic}"`);
+        }
+        if (rule.killMessage && String(rule.killMessage).length > 500) {
+            throw new Error(`Rule "${rule.name || 'unnamed'}": killMessage exceeds 500 characters`);
+        }
+        for (const cond of rule.conditions) {
+            if (!cond || typeof cond !== 'object') throw new Error('Each condition must be an object');
+            if (!VALID_KILL_RULE_FIELDS.has(cond.field))       throw new Error(`Invalid condition field: "${cond.field}"`);
+            if (!VALID_KILL_RULE_OPERATORS.has(cond.operator)) throw new Error(`Invalid condition operator: "${cond.operator}"`);
+        }
+    }
+};
+
 // Rules API
 app.get('/api/kill-rules', requireAdmin, async (req, res) => {
     try {
@@ -6609,11 +6672,11 @@ app.get('/api/kill-rules', requireAdmin, async (req, res) => {
 app.post('/api/kill-rules', requireAdmin, async (req, res) => {
     try {
         const rules = req.body;
-        if (!Array.isArray(rules)) return res.status(400).json({ error: 'Rules must be an array' });
+        validateKillRulesSchema(rules);
         await saveFile(KILL_RULES_PATH, rules);
         res.json({ success: true });
     } catch (e) {
-        res.status(500).json({ error: 'Failed to save rules' });
+        res.status(e.message.startsWith('Rule') || e.message.startsWith('Each') || e.message.startsWith('Invalid') ? 400 : 500).json({ error: e.message || 'Failed to save rules' });
     }
 });
 
