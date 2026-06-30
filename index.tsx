@@ -3416,7 +3416,8 @@ const StatusMonitorSettings: React.FC<{ config: any; onChange: (cfg: any) => voi
     };
 
     const removeGroup = async (id: string) => {
-        appConfirm(`Remove group ${id}? Services inside it won't be deleted but will lose their group.`, () => {
+        const groupName = localConfig.groups.find((g: any) => g.id === id)?.name || 'this group';
+        appConfirm(`Remove group "${groupName}"? Services inside it won't be deleted but will lose their group.`, () => {
             const newConfig = {
                 ...localConfig,
                 groups: localConfig.groups.filter((g: any) => g.id !== id),
@@ -3439,60 +3440,56 @@ const StatusMonitorSettings: React.FC<{ config: any; onChange: (cfg: any) => voi
     };
 
     return (
-        <div className="flex flex-col gap-6 w-full">
-            <div className="bg-card border border-border p-6 rounded-xl shadow-sm">
-                <div className="flex justify-between items-center mb-6 border-b border-border pb-4">
+        <div className="flex flex-col gap-8 w-full">
+            <div>
+                <div className="flex justify-between items-center mb-4 border-b border-border pb-3">
                     <h4 className="font-bold text-xl text-text">Service Groups</h4>
                     <button onClick={addGroup} className="px-4 py-2 bg-white/10 hover:bg-white/20 text-text rounded-md text-sm font-bold transition-colors">Add Group</button>
                 </div>
                 {localConfig.groups.map((group: any) => (
-                    <div key={group.id} className="flex flex-col md:flex-row justify-between items-start md:items-center p-4 mb-3 bg-black/20 rounded-lg border border-border hover:border-plex/50 transition-colors gap-4">
-                        <div className="flex-1 flex flex-col md:flex-row gap-3 w-full">
-                            <input
-                                type="text"
-                                value={group.name}
-                                onChange={(e) => updateGroup(group.id, 'name', e.target.value)}
-                                className="flex-1 p-2 rounded bg-background border border-border focus:border-plex outline-none text-sm"
-                                placeholder="Group Name"
-                            />
-                            <div className="flex-1 flex items-center px-3 py-2 rounded bg-black/40 border border-border/50 text-sm font-mono text-muted cursor-not-allowed overflow-hidden text-ellipsis whitespace-nowrap">
-                                {group.id}
-                            </div>
-                        </div>
-                        <button onClick={() => removeGroup(group.id)} className="text-red-400 hover:text-red-300 text-sm font-medium transition-colors bg-red-400/10 px-3 py-2 rounded flex-shrink-0">Remove</button>
+                    <div key={group.id} className="flex flex-col sm:flex-row sm:items-center gap-3 mb-3">
+                        <input
+                            type="text"
+                            value={group.name}
+                            onChange={(e) => updateGroup(group.id, 'name', e.target.value)}
+                            className="flex-1 w-full p-3 rounded-lg bg-background border border-border focus:border-plex outline-none text-sm"
+                            placeholder="Group Name"
+                        />
+                        <button type="button" onClick={() => removeGroup(group.id)} className="px-4 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 rounded-md text-xs font-bold transition-colors flex-shrink-0 sm:w-[5.75rem]">Remove</button>
                     </div>
                 ))}
-                {localConfig.groups.length === 0 && <p className="text-muted text-sm italic p-4 text-center border border-dashed border-border rounded-lg">No groups defined. Create one to organize your services.</p>}
+                {localConfig.groups.length === 0 && <p className="text-muted text-sm italic py-2">No groups defined. Create one to organize your services.</p>}
             </div>
 
-            <div className="bg-card border border-border p-6 rounded-xl shadow-sm">
-                <div className="flex justify-between items-center mb-6 border-b border-border pb-4">
+            <div>
+                <div className="flex justify-between items-center mb-4 border-b border-border pb-3">
                     <h4 className="font-bold text-xl text-text">Monitored Services</h4>
                     <button onClick={addService} className="px-4 py-2 bg-plex text-background hover:bg-plex-hover rounded-md text-sm font-bold transition-colors shadow-lg">Add Service</button>
                 </div>
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                <div className="flex flex-col gap-6">
                     {localConfig.services.map((service: any) => (
-                        <div key={service.id} className="flex flex-col p-4 bg-black/20 rounded-xl border border-border hover:border-plex/50 transition-colors gap-3">
-                            <div className="flex justify-between items-start gap-3">
-                                <div className="flex-1 flex flex-col gap-2">
-                                    <input
-                                        type="text"
-                                        value={service.name}
-                                        onChange={(e) => updateService(service.id, 'name', e.target.value)}
-                                        className="w-full p-2 rounded bg-background border border-border focus:border-plex outline-none text-sm font-bold"
-                                        placeholder="Service Name"
-                                    />
-                                    <input
-                                        type="text"
-                                        value={service.url}
-                                        onChange={(e) => updateService(service.id, 'url', e.target.value)}
-                                        className="w-full p-2 rounded bg-background border border-border focus:border-plex outline-none text-sm font-mono"
-                                        placeholder="Service URL (e.g. https://...)"
-                                    />
-                                </div>
-                                <button onClick={() => removeService(service.id)} className="text-red-400 hover:text-red-300 text-sm font-medium transition-colors bg-red-400/10 px-3 py-2 rounded flex-shrink-0">Remove</button>
+                        <div key={service.id} className="flex flex-col gap-3 pb-6 border-b border-border/40 last:border-b-0 last:pb-0">
+                            <div>
+                                <label className="block text-sm text-muted mb-1">Service Name</label>
+                                <input
+                                    type="text"
+                                    value={service.name}
+                                    onChange={(e) => updateService(service.id, 'name', e.target.value)}
+                                    className="w-full p-3 rounded-lg bg-background border border-border focus:border-plex outline-none text-sm font-bold"
+                                    placeholder="Service Name"
+                                />
                             </div>
-                            <div className="flex flex-wrap items-center justify-between gap-3 mt-1 text-sm border-t border-border/50 pt-3">
+                            <div>
+                                <label className="block text-sm text-muted mb-1">Service URL</label>
+                                <input
+                                    type="text"
+                                    value={service.url}
+                                    onChange={(e) => updateService(service.id, 'url', e.target.value)}
+                                    className="w-full p-3 rounded-lg bg-background border border-border focus:border-plex outline-none text-sm font-mono"
+                                    placeholder="Service URL (e.g. https://...)"
+                                />
+                            </div>
+                            <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
                                 <div className="flex items-center gap-2">
                                     <span className="text-muted">Group:</span>
                                     <div className="w-48">
@@ -3506,17 +3503,21 @@ const StatusMonitorSettings: React.FC<{ config: any; onChange: (cfg: any) => voi
                                         />
                                     </div>
                                 </div>
-                                <button
-                                    onClick={() => updateService(service.id, 'isCritical', !service.isCritical)}
-                                    className={`px-3 py-1.5 rounded text-xs font-bold transition-colors flex items-center gap-2 ${service.isCritical ? 'bg-green-500/20 text-green-400 hover:bg-green-500/30' : 'bg-white/10 text-muted hover:bg-white/20'}`}
-                                >
-                                    Critical: {service.isCritical ? 'Yes' : 'No'}
-                                </button>
+                                <div className="flex items-center gap-2 flex-shrink-0 ml-auto">
+                                    <button
+                                        type="button"
+                                        onClick={() => updateService(service.id, 'isCritical', !service.isCritical)}
+                                        className={`px-3 py-1.5 rounded text-xs font-bold transition-colors flex items-center gap-2 ${service.isCritical ? 'bg-green-500/20 text-green-400 hover:bg-green-500/30' : 'bg-white/10 text-muted hover:bg-white/20'}`}
+                                    >
+                                        Critical: {service.isCritical ? 'Yes' : 'No'}
+                                    </button>
+                                    <button type="button" onClick={() => removeService(service.id)} className="px-4 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 rounded-md text-xs font-bold transition-colors w-[5.75rem]">Remove</button>
+                                </div>
                             </div>
                         </div>
                     ))}
                 </div>
-                {localConfig.services.length === 0 && <p className="text-muted text-sm italic p-4 text-center border border-dashed border-border rounded-lg">No services defined. Add some services to monitor.</p>}
+                {localConfig.services.length === 0 && <p className="text-muted text-sm italic py-2">No services defined. Add some services to monitor.</p>}
             </div>
         </div>
     );
