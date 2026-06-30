@@ -9171,6 +9171,19 @@ const MaintenanceDashboard: React.FC = () => {
         }
     }, [addToast, isMaintenanceDisabledError, maintenanceFeatureEnabled]);
 
+    const refreshExclusionsSummaryQuietly = useCallback(() => {
+        loadExclusionsSummary().catch(() => { });
+    }, [loadExclusionsSummary]);
+
+    const updateRatingKeyExclusions = async (nextKeys: string[]) => {
+        const next = {
+            ...preferences,
+            exclusions: { ...(preferences.exclusions || {}), ratingKeys: nextKeys }
+        };
+        await savePreferences(next);
+        refreshExclusionsSummaryQuietly();
+    };
+
     const loadLibraryBrowse = useCallback(async () => {
         if (!maintenanceFeatureEnabled) return;
         setLibraryBrowseLoading(true);
@@ -9878,7 +9891,7 @@ const MaintenanceDashboard: React.FC = () => {
                         {activeSection === 'exclusions' && (
                             <div className="bg-card/50 backdrop-blur-md border border-white/5 rounded-xl p-4 md:p-5 space-y-3">
                                 <h3 className="text-xl font-bold text-plex">Exclusions</h3>
-                                <p className="text-sm text-muted">Browse posters by library, search titles, click posters to select, then bulk exclude/unexclude. Excluded items are removed from preview and execution.</p>
+                                <p className="text-sm text-muted">Click posters to select them for bulk actions. Selected items show a checkmark overlay. Use the Exclude link under each title for one-off changes.</p>
                                 <div className="bg-background/30 border border-white/5 rounded-lg p-3 md:p-4 space-y-2.5">
                                     <div className="min-w-0 md:w-[220px] h-9">
                                             <CustomSelect
@@ -9911,6 +9924,14 @@ const MaintenanceDashboard: React.FC = () => {
                                     <div className="grid grid-cols-[minmax(0,1fr)_auto] md:flex md:flex-wrap items-center gap-2">
                                         <button
                                             type="button"
+                                            className="h-9 px-3 bg-border text-text rounded-md text-xs md:text-sm font-semibold whitespace-nowrap"
+                                            onClick={() => setSelectedExcludeKeys(libraryItems.map((item: any) => String(item.ratingKey || '')).filter(Boolean))}
+                                            disabled={!libraryItems.length}
+                                        >
+                                            Select Page
+                                        </button>
+                                        <button
+                                            type="button"
                                             className="h-9 px-3 bg-plex text-background rounded-md text-xs md:text-sm font-semibold whitespace-nowrap"
                                             onClick={async () => {
                                                 if (!selectedExcludeKeys.length) {
@@ -9918,12 +9939,9 @@ const MaintenanceDashboard: React.FC = () => {
                                                     return;
                                                 }
                                                 const merged = Array.from(new Set([...(preferences?.exclusions?.ratingKeys || []).map((v: string) => String(v)), ...selectedExcludeKeys]));
-                                                const next = { ...preferences, exclusions: { ...(preferences.exclusions || {}), ratingKeys: merged } };
-                                                await savePreferences(next);
-                                                await loadExclusionsSummary();
+                                                await updateRatingKeyExclusions(merged);
                                                 setSelectedExcludeKeys([]);
-                                                await loadLibraryBrowse();
-                                                addToast(`Excluded ${merged.length} total titles by rating key.`);
+                                                addToast(`Excluded ${selectedExcludeKeys.length} selected title(s).`);
                                             }}
                                         >
                                             Exclude Selected ({selectedExcludeKeys.length})
@@ -9945,13 +9963,11 @@ const MaintenanceDashboard: React.FC = () => {
                                                     addToast('Select posters to unexclude first.', 'error');
                                                     return;
                                                 }
+                                                const removedCount = selectedExcludeKeys.length;
                                                 const remaining = (preferences?.exclusions?.ratingKeys || []).map((v: string) => String(v)).filter((key: string) => !selectedExcludeKeys.includes(key));
-                                                const next = { ...preferences, exclusions: { ...(preferences.exclusions || {}), ratingKeys: remaining } };
-                                                await savePreferences(next);
-                                                await loadExclusionsSummary();
+                                                await updateRatingKeyExclusions(remaining);
                                                 setSelectedExcludeKeys([]);
-                                                await loadLibraryBrowse();
-                                                addToast('Removed selected exclusions.');
+                                                addToast(`Removed ${removedCount} selected exclusion(s).`);
                                             }}
                                         >
                                             Remove Selected Exclusions
@@ -9966,48 +9982,59 @@ const MaintenanceDashboard: React.FC = () => {
                                                 const key = String(item.ratingKey || '');
                                                 const selected = selectedExcludeKeys.includes(key);
                                                 const excluded = item.excluded || excludedRatingKeySet.has(key);
+                                                const toggleQuickExclude = async (event: React.MouseEvent) => {
+                                                    event.preventDefault();
+                                                    event.stopPropagation();
+                                                    const currentKeys = (preferences?.exclusions?.ratingKeys || []).map((v: string) => String(v));
+                                                    const nextKeys = excluded ? currentKeys.filter((v: string) => v !== key) : Array.from(new Set([...currentKeys, key]));
+                                                    await updateRatingKeyExclusions(nextKeys);
+                                                    addToast(excluded ? `Removed exclusion for ${item.title}.` : `Excluded ${item.title}.`);
+                                                };
                                                 return (
-                                                    <div key={`exclude-item-${key}`} className={`relative w-full border rounded-lg overflow-hidden transition-colors ${selected ? 'border-plex' : 'border-white/5'} ${excluded ? 'ring-1 ring-red-500/70' : ''}`}>
+                                                    <div
+                                                        key={`exclude-item-${key}`}
+                                                        className={`relative w-full border rounded-lg overflow-hidden transition-all ${selected ? 'border-plex bg-plex/5 shadow-[0_0_0_1px_rgba(229,160,13,0.35)]' : 'border-white/5'} ${excluded ? 'ring-1 ring-red-500/60' : ''}`}
+                                                    >
                                                         <button
                                                             type="button"
                                                             className="w-full text-left"
+                                                            aria-pressed={selected}
                                                             onClick={() => {
                                                                 setSelectedExcludeKeys((prev) => prev.includes(key) ? prev.filter((v) => v !== key) : [...prev, key]);
                                                             }}
                                                         >
-                                                            <div className="aspect-[2/3] bg-black/40">
+                                                            <div className="aspect-[2/3] bg-black/40 relative">
                                                                 {item.thumb ? (
                                                                     <img src={`/api/plex/image?path=${encodeURIComponent(item.thumb)}&width=220&height=330`} alt={item.title} loading="lazy" className="w-full h-full object-cover" />
                                                                 ) : (
                                                                     <div className="w-full h-full flex items-center justify-center text-xs text-muted">No Poster</div>
                                                                 )}
+                                                                {selected && (
+                                                                    <>
+                                                                        <div className="absolute inset-0 bg-plex/20 pointer-events-none" />
+                                                                        <div className="absolute top-2 left-2 w-6 h-6 rounded-full bg-plex text-background flex items-center justify-center shadow-md pointer-events-none">
+                                                                            <Check className="w-3.5 h-3.5" strokeWidth={3} />
+                                                                        </div>
+                                                                    </>
+                                                                )}
+                                                                {excluded && (
+                                                                    <span className="absolute top-2 right-2 text-[10px] px-1.5 py-0.5 rounded bg-red-600/95 text-white font-bold pointer-events-none">
+                                                                        Excluded
+                                                                    </span>
+                                                                )}
                                                             </div>
-                                                            <div className="p-2">
-                                                                <p className="text-xs text-text line-clamp-2">{item.title}</p>
-                                                                <p className="text-[11px] text-muted mt-1">{item.libraryTitle}</p>
-                                                            </div>
+                                                            <p className="px-2 pt-2 text-xs text-text line-clamp-2">{item.title}</p>
                                                         </button>
-                                                        <div className="absolute top-2 left-2 flex gap-1">
-                                                            {selected && <span className="text-[10px] px-1.5 py-0.5 rounded bg-plex text-background font-bold">Selected</span>}
-                                                            {excluded && <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-600 text-white font-bold">Excluded</span>}
+                                                        <div className="px-2 pb-2 pt-1 flex items-center justify-between gap-2 min-h-[2rem]">
+                                                            <p className="text-[11px] text-muted truncate">{item.libraryTitle}</p>
+                                                            <button
+                                                                type="button"
+                                                                className={`text-[10px] font-semibold shrink-0 whitespace-nowrap transition-colors ${excluded ? 'text-muted hover:text-text' : 'text-plex hover:text-plex-hover'}`}
+                                                                onClick={toggleQuickExclude}
+                                                            >
+                                                                {excluded ? 'Unexclude' : 'Exclude'}
+                                                            </button>
                                                         </div>
-                                                        <button
-                                                            type="button"
-                                                            className={`absolute top-2 right-2 px-2 py-1 rounded text-[11px] font-semibold z-10 ${excluded ? 'bg-border text-text' : 'bg-plex text-background'}`}
-                                                            onClick={async (event) => {
-                                                                event.preventDefault();
-                                                                event.stopPropagation();
-                                                                const currentKeys = (preferences?.exclusions?.ratingKeys || []).map((v: string) => String(v));
-                                                                const nextKeys = excluded ? currentKeys.filter((v: string) => v !== key) : Array.from(new Set([...currentKeys, key]));
-                                                                const next = { ...preferences, exclusions: { ...(preferences.exclusions || {}), ratingKeys: nextKeys } };
-                                                                await savePreferences(next);
-                                                                await loadExclusionsSummary();
-                                                                await loadLibraryBrowse();
-                                                                addToast(excluded ? `Removed exclusion for ${item.title}.` : `Excluded ${item.title}.`);
-                                                            }}
-                                                        >
-                                                            {excluded ? 'Unexclude' : 'Exclude'}
-                                                        </button>
                                                     </div>
                                                 );
                                             })}
