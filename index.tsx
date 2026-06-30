@@ -4629,7 +4629,7 @@ const TautulliGraphsTab: React.FC = () => {
     const topUsersKeys = getSeriesKeys(get_plays_by_top_10_users);
 
     return (
-        <div className="space-y-6 mt-6">
+        <div className="space-y-6 mt-6 min-w-0">
             <div className="flex flex-col sm:flex-row justify-between items-end sm:items-center gap-4">
                 {/* Y-Axis Toggle */}
                 <div className="flex bg-black/40 rounded-lg p-1 border border-white/5 w-fit">
@@ -4984,7 +4984,7 @@ const AnalyticsDashboard: React.FC<{ isAdmin: boolean, sessionInfo: any }> = ({ 
     };
 
     return (
-        <div className="w-full animate-fade-in flex flex-col gap-6">
+        <div className="w-full min-w-0 animate-fade-in flex flex-col gap-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
                 <div>
                     <h1 className="text-3xl font-bold text-text uppercase tracking-widest flex items-center gap-3">
@@ -10434,7 +10434,7 @@ const MainApp: React.FC = () => {
     };
 
     return (
-        <div className="flex w-full min-h-screen bg-background">
+        <div className="flex w-full min-h-screen bg-background overflow-x-hidden">
             <ConfirmModal isOpen={confirmState.isOpen} message={confirmState.message} onConfirm={handleConfirm} onCancel={closeConfirm} />
             {!isPublicView && <Navigation currentRoute={currentRoute} onNavigate={setRoute as any} onLogout={handleLogout} isAdmin={isAdmin} serverName={sessionInfo?.serverName || 'Server Portal'} adminThumb={sessionInfo?.adminThumb} requestUrl={sessionInfo?.requestUrl || 'https://yourdomain.com'} navOrder={sessionInfo?.navOrder || ['home', 'discover', 'status', 'analytics', 'mediastack', 'maintenance', 'request', 'settings', 'logout']} appVersion={publicConfig.appVersion} />}
             <div className={`flex-1 min-w-0 flex flex-col items-center px-[2px] pt-20 pb-[80px] md:p-8 md:pt-8 md:pb-8 overflow-x-visible ${isPublicView ? '!pt-8 !pb-8' : ''}`}>
