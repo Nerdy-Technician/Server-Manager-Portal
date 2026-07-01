@@ -61,3 +61,17 @@ export const hexToRgb = (hex: string) => {
     const b = parseInt(hex.slice(4, 6), 16) || 0;
     return `${r} ${g} ${b}`;
 };
+
+/** Round storage up to the nearest whole MB, GB, TB, or PB. */
+export const formatSizeCeil = (bytes: number): string => {
+    const safe = Math.max(0, Number(bytes) || 0);
+    if (safe === 0) return '0 MB';
+    const mb = safe / (1024 ** 2);
+    const gb = safe / (1024 ** 3);
+    const tb = safe / (1024 ** 4);
+    const pb = safe / (1024 ** 5);
+    if (pb >= 1) return `${Math.ceil(pb)} PB`;
+    if (tb >= 1) return `${Math.ceil(tb)} TB`;
+    if (gb >= 1) return `${Math.ceil(gb)} GB`;
+    return `${Math.ceil(mb)} MB`;
+};

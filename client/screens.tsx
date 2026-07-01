@@ -6,7 +6,7 @@ import { SettingsDashboard } from './settings/SettingsDashboard';
 import { LibraryMaintenancePanel } from './maintenance/LibraryMaintenancePanel';
 import { appConfirm } from './shared/confirm';
 import { apiFetch } from './shared/api';
-import { formatDate, getDaysUntilExpiry, addMonths, addYears, formatTime, formatEventName, formatDateTime, hexToRgb } from './shared/format';
+import { formatDate, getDaysUntilExpiry, addMonths, addYears, formatTime, formatEventName, formatDateTime, hexToRgb, formatSizeCeil } from './shared/format';
 import { CustomSelect, ConfirmModal, StyledCheckbox } from './shared/ui';
 import { Loader, ToastContainer, pushToast } from './shared/toast';
 import type { User, PlexConfig, AppSettings, PlexServer, ToastMessage, DeletedUser, AuditEntry, UserStatus } from './shared/types';
@@ -1622,6 +1622,7 @@ export const AnalyticsDashboard: React.FC<{ isAdmin: boolean, sessionInfo: any }
             activeLibraries: number,
             concentrationPct: number,
             totalCatalogItems: number,
+            totalCatalogBytes?: number,
             sizeGB: number,
             fourKPercent: number,
             healthLabel: string
@@ -1810,8 +1811,9 @@ export const AnalyticsDashboard: React.FC<{ isAdmin: boolean, sessionInfo: any }
                     {libraryHealth && (
                         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                             <div className="bg-card/50 backdrop-blur-md rounded-xl p-4 border border-border">
-                                <p className="text-muted text-xs uppercase tracking-wider font-bold mb-1">Library Health</p>
+                                <p className="text-muted text-xs uppercase tracking-wider font-bold mb-1">Library Balance</p>
                                 <p className="text-xl font-black text-plex">{libraryHealth.healthLabel}</p>
+                                <p className="text-[10px] text-muted mt-1 leading-snug">How evenly viewing is spread across libraries — not server health.</p>
                             </div>
                             <div className="bg-card/50 backdrop-blur-md rounded-xl p-4 border border-border">
                                 <p className="text-muted text-xs uppercase tracking-wider font-bold mb-1">Active Libraries</p>
@@ -1820,7 +1822,7 @@ export const AnalyticsDashboard: React.FC<{ isAdmin: boolean, sessionInfo: any }
                             <div className="bg-card/50 backdrop-blur-md rounded-xl p-4 border border-border">
                                 <p className="text-muted text-xs uppercase tracking-wider font-bold mb-1">Catalog Size</p>
                                 <p className="text-xl font-black text-text">{libraryHealth.totalCatalogItems.toLocaleString()}</p>
-                                <p className="text-[11px] text-muted">{libraryHealth.sizeGB} GB</p>
+                                <p className="text-[11px] text-muted">{formatSizeCeil(libraryHealth.totalCatalogBytes ?? libraryHealth.sizeGB * 1024 ** 3)}</p>
                             </div>
                             <div className="bg-card/50 backdrop-blur-md rounded-xl p-4 border border-border">
                                 <p className="text-muted text-xs uppercase tracking-wider font-bold mb-1">Usage Concentration</p>

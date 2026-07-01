@@ -3821,11 +3821,11 @@ const summarizeLibraryHealth = (topLibraries = [], stats = {}) => {
     const sizeGB = Number((totalCatalogBytes / (1024 * 1024 * 1024)).toFixed(1));
     const fourKPercent = toNumber(stats.fourKPercent, 0);
 
-    let healthLabel = 'Needs Attention';
+    let healthLabel = 'Concentrated';
     if (activeLibraries >= 5 && concentrationPct <= 55 && fourKPercent >= 20) {
         healthLabel = 'Excellent';
     } else if (activeLibraries >= 3 && concentrationPct <= 70) {
-        healthLabel = 'Healthy';
+        healthLabel = 'Balanced';
     }
 
     return {
