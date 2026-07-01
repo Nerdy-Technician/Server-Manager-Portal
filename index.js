@@ -764,7 +764,7 @@ const syncUsers = async (config) => {
             // Update existing user with latest info from Plex, but keep local expiry/trial data.
             return { ...existingUser, id: pUser.id, username: pUser.username, email: pUser.email, thumb: pUser.thumb, plexAccessStatus: 'active' };
         }
-        log(`New user found: ${pUser.username}. Setting default 1-day expiry.`);
+        log(`New user found: ${pUser.username}. Adding with unlimited access.`);
         appendAuditLog('plex_sync_new_user_added', null, pUser).catch(() => { });
         return {
             id: pUser.id,
@@ -772,7 +772,7 @@ const syncUsers = async (config) => {
             email: pUser.email,
             thumb: pUser.thumb,
             joiningDate: new Date().toISOString(),
-            expiryDate: addDays(new Date(), 1).toISOString(),
+            expiryDate: null,
             plexAccessStatus: 'active',
             isTrial: false
         };
