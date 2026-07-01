@@ -402,10 +402,20 @@ export const SettingsDashboard: React.FC = () => {
         return renderConfigPill(configured);
     };
 
-    const trackedIntegrationKeys = ['plexConfigured', 'smtpConfigured', 'sonarrConfigured', 'radarrConfigured', 'tautulliConfigured', 'requestAppConfigured'] as const;
+    const renderOptionalIntegrationPill = (configured: boolean) => {
+        if (configured) {
+            return renderConfigPill(true);
+        }
+        return (
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold bg-white/10 text-muted border border-border">
+                Optional
+            </span>
+        );
+    };
+
+    const trackedIntegrationKeys = ['plexConfigured', 'sonarrConfigured', 'radarrConfigured', 'tautulliConfigured', 'requestAppConfigured'] as const;
     const integrationLabels: Record<(typeof trackedIntegrationKeys)[number], string> = {
         plexConfigured: 'Plex',
-        smtpConfigured: 'SMTP',
         sonarrConfigured: 'Sonarr',
         radarrConfigured: 'Radarr',
         tautulliConfigured: 'Tautulli',
@@ -1561,7 +1571,7 @@ export const SettingsDashboard: React.FC = () => {
                                         <div><strong>Node:</strong> {diagnostics?.app?.nodeVersion || 'n/a'}</div>
                                         <div><strong>Memory:</strong> {diagnostics?.app?.memoryRssMB || 0} MB</div>
                                         <div className="flex items-center justify-between gap-2"><strong>Plex</strong>{renderConfigPill(!!diagnostics?.integrations?.plexConfigured)}</div>
-                                        <div className="flex items-center justify-between gap-2"><strong>SMTP</strong>{renderConfigPill(!!diagnostics?.integrations?.smtpConfigured)}</div>
+                                        <div className="flex items-center justify-between gap-2"><strong>SMTP</strong>{renderOptionalIntegrationPill(!!diagnostics?.integrations?.smtpConfigured)}</div>
                                         <div className="flex items-center justify-between gap-2"><strong>Sonarr</strong>{renderConfigPill(!!diagnostics?.integrations?.sonarrConfigured)}</div>
                                         <div className="flex items-center justify-between gap-2"><strong>Radarr</strong>{renderConfigPill(!!diagnostics?.integrations?.radarrConfigured)}</div>
                                         <div className="flex items-center justify-between gap-2"><strong>Tautulli</strong>{renderConfigPill(!!diagnostics?.integrations?.tautulliConfigured)}</div>
