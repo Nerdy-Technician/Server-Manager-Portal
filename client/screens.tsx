@@ -2888,9 +2888,10 @@ export const Login: React.FC<{ onLoginSuccess: () => void, publicConfig?: any }>
                 method: 'POST',
                 body: JSON.stringify({ pinId })
             }).then(() => {
-                onLoginSuccess();
+                return Promise.resolve(onLoginSuccess());
             }).catch(e => {
                 setError(e.message || 'Login failed');
+            }).finally(() => {
                 setIsLoading(false);
             });
         }

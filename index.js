@@ -586,15 +586,28 @@ const apiFetch = (url, token, options = {}) => {
 };
 
 let cachedAdminId = null;
+const getPlexAccountIdForToken = async (plexToken) => {
+    if (!plexToken) return null;
+    try {
+        const res = await apiFetch('https://plex.tv/api/v2/user', plexToken);
+        if (!res.ok) return null;
+        const data = await res.json();
+        return data.id ? String(data.id) : null;
+    } catch (e) {
+        log('Failed to fetch Plex account id: ' + e.message);
+        return null;
+    }
+};
+
 const getAdminId = async (config) => {
+    if (config?.adminPlexId) return String(config.adminPlexId);
     if (cachedAdminId) return cachedAdminId;
     if (!config || !config.plexToken) return null;
     try {
-        const res = await apiFetch('https://plex.tv/api/v2/user', config.plexToken);
-        if (!res.ok) return null;
-        const data = await res.json();
-        cachedAdminId = data.id;
-        return data.id;
+        const adminId = await getPlexAccountIdForToken(config.plexToken);
+        if (!adminId) return null;
+        cachedAdminId = adminId;
+        return adminId;
     } catch (e) {
         log('Failed to fetch admin info: ' + e.message);
         return null;
@@ -1260,6 +1273,11 @@ app.post('/api/auth/plex/callback', authRateLimit, async (req, res) => {
             // returns different id shapes. Owning the configured server is
             // enough to establish portal admin access.
             isAdmin = await verifyInitialSetupPlexOwner(pinData.authToken, config.serverIdentifier);
+            if (isAdmin && String(config.adminPlexId || '') !== String(userData.id)) {
+                config.adminPlexId = String(userData.id);
+                await saveFile(CONFIG_PATH, config);
+                cachedAdminId = String(userData.id);
+            }
         }
         const deletedUsers = await loadFile(DELETED_USERS_PATH, []);
 
@@ -1648,6 +1666,10 @@ app.post('/api/config', setupRateLimit, async (req, res) => {
         autoBackupRetentionCount: Math.max(1, parseInt(autoBackupRetentionCount, 10) || 10),
         maintenanceExperimentalEnabled: maintenanceExperimentalEnabled !== undefined ? !!maintenanceExperimentalEnabled : !!existingConfig.maintenanceExperimentalEnabled
     };
+    const adminPlexId = await getPlexAccountIdForToken(config.plexToken);
+    if (adminPlexId) {
+        config.adminPlexId = adminPlexId;
+    }
     await saveFile(CONFIG_PATH, config);
     cachedAdminId = null;
     // Invalidate caches tied to the Plex token/server so changes take effect immediately.
