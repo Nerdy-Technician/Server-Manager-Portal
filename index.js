@@ -2588,13 +2588,14 @@ const fetchOwnedPlexServers = async (plexToken) => {
     }).filter(Boolean);
 };
 
-const assertInitialSetupAccess = async (req, res) => {
+const assertInitialSetupAccess = async (req, res, options = {}) => {
     const existingConfig = await loadFile(CONFIG_PATH, {});
     const isConfigured = !!(existingConfig?.plexToken && existingConfig?.serverIdentifier);
     if (isConfigured) {
         res.status(403).json({ error: 'Portal is already configured.' });
         return false;
     }
+    if (options.allowUnconfigured === true) return true;
     if (canRunInitialSetup(req)) return true;
     const sessionToken = req.cookies && req.cookies.session;
     if (sessionToken) {
@@ -2608,7 +2609,7 @@ const assertInitialSetupAccess = async (req, res) => {
 };
 
 app.post('/api/setup/plex/callback', setupRateLimit, authRateLimit, async (req, res) => {
-    if (!(await assertInitialSetupAccess(req, res))) return;
+    if (!(await assertInitialSetupAccess(req, res, { allowUnconfigured: true }))) return;
     const { pinId } = req.body;
     if (!pinId) return res.status(400).json({ error: 'pinId is required' });
 
