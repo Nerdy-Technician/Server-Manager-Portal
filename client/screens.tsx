@@ -3750,6 +3750,85 @@ const WrapUpModal: React.FC<{ metric: string; analytics: any; days: number | str
     );
 };
 
+const DiscoverPosterCard: React.FC<{
+    item: { title: string; thumb?: string; plexUrl: string; tags?: string[]; year?: number | string; parentTitle?: string };
+    aspect?: '2/3' | 'square';
+    overlay?: React.ReactNode;
+    variant?: 'discover' | 'home';
+    className?: string;
+    footer?: React.ReactNode;
+    showQualityBadges?: boolean;
+}> = ({ item, aspect = '2/3', overlay, variant = 'discover', className = 'w-full', footer, showQualityBadges = true }) => {
+    const posterShell = variant === 'home'
+        ? 'relative rounded-xl overflow-hidden bg-background border border-white/5 transition-[box-shadow,border-color] duration-300 group-hover:shadow-xl group-hover:border-plex/50'
+        : 'relative rounded-lg overflow-hidden border border-border group-hover:border-plex transition-colors shadow-md';
+
+    return (
+        <a
+            href={item.plexUrl}
+            target="_blank"
+            rel="noreferrer"
+            className={`flex flex-col gap-2 group ${className}`}
+            style={{ textDecoration: 'none', color: 'inherit' }}
+        >
+            <div className={`${posterShell} ${aspect === 'square' ? 'aspect-square' : 'aspect-[2/3]'} w-full`}>
+                {item.thumb ? (
+                    <img
+                        src={`/api/plex/image?path=${encodeURIComponent(item.thumb)}&width=300&height=${aspect === 'square' ? 300 : 450}`}
+                        alt={item.title}
+                        loading="lazy"
+                        className={`w-full h-full object-cover ${variant === 'home' ? 'transition-[transform,opacity] duration-300 group-hover:scale-105 group-hover:opacity-80' : ''}`}
+                    />
+                ) : (
+                    <div className="w-full h-full flex items-center justify-center p-4 text-center bg-white/5">
+                        <span className="text-xs font-bold text-muted line-clamp-3">{item.title}</span>
+                    </div>
+                )}
+                {overlay}
+                {showQualityBadges && item.tags && item.tags.length > 0 && (
+                    <div className="absolute bottom-1 left-1 right-1 flex flex-wrap gap-0.5 pointer-events-none z-10">
+                        {item.tags.map((tag) => (
+                            <span key={tag} className="text-[8px] font-bold px-1 py-px rounded bg-black/85 text-white/95 border border-white/15 uppercase tracking-wide">
+                                {tag}
+                            </span>
+                        ))}
+                    </div>
+                )}
+            </div>
+            {footer ?? (
+                <div className={`text-xs font-medium line-clamp-2 leading-tight ${variant === 'home' ? 'text-text text-left px-1' : 'text-white text-center mt-1'}`}>
+                    {item.title}
+                </div>
+            )}
+        </a>
+    );
+};
+
+const discoverViewsOverlay = (views: number) => (
+    <div className="absolute top-2 right-2 bg-black/80 text-plex text-xs font-bold px-2 py-1 rounded backdrop-blur-md border border-plex/30 z-10 pointer-events-none">
+        {views} Views
+    </div>
+);
+
+const TrendingDiscoverSection: React.FC<{ title: string; items: any[]; limit: number; showQualityBadges?: boolean }> = ({ title, items, limit, showQualityBadges = true }) => {
+    if (!items?.length) return null;
+    return (
+        <div className="flex flex-col">
+            <h3 className="text-plex text-sm uppercase tracking-[2px] mb-6 font-bold border-b border-white/10 pb-2">{title}</h3>
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:[grid-template-columns:repeat(auto-fill,minmax(150px,150px))] md:justify-start gap-3 w-full pb-4">
+                {items.slice(0, limit).map((item, i) => (
+                    <DiscoverPosterCard
+                        key={i}
+                        item={{ ...item, plexUrl: item.plexUrl || '#' }}
+                        overlay={discoverViewsOverlay(item.views)}
+                        showQualityBadges={showQualityBadges}
+                    />
+                ))}
+            </div>
+        </div>
+    );
+};
+
 export const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onLogout: () => void; refreshSession: () => void; onViewAdmin: () => void; onViewStatus: () => void; onViewDashboard: () => void; onViewSettings?: () => void; onViewLogs?: () => void }> = ({ sessionInfo, publicConfig, onLogout, refreshSession, onViewAdmin, onViewStatus, onViewDashboard, onViewSettings, onViewLogs }) => {
     const [isLoading, setIsLoading] = useState(false);
     const [toast, setToast] = useState<ToastMessage | null>(null);
@@ -3769,6 +3848,7 @@ export const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onL
     const [selectedMetric, setSelectedMetric] = useState<string | null>(null);
 
     const user = sessionInfo.account;
+    const showQualityBadges = publicConfig?.showPosterQualityBadges !== false;
     const [optOutNewsletter, setOptOutNewsletter] = useState(user?.optOutNewsletter || false);
 
     const handleToggleNewsletter = async () => {
@@ -4538,9 +4618,9 @@ export const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onL
                                             <div className="grid grid-cols-4 md:grid-cols-8 gap-2 md:gap-3">
                                                 {analytics.topWatched.slice(topContentPage * TOP_CONTENT_PAGE_SIZE, (topContentPage + 1) * TOP_CONTENT_PAGE_SIZE).map((item: any) => (
                                                     <a key={item.key} href={item.plexUrl} target="_blank" rel="noreferrer" className="group flex flex-col gap-1.5">
-                                                        <div className="relative rounded-lg overflow-hidden aspect-[2/3] bg-background border border-white/5 transition-transform group-hover:scale-105 group-hover:shadow-xl group-hover:border-plex/50">
+                                                        <div className="relative rounded-lg overflow-hidden aspect-[2/3] bg-background border border-white/5 transition-[box-shadow,border-color] duration-300 group-hover:shadow-xl group-hover:border-plex/50">
                                                             {item.thumbUrl ? (
-                                                                <img src={item.thumbUrl} alt={item.title} className="w-full h-full object-cover transition-opacity group-hover:opacity-80" />
+                                                                <img src={item.thumbUrl} alt={item.title} className="w-full h-full object-cover transition-[transform,opacity] duration-300 group-hover:scale-105 group-hover:opacity-80" />
                                                             ) : (
                                                                 <div className="w-full h-full flex items-center justify-center p-4 text-center bg-white/5">
                                                                     <span className="text-xs font-bold text-muted line-clamp-3">{item.title}</span>
@@ -4577,21 +4657,19 @@ export const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onL
                             <h3 className="text-xl font-bold text-text mb-4">Recently Added Movies</h3>
                             <div className="flex overflow-x-auto gap-4 pb-4 snap-x hide-scrollbar scroll-smooth">
                                 {dashboardData.recentMovies.map((item: any, idx: number) => (
-                                    <a key={idx} href={item.plexUrl} target="_blank" rel="noreferrer" className="snap-start shrink-0 w-32 md:w-40 group flex flex-col gap-2">
-                                        <div className="relative rounded-xl overflow-hidden aspect-[2/3] bg-background border border-white/5 transition-transform group-hover:scale-105 group-hover:shadow-xl group-hover:border-plex/50">
-                                            {item.thumb ? (
-                                                <img src={`/api/plex/image?path=${encodeURIComponent(item.thumb)}&width=300&height=450`} alt={item.title} className="w-full h-full object-cover transition-opacity group-hover:opacity-80" />
-                                            ) : (
-                                                <div className="w-full h-full flex items-center justify-center p-4 text-center bg-white/5">
-                                                    <span className="text-xs font-bold text-muted line-clamp-3">{item.title}</span>
-                                                </div>
-                                            )}
-                                        </div>
-                                        <div className="flex flex-col px-1">
-                                            <p className="text-xs font-bold text-text truncate group-hover:text-plex transition-colors">{item.title}</p>
-                                            {item.year && <p className="text-[10px] text-muted font-semibold mt-0.5">{item.year}</p>}
-                                        </div>
-                                    </a>
+                                    <DiscoverPosterCard
+                                        key={idx}
+                                        variant="home"
+                                        className="snap-start shrink-0 w-32 md:w-40"
+                                        item={item}
+                                        showQualityBadges={showQualityBadges}
+                                        footer={(
+                                            <div className="flex flex-col px-1">
+                                                <p className="text-xs font-bold text-text truncate group-hover:text-plex transition-colors">{item.title}</p>
+                                                {item.year && <p className="text-[10px] text-muted font-semibold mt-0.5">{item.year}</p>}
+                                            </div>
+                                        )}
+                                    />
                                 ))}
                             </div>
                         </div>
@@ -4602,21 +4680,19 @@ export const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onL
                             <h3 className="text-xl font-bold text-text mb-4">Recently Added TV Shows</h3>
                             <div className="flex overflow-x-auto gap-4 pb-4 snap-x hide-scrollbar scroll-smooth">
                                 {dashboardData.recentShows.map((item: any, idx: number) => (
-                                    <a key={idx} href={item.plexUrl} target="_blank" rel="noreferrer" className="snap-start shrink-0 w-32 md:w-40 group flex flex-col gap-2">
-                                        <div className="relative rounded-xl overflow-hidden aspect-[2/3] bg-background border border-white/5 transition-transform group-hover:scale-105 group-hover:shadow-xl group-hover:border-plex/50">
-                                            {item.thumb ? (
-                                                <img src={`/api/plex/image?path=${encodeURIComponent(item.thumb)}&width=300&height=450`} alt={item.title} className="w-full h-full object-cover transition-opacity group-hover:opacity-80" />
-                                            ) : (
-                                                <div className="w-full h-full flex items-center justify-center p-4 text-center bg-white/5">
-                                                    <span className="text-xs font-bold text-muted line-clamp-3">{item.title}</span>
-                                                </div>
-                                            )}
-                                        </div>
-                                        <div className="flex flex-col px-1">
-                                            <p className="text-xs font-bold text-text truncate group-hover:text-plex transition-colors">{item.title}</p>
-                                            {item.year && <p className="text-[10px] text-muted font-semibold mt-0.5">{item.year}</p>}
-                                        </div>
-                                    </a>
+                                    <DiscoverPosterCard
+                                        key={idx}
+                                        variant="home"
+                                        className="snap-start shrink-0 w-32 md:w-40"
+                                        item={item}
+                                        showQualityBadges={showQualityBadges}
+                                        footer={(
+                                            <div className="flex flex-col px-1">
+                                                <p className="text-xs font-bold text-text truncate group-hover:text-plex transition-colors">{item.title}</p>
+                                                {item.year && <p className="text-[10px] text-muted font-semibold mt-0.5">{item.year}</p>}
+                                            </div>
+                                        )}
+                                    />
                                 ))}
                             </div>
                         </div>
@@ -4627,21 +4703,20 @@ export const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onL
                             <h3 className="text-xl font-bold text-text mb-4">Recently Added Music</h3>
                             <div className="flex overflow-x-auto gap-4 pb-4 snap-x hide-scrollbar scroll-smooth">
                                 {dashboardData.recentMusic.map((item: any, idx: number) => (
-                                    <a key={idx} href={item.plexUrl} target="_blank" rel="noreferrer" className="snap-start shrink-0 w-32 md:w-40 group flex flex-col gap-2">
-                                        <div className="relative rounded-xl overflow-hidden aspect-square bg-background border border-white/5 transition-transform group-hover:scale-105 group-hover:shadow-xl group-hover:border-plex/50">
-                                            {item.thumb ? (
-                                                <img src={`/api/plex/image?path=${encodeURIComponent(item.thumb)}&width=300&height=300`} alt={item.title} className="w-full h-full object-cover transition-opacity group-hover:opacity-80" />
-                                            ) : (
-                                                <div className="w-full h-full flex items-center justify-center p-4 text-center bg-white/5">
-                                                    <span className="text-xs font-bold text-muted line-clamp-3">{item.title}</span>
-                                                </div>
-                                            )}
-                                        </div>
-                                        <div className="flex flex-col px-1">
-                                            <p className="text-xs font-bold text-text truncate group-hover:text-plex transition-colors">{item.title}</p>
-                                            {item.parentTitle && <p className="text-[10px] text-muted font-semibold mt-0.5 truncate">{item.parentTitle}</p>}
-                                        </div>
-                                    </a>
+                                    <DiscoverPosterCard
+                                        key={idx}
+                                        variant="home"
+                                        aspect="square"
+                                        className="snap-start shrink-0 w-32 md:w-40"
+                                        item={item}
+                                        showQualityBadges={showQualityBadges}
+                                        footer={(
+                                            <div className="flex flex-col px-1">
+                                                <p className="text-xs font-bold text-text truncate group-hover:text-plex transition-colors">{item.title}</p>
+                                                {item.parentTitle && <p className="text-[10px] text-muted font-semibold mt-0.5 truncate">{item.parentTitle}</p>}
+                                            </div>
+                                        )}
+                                    />
                                 ))}
                             </div>
                         </div>
@@ -5091,34 +5166,6 @@ const StreamDetailsModal: React.FC<{ session: any, onClose: () => void, isAdmin?
     );
 };
 
-const DiscoverPosterCard: React.FC<{
-    item: { title: string; thumb?: string; plexUrl: string; tags?: string[] };
-    aspect?: '2/3' | 'square';
-    overlay?: React.ReactNode;
-}> = ({ item, aspect = '2/3', overlay }) => (
-    <a href={item.plexUrl} target="_blank" rel="noreferrer" className="flex flex-col w-full gap-2 group" style={{ textDecoration: 'none', color: 'inherit' }}>
-        <div className={`relative ${aspect === 'square' ? 'aspect-square' : 'aspect-[2/3]'} w-full rounded-lg overflow-hidden border border-border group-hover:border-plex transition-colors shadow-md`}>
-            <img
-                src={`/api/plex/image?path=${encodeURIComponent(item.thumb || '')}&width=300&height=${aspect === 'square' ? 300 : 450}`}
-                alt={item.title}
-                loading="lazy"
-                className="w-full h-full object-cover"
-            />
-            {overlay}
-            {item.tags && item.tags.length > 0 && (
-                <div className="absolute bottom-1 left-1 right-1 flex flex-wrap gap-0.5 pointer-events-none z-10">
-                    {item.tags.map((tag) => (
-                        <span key={tag} className="text-[8px] font-bold px-1 py-px rounded bg-black/85 text-white/95 border border-white/15 uppercase tracking-wide">
-                            {tag}
-                        </span>
-                    ))}
-                </div>
-            )}
-        </div>
-        <div className="text-white text-xs font-medium text-center mt-1 line-clamp-2 leading-tight">{item.title}</div>
-    </a>
-);
-
 export const LibraryDashboard: React.FC<{ onBack: () => void, isAdmin?: boolean, publicConfig?: any }> = ({ onBack, isAdmin, publicConfig }) => {
     const [dashboardData, setDashboardData] = useState<{ activeSessions: any[], recentMovies: any[], recentShows: any[], recentMusic: any[] } | null>(null);
     const [trendingStats, setTrendingStats] = useState<{ trending7Days: any[], movies30Days: any[], shows30Days: any[], top365Days: any[], allTime: any[], weekendWarriors: any[], nightOwls: any[], retroHits: any[], cultClassics: any[] } | null>(null);
@@ -5129,6 +5176,7 @@ export const LibraryDashboard: React.FC<{ onBack: () => void, isAdmin?: boolean,
         return saved ? Number(saved) : 12;
     });
     const [selectedSession, setSelectedSession] = useState<any | null>(null);
+    const showQualityBadges = publicConfig?.showPosterQualityBadges !== false;
 
     useEffect(() => {
         localStorage.setItem('discoverRecentLimit', String(recentLimit));
@@ -5330,7 +5378,7 @@ export const LibraryDashboard: React.FC<{ onBack: () => void, isAdmin?: boolean,
                         <h2 className="text-plex text-sm uppercase tracking-[2px] mb-6 font-bold border-b border-white/10 pb-2">RECENTLY ADDED MOVIES</h2>
                         <div className="grid grid-cols-3 sm:grid-cols-4 md:[grid-template-columns:repeat(auto-fill,minmax(150px,150px))] md:justify-start gap-3 w-full pb-4">
                             {dashboardData && dashboardData.recentMovies.slice(0, recentLimit).map((item, i) => (
-                                <DiscoverPosterCard key={i} item={item} />
+                                <DiscoverPosterCard key={i} item={item} showQualityBadges={showQualityBadges} />
                             ))}
                             {(!dashboardData || dashboardData.recentMovies.length === 0) && <div className="text-center text-muted p-8 border border-dashed border-border rounded-xl mt-4 w-full col-span-full">No recent movies</div>}
                         </div>
@@ -5341,7 +5389,7 @@ export const LibraryDashboard: React.FC<{ onBack: () => void, isAdmin?: boolean,
                         <h2 className="text-plex text-sm uppercase tracking-[2px] mb-6 font-bold border-b border-white/10 pb-2">RECENTLY ADDED TV SHOWS</h2>
                         <div className="grid grid-cols-3 sm:grid-cols-4 md:[grid-template-columns:repeat(auto-fill,minmax(150px,150px))] md:justify-start gap-3 w-full pb-4">
                             {dashboardData && dashboardData.recentShows.slice(0, recentLimit).map((item, i) => (
-                                <DiscoverPosterCard key={i} item={item} />
+                                <DiscoverPosterCard key={i} item={item} showQualityBadges={showQualityBadges} />
                             ))}
                             {(!dashboardData || dashboardData.recentShows.length === 0) && <div className="text-center text-muted p-8 border border-dashed border-border rounded-xl mt-4 w-full col-span-full">No recent TV shows</div>}
                         </div>
@@ -5352,7 +5400,7 @@ export const LibraryDashboard: React.FC<{ onBack: () => void, isAdmin?: boolean,
                         <h2 className="text-plex text-sm uppercase tracking-[2px] mb-6 font-bold border-b border-white/10 pb-2">RECENTLY ADDED MUSIC</h2>
                         <div className="grid grid-cols-3 sm:grid-cols-4 md:[grid-template-columns:repeat(auto-fill,minmax(150px,150px))] md:justify-start gap-3 w-full pb-4">
                             {dashboardData && dashboardData.recentMusic.slice(0, recentLimit).map((item, i) => (
-                                <DiscoverPosterCard key={i} item={item} aspect="square" />
+                                <DiscoverPosterCard key={i} item={item} aspect="square" showQualityBadges={showQualityBadges} />
                             ))}
                             {(!dashboardData || dashboardData.recentMusic.length === 0) && <div className="text-center text-muted p-8 border border-dashed border-border rounded-xl mt-4 w-full col-span-full">No recent music</div>}
                         </div>
@@ -5367,185 +5415,15 @@ export const LibraryDashboard: React.FC<{ onBack: () => void, isAdmin?: boolean,
                             <p className="text-muted text-sm max-w-xl">A look at what the community is currently watching across the entire server.</p>
                         </div>
 
-                        {/* Trending 7 Days */}
-                        {trendingStats.trending7Days?.length > 0 && (
-                            <div className="flex flex-col">
-                                <h3 className="text-plex text-sm uppercase tracking-[2px] mb-6 font-bold border-b border-white/10 pb-2">🔥 Trending This Week</h3>
-                                <div className="grid grid-cols-3 sm:grid-cols-4 md:[grid-template-columns:repeat(auto-fill,minmax(150px,150px))] md:justify-start gap-3 w-full pb-4">
-                                    {trendingStats.trending7Days.slice(0, recentLimit).map((item, i) => (
-                                        <a key={i} href={item.plexUrl || '#'} target="_blank" rel="noreferrer" className="flex flex-col w-full gap-2 group" style={{ textDecoration: 'none', color: 'inherit' }}>
-                                            <div className="relative aspect-[2/3] w-full rounded-lg overflow-hidden border border-border group-hover:border-plex transition-colors shadow-md">
-                                                <img src={`/api/plex/image?path=${encodeURIComponent(item.thumb)}&width=300&height=450`} alt={item.title} loading="lazy" className="w-full h-full object-cover" />
-                                                <div className="absolute top-2 right-2 bg-black/80 text-plex text-xs font-bold px-2 py-1 rounded backdrop-blur-md border border-plex/30">
-                                                    {item.views} Views
-                                                </div>
-                                            </div>
-                                            <div className="text-white text-xs font-medium text-center mt-1 line-clamp-2 leading-tight">{item.title}</div>
-                                        </a>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Most Watched Movies 30 Days */}
-                        {trendingStats.movies30Days?.length > 0 && (
-                            <div className="flex flex-col">
-                                <h3 className="text-plex text-sm uppercase tracking-[2px] mb-6 font-bold border-b border-white/10 pb-2">🍿 Most Watched Movies (This Month)</h3>
-                                <div className="grid grid-cols-3 sm:grid-cols-4 md:[grid-template-columns:repeat(auto-fill,minmax(150px,150px))] md:justify-start gap-3 w-full pb-4">
-                                    {trendingStats.movies30Days.slice(0, recentLimit).map((item, i) => (
-                                        <a key={i} href={item.plexUrl || '#'} target="_blank" rel="noreferrer" className="flex flex-col w-full gap-2 group" style={{ textDecoration: 'none', color: 'inherit' }}>
-                                            <div className="relative aspect-[2/3] w-full rounded-lg overflow-hidden border border-border group-hover:border-plex transition-colors shadow-md">
-                                                <img src={`/api/plex/image?path=${encodeURIComponent(item.thumb)}&width=300&height=450`} alt={item.title} loading="lazy" className="w-full h-full object-cover" />
-                                                <div className="absolute top-2 right-2 bg-black/80 text-plex text-xs font-bold px-2 py-1 rounded backdrop-blur-md border border-plex/30">
-                                                    {item.views} Views
-                                                </div>
-                                            </div>
-                                            <div className="text-white text-xs font-medium text-center mt-1 line-clamp-2 leading-tight">{item.title}</div>
-                                        </a>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Most Watched Shows 30 Days */}
-                        {trendingStats.shows30Days?.length > 0 && (
-                            <div className="flex flex-col">
-                                <h3 className="text-plex text-sm uppercase tracking-[2px] mb-6 font-bold border-b border-white/10 pb-2">📺 Most Watched Shows (This Month)</h3>
-                                <div className="grid grid-cols-3 sm:grid-cols-4 md:[grid-template-columns:repeat(auto-fill,minmax(150px,150px))] md:justify-start gap-3 w-full pb-4">
-                                    {trendingStats.shows30Days.slice(0, recentLimit).map((item, i) => (
-                                        <a key={i} href={item.plexUrl || '#'} target="_blank" rel="noreferrer" className="flex flex-col w-full gap-2 group" style={{ textDecoration: 'none', color: 'inherit' }}>
-                                            <div className="relative aspect-[2/3] w-full rounded-lg overflow-hidden border border-border group-hover:border-plex transition-colors shadow-md">
-                                                <img src={`/api/plex/image?path=${encodeURIComponent(item.thumb)}&width=300&height=450`} alt={item.title} loading="lazy" className="w-full h-full object-cover" />
-                                                <div className="absolute top-2 right-2 bg-black/80 text-plex text-xs font-bold px-2 py-1 rounded backdrop-blur-md border border-plex/30">
-                                                    {item.views} Views
-                                                </div>
-                                            </div>
-                                            <div className="text-white text-xs font-medium text-center mt-1 line-clamp-2 leading-tight">{item.title}</div>
-                                        </a>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Top of the Year */}
-                        {trendingStats.top365Days?.length > 0 && (
-                            <div className="flex flex-col">
-                                <h3 className="text-plex text-sm uppercase tracking-[2px] mb-6 font-bold border-b border-white/10 pb-2">🏆 Top of the Year</h3>
-                                <div className="grid grid-cols-3 sm:grid-cols-4 md:[grid-template-columns:repeat(auto-fill,minmax(150px,150px))] md:justify-start gap-3 w-full pb-4">
-                                    {trendingStats.top365Days.slice(0, recentLimit).map((item, i) => (
-                                        <a key={i} href={item.plexUrl || '#'} target="_blank" rel="noreferrer" className="flex flex-col w-full gap-2 group" style={{ textDecoration: 'none', color: 'inherit' }}>
-                                            <div className="relative aspect-[2/3] w-full rounded-lg overflow-hidden border border-border group-hover:border-plex transition-colors shadow-md">
-                                                <img src={`/api/plex/image?path=${encodeURIComponent(item.thumb)}&width=300&height=450`} alt={item.title} loading="lazy" className="w-full h-full object-cover" />
-                                                <div className="absolute top-2 right-2 bg-black/80 text-plex text-xs font-bold px-2 py-1 rounded backdrop-blur-md border border-plex/30">
-                                                    {item.views} Views
-                                                </div>
-                                            </div>
-                                            <div className="text-white text-xs font-medium text-center mt-1 line-clamp-2 leading-tight">{item.title}</div>
-                                        </a>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-
-                        {/* All Time Favorites */}
-                        {trendingStats.allTime?.length > 0 && (
-                            <div className="flex flex-col">
-                                <h3 className="text-plex text-sm uppercase tracking-[2px] mb-6 font-bold border-b border-white/10 pb-2">🌟 All Time Favorites</h3>
-                                <div className="grid grid-cols-3 sm:grid-cols-4 md:[grid-template-columns:repeat(auto-fill,minmax(150px,150px))] md:justify-start gap-3 w-full pb-4">
-                                    {trendingStats.allTime.slice(0, recentLimit).map((item, i) => (
-                                        <a key={i} href={item.plexUrl || '#'} target="_blank" rel="noreferrer" className="flex flex-col w-full gap-2 group" style={{ textDecoration: 'none', color: 'inherit' }}>
-                                            <div className="relative aspect-[2/3] w-full rounded-lg overflow-hidden border border-border group-hover:border-plex transition-colors shadow-md">
-                                                <img src={`/api/plex/image?path=${encodeURIComponent(item.thumb)}&width=300&height=450`} alt={item.title} loading="lazy" className="w-full h-full object-cover" />
-                                                <div className="absolute top-2 right-2 bg-black/80 text-plex text-xs font-bold px-2 py-1 rounded backdrop-blur-md border border-plex/30">
-                                                    {item.views} Views
-                                                </div>
-                                            </div>
-                                            <div className="text-white text-xs font-medium text-center mt-1 line-clamp-2 leading-tight">{item.title}</div>
-                                        </a>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Weekend Warriors */}
-                        {trendingStats.weekendWarriors?.length > 0 && (
-                            <div className="flex flex-col">
-                                <h3 className="text-plex text-sm uppercase tracking-[2px] mb-6 font-bold border-b border-white/10 pb-2">🍿 Weekend Warriors</h3>
-                                <div className="grid grid-cols-3 sm:grid-cols-4 md:[grid-template-columns:repeat(auto-fill,minmax(150px,150px))] md:justify-start gap-3 w-full pb-4">
-                                    {trendingStats.weekendWarriors.slice(0, recentLimit).map((item, i) => (
-                                        <a key={i} href={item.plexUrl || '#'} target="_blank" rel="noreferrer" className="flex flex-col w-full gap-2 group" style={{ textDecoration: 'none', color: 'inherit' }}>
-                                            <div className="relative aspect-[2/3] w-full rounded-lg overflow-hidden border border-border group-hover:border-plex transition-colors shadow-md">
-                                                <img src={`/api/plex/image?path=${encodeURIComponent(item.thumb)}&width=300&height=450`} alt={item.title} loading="lazy" className="w-full h-full object-cover" />
-                                                <div className="absolute top-2 right-2 bg-black/80 text-plex text-xs font-bold px-2 py-1 rounded backdrop-blur-md border border-plex/30">
-                                                    {item.views} Views
-                                                </div>
-                                            </div>
-                                            <div className="text-white text-xs font-medium text-center mt-1 line-clamp-2 leading-tight">{item.title}</div>
-                                        </a>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Night Owl Club */}
-                        {trendingStats.nightOwls?.length > 0 && (
-                            <div className="flex flex-col">
-                                <h3 className="text-plex text-sm uppercase tracking-[2px] mb-6 font-bold border-b border-white/10 pb-2">🦇 Night Owl Club</h3>
-                                <div className="grid grid-cols-3 sm:grid-cols-4 md:[grid-template-columns:repeat(auto-fill,minmax(150px,150px))] md:justify-start gap-3 w-full pb-4">
-                                    {trendingStats.nightOwls.slice(0, recentLimit).map((item, i) => (
-                                        <a key={i} href={item.plexUrl || '#'} target="_blank" rel="noreferrer" className="flex flex-col w-full gap-2 group" style={{ textDecoration: 'none', color: 'inherit' }}>
-                                            <div className="relative aspect-[2/3] w-full rounded-lg overflow-hidden border border-border group-hover:border-plex transition-colors shadow-md">
-                                                <img src={`/api/plex/image?path=${encodeURIComponent(item.thumb)}&width=300&height=450`} alt={item.title} loading="lazy" className="w-full h-full object-cover" />
-                                                <div className="absolute top-2 right-2 bg-black/80 text-plex text-xs font-bold px-2 py-1 rounded backdrop-blur-md border border-plex/30">
-                                                    {item.views} Views
-                                                </div>
-                                            </div>
-                                            <div className="text-white text-xs font-medium text-center mt-1 line-clamp-2 leading-tight">{item.title}</div>
-                                        </a>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Blast from the Past */}
-                        {trendingStats.retroHits?.length > 0 && (
-                            <div className="flex flex-col">
-                                <h3 className="text-plex text-sm uppercase tracking-[2px] mb-6 font-bold border-b border-white/10 pb-2">📼 Blast from the Past</h3>
-                                <div className="grid grid-cols-3 sm:grid-cols-4 md:[grid-template-columns:repeat(auto-fill,minmax(150px,150px))] md:justify-start gap-3 w-full pb-4">
-                                    {trendingStats.retroHits.slice(0, recentLimit).map((item, i) => (
-                                        <a key={i} href={item.plexUrl || '#'} target="_blank" rel="noreferrer" className="flex flex-col w-full gap-2 group" style={{ textDecoration: 'none', color: 'inherit' }}>
-                                            <div className="relative aspect-[2/3] w-full rounded-lg overflow-hidden border border-border group-hover:border-plex transition-colors shadow-md">
-                                                <img src={`/api/plex/image?path=${encodeURIComponent(item.thumb)}&width=300&height=450`} alt={item.title} loading="lazy" className="w-full h-full object-cover" />
-                                                <div className="absolute top-2 right-2 bg-black/80 text-plex text-xs font-bold px-2 py-1 rounded backdrop-blur-md border border-plex/30">
-                                                    {item.views} Views
-                                                </div>
-                                            </div>
-                                            <div className="text-white text-xs font-medium text-center mt-1 line-clamp-2 leading-tight">{item.title}</div>
-                                        </a>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Cult Classics */}
-                        {trendingStats.cultClassics?.length > 0 && (
-                            <div className="flex flex-col">
-                                <h3 className="text-plex text-sm uppercase tracking-[2px] mb-6 font-bold border-b border-white/10 pb-2">💎 Cult Classics</h3>
-                                <div className="grid grid-cols-3 sm:grid-cols-4 md:[grid-template-columns:repeat(auto-fill,minmax(150px,150px))] md:justify-start gap-3 w-full pb-4">
-                                    {trendingStats.cultClassics.slice(0, recentLimit).map((item, i) => (
-                                        <a key={i} href={item.plexUrl || '#'} target="_blank" rel="noreferrer" className="flex flex-col w-full gap-2 group" style={{ textDecoration: 'none', color: 'inherit' }}>
-                                            <div className="relative aspect-[2/3] w-full rounded-lg overflow-hidden border border-border group-hover:border-plex transition-colors shadow-md">
-                                                <img src={`/api/plex/image?path=${encodeURIComponent(item.thumb)}&width=300&height=450`} alt={item.title} loading="lazy" className="w-full h-full object-cover" />
-                                                <div className="absolute top-2 right-2 bg-black/80 text-plex text-xs font-bold px-2 py-1 rounded backdrop-blur-md border border-plex/30">
-                                                    {item.views} Views
-                                                </div>
-                                            </div>
-                                            <div className="text-white text-xs font-medium text-center mt-1 line-clamp-2 leading-tight">{item.title}</div>
-                                        </a>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
+                        <TrendingDiscoverSection title="🔥 Trending This Week" items={trendingStats.trending7Days} limit={recentLimit} showQualityBadges={showQualityBadges} />
+                        <TrendingDiscoverSection title="🍿 Most Watched Movies (This Month)" items={trendingStats.movies30Days} limit={recentLimit} showQualityBadges={showQualityBadges} />
+                        <TrendingDiscoverSection title="📺 Most Watched Shows (This Month)" items={trendingStats.shows30Days} limit={recentLimit} showQualityBadges={showQualityBadges} />
+                        <TrendingDiscoverSection title="🏆 Top of the Year" items={trendingStats.top365Days} limit={recentLimit} showQualityBadges={showQualityBadges} />
+                        <TrendingDiscoverSection title="🌟 All Time Favorites" items={trendingStats.allTime} limit={recentLimit} showQualityBadges={showQualityBadges} />
+                        <TrendingDiscoverSection title="🍿 Weekend Warriors" items={trendingStats.weekendWarriors} limit={recentLimit} showQualityBadges={showQualityBadges} />
+                        <TrendingDiscoverSection title="🦇 Night Owl Club" items={trendingStats.nightOwls} limit={recentLimit} showQualityBadges={showQualityBadges} />
+                        <TrendingDiscoverSection title="📼 Blast from the Past" items={trendingStats.retroHits} limit={recentLimit} showQualityBadges={showQualityBadges} />
+                        <TrendingDiscoverSection title="💎 Cult Classics" items={trendingStats.cultClassics} limit={recentLimit} showQualityBadges={showQualityBadges} />
                     </div>
                 )}
             </main>

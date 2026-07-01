@@ -66,6 +66,7 @@ export const SettingsDashboard: React.FC = () => {
         try {
             await apiFetch('/api/config', { method: 'POST', body: JSON.stringify(newConfig) });
             setInitialSettings(newConfig);
+            window.dispatchEvent(new CustomEvent('portal-public-config-updated'));
             addToast('Settings Saved!');
         } catch (e: any) {
             addToast(e.message || 'Failed to save config', 'error');
@@ -91,7 +92,7 @@ export const SettingsDashboard: React.FC = () => {
         {
             title: 'Portal',
             tabs: [
-                { id: 'branding', label: 'Portal UI', keywords: ['theme', 'logo', 'color', 'announcement', 'referral'] },
+                { id: 'branding', label: 'Portal UI', keywords: ['theme', 'logo', 'color', 'announcement', 'referral', 'quality', 'badges', 'poster', 'hdr', 'codec'] },
                 { id: 'contact', label: 'Contact Details', keywords: ['email', 'whatsapp', 'support'] },
                 { id: 'navigation', label: 'Navigation', keywords: ['menu', 'order', 'sidebar'] }
             ]
@@ -214,6 +215,7 @@ export const SettingsDashboard: React.FC = () => {
     const [announcement, setAnnouncement] = useState('');
     const [isPushingAnnouncement, setIsPushingAnnouncement] = useState(false);
     const [use24HourClock, setUse24HourClock] = useState(initialSettings.use24HourClock || false);
+    const [showPosterQualityBadges, setShowPosterQualityBadges] = useState(initialSettings.showPosterQualityBadges !== false);
     const [allowTemporaryAccess, setAllowTemporaryAccess] = useState(initialSettings.allowTemporaryAccess || false);
     const ensureMaintenanceNavOrder = useCallback((order: string[]) => {
         const base = Array.isArray(order) ? order.filter(Boolean) : ['home', 'discover', 'status', 'analytics', 'mediastack', 'request', 'settings', 'logout'];
@@ -646,6 +648,7 @@ export const SettingsDashboard: React.FC = () => {
             setHideStreamUsers(initialSettings.hideStreamUsers === true ? 'anonymous' : (initialSettings.hideStreamUsers || 'false'));
             if (initialSettings.defaultLibraryIds) setDefaultLibraryIds(initialSettings.defaultLibraryIds);
             if (initialSettings.use24HourClock !== undefined) setUse24HourClock(!!initialSettings.use24HourClock);
+            if (initialSettings.showPosterQualityBadges !== undefined) setShowPosterQualityBadges(initialSettings.showPosterQualityBadges !== false);
             if (initialSettings.allowTemporaryAccess !== undefined) setAllowTemporaryAccess(!!initialSettings.allowTemporaryAccess);
             if (initialSettings.autoBackupEnabled !== undefined) setAutoBackupEnabled(!!initialSettings.autoBackupEnabled);
             if (initialSettings.autoBackupIntervalDays !== undefined) setAutoBackupIntervalDays(Number(initialSettings.autoBackupIntervalDays) || 2);
@@ -756,6 +759,7 @@ export const SettingsDashboard: React.FC = () => {
             defaultLibraryIds,
             use24HourClock,
             allowTemporaryAccess,
+            showPosterQualityBadges,
             autoBackupEnabled,
             autoBackupIntervalDays,
             autoBackupRetentionCount,
@@ -1342,6 +1346,17 @@ export const SettingsDashboard: React.FC = () => {
                                     </button>
                                     <span className="text-sm font-medium cursor-pointer select-none hover:text-plex transition-colors" onClick={() => setUse24HourClock(!use24HourClock)}>Use 24-Hour Clock across the Portal</span>
                                 </div>
+                            </div>
+
+                            <div className="mb-4">
+                                <label>Poster Quality Badges</label>
+                                <div className="flex items-center gap-2 mt-2">
+                                    <button type="button" onClick={() => setShowPosterQualityBadges(!showPosterQualityBadges)} className={`relative inline-flex items-center h-6 rounded-full w-11 transition-colors flex-shrink-0 cursor-pointer ${showPosterQualityBadges ? 'bg-plex' : 'bg-border'}`}>
+                                        <span className={`inline-block w-4 h-4 transform bg-white rounded-full shadow-sm transition-transform ${showPosterQualityBadges ? 'translate-x-6' : 'translate-x-1'}`} />
+                                    </button>
+                                    <span className="text-sm font-medium cursor-pointer select-none hover:text-plex transition-colors" onClick={() => setShowPosterQualityBadges(!showPosterQualityBadges)}>Show quality badges on recently added and discover posters (4K, HDR, codec, Atmos)</span>
+                                </div>
+                                <SettingHint>Applies to Home and Discover poster cards for all users.</SettingHint>
                             </div>
 
                             <div className="mb-4">

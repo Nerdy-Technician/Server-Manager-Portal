@@ -25,7 +25,7 @@ Server Portal is a self-hosted web application that turns your Plex Media Server
 
 ### Personal Analytics & Wrap-Up
 
-Every user gets a rich, personalized dashboard packed with insights about their own streaming habits. A **time-period filter** (7 / 30 / 60 / 90 / 180 / 365 days / All Time) updates every card simultaneously. Metadata is cached server-side for near-instant filter switching.
+Every user gets a rich, personalized dashboard packed with insights about their own streaming habits. A **time-period filter** (7 / 30 / 60 / 90 / 180 / 365 days / All Time) updates every card simultaneously. Metadata is cached server-side and refreshed by a background job every **30 minutes** for near-instant filter switching.
 
 | Card | What it shows |
 |---|---|
@@ -69,7 +69,20 @@ A curated content discovery experience for all users, powered by server-wide wat
 - **Cult Classics** - Niche content with extremely high plays relative to its tiny viewer count
 - **Blast from the Past** - Pre-2000 titles getting recent love
 
-All discover items display Plex backdrop artwork, play counts, and viewer counts.
+All discover items display Plex artwork, play counts, and quality badges (4K, HDR, AV1/HEVC, Atmos, and more).
+
+---
+
+### Media Stack
+
+Browse your Sonarr and Radarr activity directly inside the portal:
+
+- **Release Calendar** - Upcoming TV episodes and movie releases with poster art, air dates, and grabbed/missing status
+- **Active Queue** - Live download queue from Sonarr and Radarr with progress and status
+- **Recent History** - Import and grab history across both services
+- **Month Navigation** - Browse releases by month with auto-advance to the next month that has content
+
+Configure Sonarr/Radarr URLs and API keys in **Settings → Integrations**.
 
 ---
 
@@ -103,15 +116,6 @@ Beautiful, responsive HTML emails sent automatically:
 - **Landing Page** - A sleek login page showing live library stats (total movies, shows, music) to entice new users
 - **Status Page** - A public `/status` dashboard showing the live uptime of your Plex server, request tools (Overseerr/Ombi), and download clients
 - **Invite Claim Page** - A dedicated, shareable page for invited users to claim their account
-
----
-
-### Media Stack Integration (coming soon)
-
-Embed your Arr stack directly into the portal for seamless browsing and requesting:
-
-- **Sonarr** - Browse and request TV shows without leaving the portal
-- **Radarr** - Browse and request movies without leaving the portal
 
 ---
 

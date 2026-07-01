@@ -77,6 +77,12 @@ export const MainApp: React.FC = () => {
         fetchPublicConfig();
     }, [fetchPublicConfig]);
 
+    useEffect(() => {
+        const onPublicConfigUpdated = () => { fetchPublicConfig(); };
+        window.addEventListener('portal-public-config-updated', onPublicConfigUpdated);
+        return () => window.removeEventListener('portal-public-config-updated', onPublicConfigUpdated);
+    }, [fetchPublicConfig]);
+
     const setRoute = useCallback((route: 'login' | 'admin' | 'user' | 'users' | 'status' | 'dashboard' | 'settings' | 'logs' | 'analytics' | 'mediastack' | 'maintenance' | 'invite' | 'loading') => {
         if (route === 'logs') {
             setCurrentRoute('settings');
@@ -170,7 +176,7 @@ export const MainApp: React.FC = () => {
             return <PublicInviteClaim code={code} />;
         }
         if (currentRoute === 'status') return <StatusDashboard onBack={() => isPublicStatus ? setRoute('login') : setRoute('user')} isAdmin={isAdmin} isPublic={isPublicStatus} />;
-        if (currentRoute === 'dashboard') return <LibraryDashboard onBack={() => setRoute('user')} isAdmin={isAdmin} />;
+        if (currentRoute === 'dashboard') return <LibraryDashboard onBack={() => setRoute('user')} isAdmin={isAdmin} publicConfig={publicConfig} />;
         if (currentRoute === 'settings' && isAdmin) return <SettingsDashboard />;
         if (currentRoute === 'maintenance' && isAdmin) return <MaintenanceDashboard />;
         if (currentRoute === 'logs' && isAdmin) return <LogsDashboard onLogout={handleLogout} />;

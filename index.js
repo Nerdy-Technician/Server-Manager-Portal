@@ -1451,6 +1451,7 @@ app.get('/api/config', requireAdmin, async (req, res) => {
                 defaultLibraryIds: config.defaultLibraryIds || null,
                 use24HourClock: !!config.use24HourClock,
                 allowTemporaryAccess: !!config.allowTemporaryAccess,
+                showPosterQualityBadges: config.showPosterQualityBadges !== false,
                 autoBackupEnabled: !!config.autoBackupEnabled,
                 autoBackupIntervalDays: Number(config.autoBackupIntervalDays) > 0 ? Number(config.autoBackupIntervalDays) : 2,
                 autoBackupRetentionCount: Number(config.autoBackupRetentionCount) > 0 ? Number(config.autoBackupRetentionCount) : 10,
@@ -1498,6 +1499,7 @@ app.get('/api/config', requireAdmin, async (req, res) => {
                 defaultLibraryIds: null,
                 use24HourClock: false,
                 allowTemporaryAccess: false,
+                showPosterQualityBadges: true,
                 autoBackupEnabled: false,
                 autoBackupIntervalDays: 2,
                 autoBackupRetentionCount: 10,
@@ -1515,7 +1517,7 @@ app.post('/api/config', setupRateLimit, async (req, res) => {
         sonarrUrl, sonarrApiKey, radarrUrl, radarrApiKey, tautulliUrl, tautulliApiKey,
         requestAppType, requestAppUrl, requestAppApiKey,
         inactiveCleanupEnabled, inactiveCleanupDays,
-        primaryColor, customLogoUrl, referralEnabled, referralTrialDays, referralRewardDays, announcement, navOrder, hideStreamUsers, defaultLibraryIds, use24HourClock, allowTemporaryAccess,
+        primaryColor, customLogoUrl, referralEnabled, referralTrialDays, referralRewardDays, announcement, navOrder, hideStreamUsers, defaultLibraryIds, use24HourClock, allowTemporaryAccess, showPosterQualityBadges,
         autoBackupEnabled, autoBackupIntervalDays, autoBackupRetentionCount, maintenanceExperimentalEnabled
     } = req.body;
 
@@ -1620,6 +1622,7 @@ app.post('/api/config', setupRateLimit, async (req, res) => {
         defaultLibraryIds: Array.isArray(defaultLibraryIds) ? defaultLibraryIds : null,
         use24HourClock: !!use24HourClock,
         allowTemporaryAccess: !!allowTemporaryAccess,
+        showPosterQualityBadges: showPosterQualityBadges !== false,
         autoBackupEnabled: !!autoBackupEnabled,
         autoBackupIntervalDays: Math.max(1, parseInt(autoBackupIntervalDays, 10) || 2),
         autoBackupRetentionCount: Math.max(1, parseInt(autoBackupRetentionCount, 10) || 10),
@@ -1663,7 +1666,8 @@ app.get('/api/config/public', async (req, res) => {
             referralEnabled: !!config.referralEnabled,
             appVersion: appVersion,
             use24HourClock: !!config.use24HourClock,
-            allowTemporaryAccess: !!config.allowTemporaryAccess
+            allowTemporaryAccess: !!config.allowTemporaryAccess,
+            showPosterQualityBadges: config.showPosterQualityBadges !== false
         });
     } catch (error) {
         res.json({
@@ -1673,7 +1677,8 @@ app.get('/api/config/public', async (req, res) => {
             referralEnabled: false,
             appVersion: appVersion,
             use24HourClock: false,
-            allowTemporaryAccess: false
+            allowTemporaryAccess: false,
+            showPosterQualityBadges: true
         });
     }
 });
@@ -4684,9 +4689,9 @@ let tasksInfo = [
 ];
 
 const systemJobs = {
-    analyticsCache: { id: 'analyticsCache', name: 'Analytics Cache Builder', description: 'Rebuilds server analytics cache snapshots.', lastRun: null, nextRun: null, running: false, lastDurationMs: null, lastError: null },
-    trendingCache: { id: 'trendingCache', name: 'Trending Cache Builder', description: 'Rebuilds trending and leaderboard data.', lastRun: null, nextRun: null, running: false, lastDurationMs: null, lastError: null },
-    plexStats: { id: 'plexStats', name: 'Plex Stats Builder', description: 'Rebuilds cached library size and usage totals.', lastRun: null, nextRun: null, running: false, lastDurationMs: null, lastError: null },
+    analyticsCache: { id: 'analyticsCache', name: 'Analytics Cache Builder', description: 'Rebuilds server analytics cache snapshots every 30 minutes.', lastRun: null, nextRun: null, running: false, lastDurationMs: null, lastError: null },
+    trendingCache: { id: 'trendingCache', name: 'Trending Cache Builder', description: 'Rebuilds trending and leaderboard data every 12 hours.', lastRun: null, nextRun: null, running: false, lastDurationMs: null, lastError: null },
+    plexStats: { id: 'plexStats', name: 'Plex Stats Builder', description: 'Rebuilds cached library size and usage totals every 24 hours.', lastRun: null, nextRun: null, running: false, lastDurationMs: null, lastError: null },
     autoBackup: { id: 'autoBackup', name: 'Auto Rolling Backup', description: 'Creates rolling backup snapshots on configured interval.', lastRun: null, nextRun: null, running: false, lastDurationMs: null, lastError: null },
     maintenanceIndex: { id: 'maintenanceIndex', name: 'Maintenance Media Index', description: 'Builds per-item media and request index for cleanup rules.', lastRun: null, nextRun: null, running: false, lastDurationMs: null, lastError: null }
 };
@@ -5413,11 +5418,13 @@ async function calculateTrendingStats() {
 
             const groupKey = isMovie ? item.ratingKey : item.grandparentKey;
 
+            const metaId = String(groupKey).split('/').pop();
             const baseItem = {
-                ratingKey: groupKey,
+                ratingKey: metaId,
                 title: isMovie ? item.title : item.grandparentTitle,
                 thumb: isMovie ? item.thumb : (item.grandparentThumb || item.parentThumb || item.thumb),
-                type: isMovie ? 'movie' : 'show'
+                type: isMovie ? 'movie' : 'show',
+                plexUrl: `https://app.plex.tv/desktop/#!/server/${config.serverIdentifier}/details?key=${encodeURIComponent('/library/metadata/' + metaId)}`
             };
 
             const increment = (obj) => {
@@ -5526,15 +5533,28 @@ async function calculateTrendingStats() {
             userCount: users instanceof Set ? users.size : (rest.userCount || 0)
         }));
 
-        const trending7Days = stripUsers(getTopUnique(counts.trending7Days));
-        const movies30Days = stripUsers(getTopUnique(counts.movies30Days));
-        const shows30Days = stripUsers(getTopUnique(counts.shows30Days));
-        const top365Days = stripUsers(getTopUnique(counts.top365Days));
-        const allTime = stripUsers(getTopUnique(counts.allTime));
-        const weekendWarriors = stripUsers(getTopUnique(counts.weekendWarriors));
-        const nightOwls = stripUsers(getTopUnique(counts.nightOwls));
-        const retroHits = stripUsers(getTopUnique(counts.retroHits));
-        const cultClassics = stripUsers(getCultClassicsUnique(counts.cultClassics));
+        const trendingLists = await Promise.all([
+            enrichRecentItemsWithMediaTags(uri, config, stripUsers(getTopUnique(counts.trending7Days))),
+            enrichRecentItemsWithMediaTags(uri, config, stripUsers(getTopUnique(counts.movies30Days))),
+            enrichRecentItemsWithMediaTags(uri, config, stripUsers(getTopUnique(counts.shows30Days))),
+            enrichRecentItemsWithMediaTags(uri, config, stripUsers(getTopUnique(counts.top365Days))),
+            enrichRecentItemsWithMediaTags(uri, config, stripUsers(getTopUnique(counts.allTime))),
+            enrichRecentItemsWithMediaTags(uri, config, stripUsers(getTopUnique(counts.weekendWarriors))),
+            enrichRecentItemsWithMediaTags(uri, config, stripUsers(getTopUnique(counts.nightOwls))),
+            enrichRecentItemsWithMediaTags(uri, config, stripUsers(getTopUnique(counts.retroHits))),
+            enrichRecentItemsWithMediaTags(uri, config, stripUsers(getCultClassicsUnique(counts.cultClassics)))
+        ]);
+        const [
+            trending7Days,
+            movies30Days,
+            shows30Days,
+            top365Days,
+            allTime,
+            weekendWarriors,
+            nightOwls,
+            retroHits,
+            cultClassics
+        ] = trendingLists;
 
         const stats = {
             trending7Days,
@@ -7276,7 +7296,7 @@ app.listen(PORT, BIND_HOST, async () => {
     startBackgroundService();
     startPlexStatsBackgroundTask(); // start 24-hour library size cache task
 
-    // Setup Trending Stats Aggregator
+    // Background cache builders: trending every 12h, analytics every 30m, plex stats every 24h.
     systemJobs.trendingCache.nextRun = new Date(Date.now() + 10000).toISOString();
     systemJobs.analyticsCache.nextRun = new Date(Date.now() + 15000).toISOString();
     setTimeout(calculateTrendingStats, 10000); // Run once shortly after startup
