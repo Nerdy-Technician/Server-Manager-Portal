@@ -12,6 +12,7 @@ services:
       PORT: 2121
       BIND_HOST: 0.0.0.0
       CONFIG_DIR: /app/config
+      PLEX_PREFER_REMOTE_CONNECTION: "true"
     volumes:
       - ./config:/app/config
       - ./backup:/app/backup

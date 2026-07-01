@@ -47,8 +47,6 @@ export const SettingsDashboard: React.FC = () => {
                 }
                 const usersData = await apiFetch('/api/users');
                 setUsers(usersData);
-                const libData = await apiFetch('/api/plex/libraries').catch(() => []);
-                setLibraries(libData || []);
                 await fetchStatusConfig();
             } catch (error) {
                 const message = error instanceof Error ? error.message : 'Failed to load config';
@@ -59,6 +57,8 @@ export const SettingsDashboard: React.FC = () => {
             }
         };
         fetchConfig();
+        // Libraries call Plex on the server — can hang in Docker if a loopback URI is used.
+        apiFetch('/api/plex/libraries').then((libData) => setLibraries(libData || [])).catch(() => setLibraries([]));
     }, [addToast, fetchStatusConfig]);
 
     const handleSaveConfig = async (newConfig: any) => {

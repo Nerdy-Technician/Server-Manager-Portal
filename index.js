@@ -1768,25 +1768,67 @@ app.post('/api/config/test-email', requireAdmin, async (req, res) => {
 let cachedPlexConnectionUri = null;
 let lastPlexConnectionUriFetch = 0;
 
+const isLoopbackPlexUri = (uri = '') => {
+    try {
+        const { hostname } = new URL(uri);
+        return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1';
+    } catch (e) {
+        return false;
+    }
+};
+
+const shouldPreferRemotePlexConnection = () => {
+    const override = String(process.env.PLEX_PREFER_REMOTE_CONNECTION || '').toLowerCase();
+    if (override === 'true') return true;
+    if (override === 'false') return false;
+    // Inside Docker, Plex "local" URLs usually mean the container loopback — not the host.
+    return fsSync.existsSync('/.dockerenv');
+};
+
+const pickPlexConnection = (connections = []) => {
+    if (!Array.isArray(connections) || connections.length === 0) return null;
+    if (shouldPreferRemotePlexConnection()) {
+        const remote = connections.find(c => !c.local && !isLoopbackPlexUri(c.uri));
+        if (remote) return remote;
+        const nonLoopback = connections.find(c => !isLoopbackPlexUri(c.uri));
+        if (nonLoopback) return nonLoopback;
+    }
+    return connections.find(c => c.local) || connections[0];
+};
+
+const fetchWithTimeout = async (url, options = {}, timeoutMs = 15000) => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+        return await fetch(url, { ...options, signal: controller.signal });
+    } finally {
+        clearTimeout(timer);
+    }
+};
+
 // Plex interaction helpers
 const getPlexConnectionUri = async (config) => {
     if (cachedPlexConnectionUri && (Date.now() - lastPlexConnectionUriFetch < 60 * 60 * 1000)) {
         return cachedPlexConnectionUri;
     }
-    const response = await fetch('https://plex.tv/api/v2/resources?includeHttps=1', {
+    const response = await fetchWithTimeout('https://plex.tv/api/v2/resources?includeHttps=1', {
         headers: {
             'X-Plex-Token': config.plexToken,
             'X-Plex-Client-Identifier': CLIENT_ID,
             'Accept': 'application/json'
         }
-    });
+    }, 20000);
     if (!response.ok) throw new Error('Failed to fetch resources from Plex.tv');
     const resources = await response.json();
     const server = resources.find(r => r.clientIdentifier === config.serverIdentifier);
     if (!server || !server.connections || server.connections.length === 0) throw new Error('Server not found');
-    const localConnection = server.connections.find(c => c.local) || server.connections[0];
-    cachedPlexConnectionUri = localConnection.uri;
+    const connection = pickPlexConnection(server.connections);
+    if (!connection?.uri) throw new Error('No usable Plex connection found');
+    cachedPlexConnectionUri = connection.uri;
     lastPlexConnectionUriFetch = Date.now();
+    if (shouldPreferRemotePlexConnection()) {
+        log(`Using Plex connection URI for container runtime: ${cachedPlexConnectionUri}`);
+    }
     return cachedPlexConnectionUri;
 };
 
@@ -3396,7 +3438,7 @@ app.get('/api/plex/libraries', requireAdmin, async (req, res) => {
         const uri = await getPlexConnectionUri(config);
         if (!uri) return res.status(503).json({ error: 'Cannot connect to Plex' });
 
-        const sectionsRes = await fetch(`${uri}/library/sections?X-Plex-Token=${config.plexToken}`, { headers: { 'Accept': 'application/json' } }).then(r => r.json()).catch(() => null);
+        const sectionsRes = await fetchWithTimeout(`${uri}/library/sections?X-Plex-Token=${config.plexToken}`, { headers: { 'Accept': 'application/json' } }, 15000).then(r => r.json()).catch(() => null);
 
         let libraries = [];
         if (sectionsRes && sectionsRes.MediaContainer && sectionsRes.MediaContainer.Directory) {
