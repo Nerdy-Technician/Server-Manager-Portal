@@ -2880,6 +2880,17 @@ export const Login: React.FC<{ onLoginSuccess: () => void, publicConfig?: any }>
         if (path.startsWith('/auth/setup/')) {
             return;
         }
+
+        // Check for login error from the server-side GET callback redirect
+        const params = new URLSearchParams(window.location.search);
+        const loginError = params.get('loginError');
+        if (loginError) {
+            setError(loginError);
+            window.history.replaceState({}, '', '/');
+            return;
+        }
+
+        // Legacy fallback: handle /auth/<pinId> path (old flow, kept for backward compat)
         if (path.startsWith('/auth/')) {
             const pinId = path.split('/')[2];
             setIsLoading(true);
@@ -2902,7 +2913,10 @@ export const Login: React.FC<{ onLoginSuccess: () => void, publicConfig?: any }>
         setError('');
         try {
             const data = await apiFetch('/api/auth/plex/login', { method: 'POST' });
-            const forwardUrl = window.location.origin + '/auth/' + data.id;
+            // Use the server-side GET callback as forwardUrl — plex.tv redirects to the
+            // server endpoint which sets the cookie via a navigation response and redirects
+            // to /portal. This is more reliable than the fetch-based approach in Docker.
+            const forwardUrl = window.location.origin + '/api/auth/plex/callback?pinId=' + data.id;
             const authUrl = `https://app.plex.tv/auth#?clientID=${data.clientIdentifier}&code=${data.code}&context[device][product]=Server%20Manager%20Portal&forwardUrl=${encodeURIComponent(forwardUrl)}`;
             window.location.href = authUrl;
         } catch (e) {

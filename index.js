@@ -170,7 +170,7 @@ const resolveIntegrationUrlForFetch = (rawUrl) => {
 };
 
 const clearSessionCookie = (req, res) => {
-    const isHttps = FORCE_SECURE_COOKIES || req.secure;
+    const isHttps = FORCE_SECURE_COOKIES || !!(req.socket?.encrypted);
     res.clearCookie('session', { httpOnly: true, secure: isHttps, sameSite: 'lax', path: '/' });
 };
 
@@ -1351,7 +1351,10 @@ app.post('/api/auth/plex/callback', authRateLimit, async (req, res) => {
         }
 
         const token = jwt.sign(sessionUser, JWT_SECRET, { expiresIn: '7d' });
-        const isHttps = FORCE_SECURE_COOKIES || req.secure;
+        // Use req.socket?.encrypted (actual TLS on the socket) rather than req.secure
+        // (which can be spoofed by X-Forwarded-Proto from Docker/proxy networking)
+        // to avoid setting Secure cookies over plain HTTP in Docker environments.
+        const isHttps = FORCE_SECURE_COOKIES || !!(req.socket?.encrypted);
         res.cookie('session', token, { httpOnly: true, secure: isHttps, sameSite: 'lax', path: '/', maxAge: 7 * 24 * 60 * 60 * 1000 });
 
         if (!isAdmin) {
@@ -1368,6 +1371,120 @@ app.post('/api/auth/plex/callback', authRateLimit, async (req, res) => {
     } catch (err) {
         log('Error in plex callback: ' + err.message);
         res.status(500).json({ error: 'Failed to verify login' });
+    }
+});
+
+// GET callback: plex.tv redirects here directly, server sets cookie and redirects to /portal.
+// This is more reliable than the fetch-based POST approach because browsers handle
+// Set-Cookie headers from navigation responses much more consistently than from fetch() responses.
+app.get('/api/auth/plex/callback', authRateLimit, async (req, res) => {
+    const { pinId, ref } = req.query;
+    if (!pinId) return res.redirect('/?loginError=' + encodeURIComponent('Missing pin ID'));
+
+    try {
+        const pinRes = await fetch(`https://plex.tv/api/v2/pins/${pinId}`, {
+            headers: { 'Accept': 'application/json', 'X-Plex-Client-Identifier': CLIENT_ID }
+        });
+        const pinData = await pinRes.json();
+
+        if (!pinData.authToken) {
+            return res.redirect('/?loginError=' + encodeURIComponent('Not authenticated yet — please try again'));
+        }
+
+        const userRes = await apiFetch('https://plex.tv/api/v2/user', pinData.authToken);
+        if (!userRes.ok) throw new Error('Failed to fetch user info');
+        const userData = await userRes.json();
+
+        const config = await loadFile(CONFIG_PATH, {});
+        const adminId = await getAdminId(config);
+        let isAdmin = !!(adminId && String(userData.id) === String(adminId));
+
+        if (!isAdmin && config?.serverIdentifier) {
+            isAdmin = await verifyInitialSetupPlexOwner(pinData.authToken, config.serverIdentifier);
+        }
+
+        if (isAdmin && String(config.adminPlexId || '') !== String(userData.id)) {
+            config.adminPlexId = String(userData.id);
+            await saveFile(CONFIG_PATH, config);
+            cachedAdminId = String(userData.id);
+        }
+
+        const deletedUsers = await loadFile(DELETED_USERS_PATH, []);
+        const sessionUser = {
+            id: userData.uuid,
+            plexId: userData.id,
+            email: userData.email,
+            username: userData.username,
+            isAdmin
+        };
+
+        if (!isAdmin && isDeletedUser(deletedUsers, sessionUser)) {
+            await appendAuditLog('login_blocked_deleted_user', sessionUser, sessionUser);
+            clearSessionCookie(req, res);
+            return res.redirect('/?loginError=' + encodeURIComponent('Your portal session has expired. Please contact the admin for access.'));
+        }
+
+        if (!isAdmin) {
+            const users = await loadFile(USERS_PATH, []);
+            const knownUser = findLocalUserForSession(users, sessionUser);
+            const canSelfRegister = !!config.allowTemporaryAccess || (!!config.referralEnabled && !!ref);
+            if (!knownUser && !canSelfRegister) {
+                await appendAuditLog('login_blocked_non_member', sessionUser, sessionUser);
+                clearSessionCookie(req, res);
+                return res.redirect('/?loginError=' + encodeURIComponent('Your account is not registered for this portal.'));
+            }
+        }
+
+        if (!isAdmin && config.referralEnabled && ref) {
+            const users = await loadFile(USERS_PATH, []);
+            const isNewUser = !users.find(u => u.id === sessionUser.id || u.plexId === sessionUser.plexId);
+            if (isNewUser) {
+                const referrer = users.find(u => u.id === ref || u.plexId === ref);
+                if (referrer && referrer.plexAccessStatus === 'active') {
+                    const trialDays = config.referralTrialDays || 3;
+                    const rewardDays = config.referralRewardDays || 7;
+                    const newUserObj = {
+                        id: sessionUser.id,
+                        plexId: sessionUser.plexId,
+                        username: sessionUser.username,
+                        email: sessionUser.email,
+                        joiningDate: new Date().toISOString(),
+                        expiryDate: addDays(new Date(), trialDays).toISOString(),
+                        plexAccessStatus: 'pending',
+                        isTrial: true
+                    };
+                    users.push(newUserObj);
+                    if (referrer.expiryDate) {
+                        referrer.expiryDate = addDays(new Date(referrer.expiryDate), rewardDays).toISOString();
+                    }
+                    await saveFile(USERS_PATH, users);
+                    await appendAuditLog('referral_claimed', sessionUser, referrer, { trialDays, rewardDays });
+                    if (config.serverIdentifier && config.plexToken) {
+                        inviteUserToPlex(newUserObj, config).catch(e => log('Failed to invite referral: ' + e.message));
+                    }
+                }
+            }
+        }
+
+        const token = jwt.sign(sessionUser, JWT_SECRET, { expiresIn: '7d' });
+        const isHttps = FORCE_SECURE_COOKIES || !!(req.socket?.encrypted);
+        res.cookie('session', token, { httpOnly: true, secure: isHttps, sameSite: 'lax', path: '/', maxAge: 7 * 24 * 60 * 60 * 1000 });
+
+        if (!isAdmin) {
+            const users = await loadFile(USERS_PATH, []);
+            const existingUser = users.find(u => u.id === sessionUser.id || u.plexId === sessionUser.plexId);
+            if (existingUser) {
+                existingUser.lastLogin = new Date().toISOString();
+                await saveFile(USERS_PATH, users);
+            }
+        }
+        await appendAuditLog('user_login', sessionUser, sessionUser);
+
+        res.redirect('/portal');
+    } catch (err) {
+        log('Error in plex GET callback: ' + err.message);
+        clearSessionCookie(req, res);
+        res.redirect('/?loginError=' + encodeURIComponent('Login failed. Please try again.'));
     }
 });
 
@@ -3081,7 +3198,7 @@ app.post('/api/invites/:code/claim', authRateLimit, async (req, res) => {
             isAdmin
         };
         const token = jwt.sign(sessionUser, JWT_SECRET, { expiresIn: '7d' });
-        const isHttps = FORCE_SECURE_COOKIES || req.secure;
+        const isHttps = FORCE_SECURE_COOKIES || !!(req.socket?.encrypted);
         res.cookie('session', token, { httpOnly: true, secure: isHttps, sameSite: 'lax', path: '/', maxAge: 7 * 24 * 60 * 60 * 1000 });
 
         res.json({ success: true, user: newUser });
