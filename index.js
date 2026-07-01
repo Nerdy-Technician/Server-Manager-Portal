@@ -1847,16 +1847,8 @@ app.post('/api/config/test-integration', setupRateLimit, async (req, res) => {
             const plexToken = resolveTestCredential(token, stored.plexToken);
             const serverId = resolveTestCredential(serverIdentifier, stored.serverIdentifier);
             if (!plexToken || !serverId) return res.status(400).json({ error: 'Plex token and server identifier are required.' });
-            cachedPlexConnectionUri = null;
-            lastPlexConnectionUriFetch = 0;
             const testConfig = { ...stored, plexToken, serverIdentifier: serverId };
-            const uri = await getPlexConnectionUri(testConfig);
-            const identityRes = await fetchWithTimeout(`${uri}/identity?X-Plex-Token=${encodeURIComponent(plexToken)}`, {
-                headers: { Accept: 'application/json' },
-            }, 12000);
-            if (!identityRes.ok) throw new Error(`Plex server returned HTTP ${identityRes.status}`);
-            const identity = await identityRes.json().catch(() => ({}));
-            const container = identity.MediaContainer || identity;
+            const { container, uri } = await testPlexServerConnection(testConfig);
             const version = container.version || container.Version || '';
             const message = version
                 ? `Connected to Plex Media Server (v${version})`
@@ -1924,8 +1916,12 @@ app.post('/api/config/test-integration', setupRateLimit, async (req, res) => {
 
         return res.status(400).json({ error: 'Unknown integration type.' });
     } catch (e) {
-        log(`Integration test failed (${type}): ${e.message}`);
-        res.status(500).json({ error: e.message || 'Connection test failed.' });
+        const safeMessage = sanitizeConnectionError(e.message || 'Connection test failed.', [
+            token, sonarrApiKey, radarrApiKey, tautulliApiKey, requestAppApiKey,
+            stored.plexToken, stored.sonarrApiKey, stored.radarrApiKey, stored.tautulliApiKey, stored.requestAppApiKey
+        ]);
+        log(`Integration test failed (${type}): ${safeMessage}`);
+        res.status(500).json({ error: safeMessage });
     }
 });
 
@@ -1960,6 +1956,30 @@ const pickPlexConnection = (connections = []) => {
     return connections.find(c => c.local) || connections[0];
 };
 
+const orderPlexConnectionsForTest = (connections = []) => {
+    const preferred = pickPlexConnection(connections);
+    const ordered = [];
+    if (preferred) ordered.push(preferred);
+    for (const connection of connections) {
+        if (connection?.uri && !ordered.some(existing => existing.uri === connection.uri)) {
+            ordered.push(connection);
+        }
+    }
+    return ordered;
+};
+
+const sanitizeConnectionError = (message = '', secrets = []) => {
+    let safe = String(message || 'Connection test failed.');
+    for (const secret of secrets) {
+        if (secret && typeof secret === 'string') {
+            safe = safe.split(secret).join('[redacted]');
+        }
+    }
+    safe = safe.replace(/([?&](?:X-Plex-Token|apikey|api_key|apiKey|token|key)=)[^&\s]+/gi, '$1[redacted]');
+    safe = safe.replace(/(X-(?:Plex-)?Api-Key[=:]\s*)[^\s,;]+/gi, '$1[redacted]');
+    return safe;
+};
+
 const fetchWithTimeout = async (url, options = {}, timeoutMs = 15000) => {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -1968,6 +1988,46 @@ const fetchWithTimeout = async (url, options = {}, timeoutMs = 15000) => {
     } finally {
         clearTimeout(timer);
     }
+};
+
+const testPlexServerConnection = async (config) => {
+    const response = await fetchWithTimeout('https://plex.tv/api/v2/resources?includeHttps=1', {
+        headers: {
+            'X-Plex-Token': config.plexToken,
+            'X-Plex-Client-Identifier': CLIENT_ID,
+            'Accept': 'application/json'
+        }
+    }, 20000);
+    if (!response.ok) throw new Error('Failed to fetch resources from Plex.tv');
+
+    const resources = await response.json();
+    const server = resources.find(r => r.clientIdentifier === config.serverIdentifier);
+    if (!server || !server.connections || server.connections.length === 0) {
+        throw new Error('Server not found in Plex resources');
+    }
+
+    const failures = [];
+    for (const connection of orderPlexConnectionsForTest(server.connections)) {
+        if (!connection?.uri) continue;
+        try {
+            const identityRes = await fetchWithTimeout(`${connection.uri}/identity`, {
+                headers: {
+                    'X-Plex-Token': config.plexToken,
+                    'Accept': 'application/json'
+                },
+            }, 12000);
+            if (!identityRes.ok) {
+                failures.push(`${connection.uri} returned HTTP ${identityRes.status}`);
+                continue;
+            }
+            const identity = await identityRes.json().catch(() => ({}));
+            return { container: identity.MediaContainer || identity, uri: connection.uri };
+        } catch (e) {
+            failures.push(`${connection.uri}: ${sanitizeConnectionError(e.message, [config.plexToken])}`);
+        }
+    }
+
+    throw new Error(`Could not reach Plex Media Server from this container. Tried ${failures.length} connection(s): ${failures.join(' | ')}`);
 };
 
 // Plex interaction helpers
