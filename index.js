@@ -2877,45 +2877,6 @@ const assertInitialSetupAccess = async (req, res, options = {}) => {
     return false;
 };
 
-app.post('/api/setup/plex/callback', setupRateLimit, authRateLimit, async (req, res) => {
-    if (!(await assertInitialSetupAccess(req, res, { allowUnconfigured: true }))) return;
-    const { pinId } = req.body;
-    if (!pinId) return res.status(400).json({ error: 'pinId is required' });
-
-    try {
-        const pinRes = await fetch(`https://plex.tv/api/v2/pins/${pinId}`, {
-            headers: {
-                Accept: 'application/json',
-                'X-Plex-Client-Identifier': CLIENT_ID,
-            },
-        });
-        const pinData = await pinRes.json();
-        if (!pinData.authToken) {
-            return res.status(400).json({ error: 'Plex sign-in not completed yet. Please try again.' });
-        }
-
-        const userRes = await apiFetch('https://plex.tv/api/v2/user', pinData.authToken);
-        if (!userRes.ok) throw new Error('Failed to fetch Plex user info');
-        const userData = await userRes.json();
-
-        const servers = await fetchOwnedPlexServers(pinData.authToken);
-        if (!servers.length) {
-            return res.status(400).json({ error: 'No owned Plex servers found for this account. You must sign in as the server owner.' });
-        }
-
-        res.json({
-            token: pinData.authToken,
-            plexId: String(userData.id || ''),
-            servers,
-            username: userData.username || userData.title || userData.email || 'Plex User',
-            email: userData.email || '',
-        });
-    } catch (err) {
-        log(`Setup Plex callback error: ${err.message}`);
-        res.status(500).json({ error: err.message || 'Failed to complete Plex sign-in' });
-    }
-});
-
 app.post('/api/plex/servers', setupRateLimit, async (req, res) => {
     const { token } = req.body;
     if (!token) return res.status(400).json({ error: 'Plex token is required.' });

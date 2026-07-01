@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
     Settings, Sparkles, ChevronRight, ChevronLeft, Check, Palette, Mail, Layers, Server, PartyPopper,
 } from 'lucide-react';
@@ -27,10 +27,8 @@ const readStoredSetupPlex = () => {
         if (!raw) return null;
         return JSON.parse(raw) as {
             token?: string;
-            plexId?: string;
             servers?: PlexServer[];
             serverIdentifier?: string;
-            username?: string;
             step?: StepId;
         };
     } catch {
@@ -40,10 +38,8 @@ const readStoredSetupPlex = () => {
 
 export const SetupWizard: React.FC<{ onComplete: () => void }> = ({ onComplete }) => {
     const storedPlex = readStoredSetupPlex();
-    const isOAuthReturn = typeof window !== 'undefined' && window.location.pathname.startsWith('/auth/setup/');
 
     const [step, setStep] = useState<StepId>(() => {
-        if (isOAuthReturn) return 'plex';
         if (storedPlex?.step) return storedPlex.step;
         if (storedPlex?.token) return 'plex';
         return 'welcome';
@@ -52,12 +48,9 @@ export const SetupWizard: React.FC<{ onComplete: () => void }> = ({ onComplete }
     const [isLoading, setIsLoading] = useState(false);
 
     const [token, setToken] = useState(storedPlex?.token || '');
-    const [plexId, setPlexId] = useState(storedPlex?.plexId || '');
     const [serverIdentifier, setServerIdentifier] = useState(storedPlex?.serverIdentifier || '');
     const [plexServerUrl, setPlexServerUrl] = useState('');
     const [servers, setServers] = useState<PlexServer[]>(storedPlex?.servers || []);
-    const [plexUsername, setPlexUsername] = useState(storedPlex?.username || '');
-    const [showManualToken, setShowManualToken] = useState(false);
 
     const [publicDomain, setPublicDomain] = useState(typeof window !== 'undefined' ? window.location.origin : '');
     const [primaryColor, setPrimaryColor] = useState('#E5A00D');
@@ -85,60 +78,11 @@ export const SetupWizard: React.FC<{ onComplete: () => void }> = ({ onComplete }
     const canGoNext = step !== 'plex' || (token && serverIdentifier);
 
     useEffect(() => {
-        const path = window.location.pathname;
-        if (!path.startsWith('/auth/setup/')) return;
-
-        const pinId = path.split('/').filter(Boolean).pop();
-        if (!pinId || pinId === 'setup') return;
-
-        const returnPath = sessionStorage.getItem('setupReturnPath') || '/';
-
-        setIsLoading(true);
-        setError('');
-        setStep('plex');
-
-        apiFetch('/api/setup/plex/callback', {
-            method: 'POST',
-            body: JSON.stringify({ pinId }),
-        }).then((data) => {
-            const next = {
-                token: data.token,
-                plexId: data.plexId || '',
-                servers: data.servers || [],
-                serverIdentifier: data.servers?.[0]?.identifier || '',
-                username: data.username || '',
-                step: 'plex' as StepId,
-            };
-            sessionStorage.setItem(SETUP_PLEX_STORAGE_KEY, JSON.stringify(next));
-            setToken(next.token);
-            setPlexId(next.plexId);
-            setServers(next.servers);
-            setPlexUsername(next.username);
-            setServerIdentifier(next.serverIdentifier);
-        }).catch((e) => {
-            setError(e instanceof Error ? e.message : 'Plex sign-in failed');
-        }).finally(() => {
-            sessionStorage.removeItem('setupReturnPath');
-            window.history.replaceState({}, '', returnPath);
-            setIsLoading(false);
-        });
-    }, []);
-
-    const handlePlexSignIn = async () => {
-        setIsLoading(true);
-        setError('');
-        try {
-            sessionStorage.setItem('setupReturnPath', window.location.pathname + window.location.search);
-            sessionStorage.setItem(SETUP_PLEX_STORAGE_KEY, JSON.stringify({ step: 'plex' }));
-            const data = await apiFetch('/api/auth/plex/login', { method: 'POST' });
-            const forwardUrl = `${window.location.origin}/auth/setup/${data.id}`;
-            const authUrl = `https://app.plex.tv/auth#?clientID=${data.clientIdentifier}&code=${data.code}&context[device][product]=Server%20Manager%20Portal&forwardUrl=${encodeURIComponent(forwardUrl)}`;
-            window.location.href = authUrl;
-        } catch (e) {
-            setError(e instanceof Error ? e.message : 'Failed to start Plex sign-in');
-            setIsLoading(false);
-        }
-    };
+        sessionStorage.setItem(
+            SETUP_PLEX_STORAGE_KEY,
+            JSON.stringify({ token, servers, serverIdentifier, step }),
+        );
+    }, [token, servers, serverIdentifier, step]);
 
     const handleFetchServers = async () => {
         if (!token) {
@@ -196,7 +140,6 @@ export const SetupWizard: React.FC<{ onComplete: () => void }> = ({ onComplete }
                 body: JSON.stringify({
                     token,
                     serverIdentifier,
-                    adminPlexId: plexId || undefined,
                     plexServerUrl: plexServerUrl || undefined,
                     publicDomain,
                     primaryColor,
@@ -219,7 +162,6 @@ export const SetupWizard: React.FC<{ onComplete: () => void }> = ({ onComplete }
                 }),
             });
             sessionStorage.removeItem(SETUP_PLEX_STORAGE_KEY);
-            sessionStorage.removeItem('setupReturnPath');
             onComplete();
         } catch (e) {
             setError(e instanceof Error ? e.message : 'Failed to save configuration.');
@@ -289,44 +231,22 @@ export const SetupWizard: React.FC<{ onComplete: () => void }> = ({ onComplete }
                         <div className="flex flex-col gap-5">
                             <div>
                                 <h2 className="text-2xl font-bold text-text mb-1">Plex Connection</h2>
-                                <p className="text-muted text-sm">Sign in with your Plex account to connect your server — no manual token needed.</p>
+                                <p className="text-muted text-sm">Enter your Plex token manually, then fetch and choose your server.</p>
                             </div>
 
-                            {!token ? (
-                                <>
-                                    <button
-                                        type="button"
-                                        onClick={handlePlexSignIn}
-                                        disabled={isLoading}
-                                        className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-plex text-background rounded-lg font-bold text-sm hover:bg-plex-hover transition-colors disabled:opacity-50"
-                                    >
-                                        <img src="/static/logo.png" alt="" className="w-4 h-4 object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-                                        {isLoading ? 'Redirecting to Plex…' : 'Sign in with Plex'}
-                                    </button>
-                                    <p className="text-center text-xs text-muted">Uses secure Plex OAuth. We&apos;ll fetch your owned servers automatically.</p>
-                                </>
-                            ) : (
-                                <div className="p-4 bg-green-500/10 border border-green-500/30 rounded-xl flex items-center gap-3">
-                                    <Check className="w-5 h-5 text-green-400 flex-shrink-0" />
-                                    <div>
-                                        <p className="text-green-400 font-bold text-sm">Signed in as {plexUsername || 'Plex User'}</p>
-                                        <p className="text-muted text-xs mt-0.5">{servers.length} owned server{servers.length !== 1 ? 's' : ''} found</p>
-                                    </div>
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            setToken('');
-                                            setServers([]);
-                                            setServerIdentifier('');
-                                            setPlexUsername('');
-                                            sessionStorage.removeItem(SETUP_PLEX_STORAGE_KEY);
-                                        }}
-                                        className="ml-auto text-xs text-muted hover:text-text underline"
-                                    >
-                                        Sign out
+                            <div className="p-4 bg-plex/5 border border-plex/20 rounded-xl text-sm text-muted">
+                                <strong className="text-plex">Tip:</strong> Log into Plex Web, open any library item XML, and find <code className="bg-background px-1 rounded">X-Plex-Token=...</code> in the URL.
+                            </div>
+
+                            <div className="flex flex-col gap-2">
+                                <label className={labelClass}>Plex Token</label>
+                                <div className="flex gap-2">
+                                    <input type="password" className={inputClass} value={token} onChange={(e) => setToken(e.target.value)} placeholder="X-Plex-Token" />
+                                    <button type="button" onClick={handleFetchServers} disabled={isLoading || !token} className="px-4 bg-plex/20 text-plex rounded-lg font-bold hover:bg-plex/30 whitespace-nowrap transition-colors disabled:opacity-50">
+                                        Fetch Servers
                                     </button>
                                 </div>
-                            )}
+                            </div>
 
                             {servers.length > 0 ? (
                                 <div className="flex flex-col gap-2">
@@ -356,32 +276,6 @@ export const SetupWizard: React.FC<{ onComplete: () => void }> = ({ onComplete }
                                     placeholder="http://192.168.1.6:32400"
                                 />
                                 <p className="text-xs text-muted">If the test connection fails in Docker, enter your Plex server&apos;s LAN address here. Leave blank to use auto-discovery.</p>
-                            </div>
-
-                            <div className="border-t border-border pt-4">
-                                <button
-                                    type="button"
-                                    onClick={() => setShowManualToken(!showManualToken)}
-                                    className="text-sm text-muted hover:text-text transition-colors"
-                                >
-                                    {showManualToken ? '▾ Hide manual token entry' : '▸ Enter Plex token manually'}
-                                </button>
-                                {showManualToken && (
-                                    <div className="mt-4 flex flex-col gap-4">
-                                        <div className="p-4 bg-plex/5 border border-plex/20 rounded-xl text-sm text-muted">
-                                            <strong className="text-plex">Tip:</strong> Log into Plex Web, open any library item XML, and find <code className="bg-background px-1 rounded">X-Plex-Token=...</code> in the URL.
-                                        </div>
-                                        <div className="flex flex-col gap-2">
-                                            <label className={labelClass}>Plex Token</label>
-                                            <div className="flex gap-2">
-                                                <input type="password" className={inputClass} value={token} onChange={(e) => setToken(e.target.value)} placeholder="X-Plex-Token" />
-                                                <button type="button" onClick={handleFetchServers} disabled={isLoading || !token} className="px-4 bg-plex/20 text-plex rounded-lg font-bold hover:bg-plex/30 whitespace-nowrap transition-colors disabled:opacity-50">
-                                                    Fetch Servers
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
                             </div>
                         </div>
                     )}

@@ -2876,11 +2876,6 @@ export const Login: React.FC<{ onLoginSuccess: () => void, publicConfig?: any }>
         fetchPublicInfo();
 
         const path = window.location.pathname;
-        // Setup wizard OAuth return — SetupWizard handles this, not login
-        if (path.startsWith('/auth/setup/')) {
-            return;
-        }
-
         // Check for login error from the server-side GET callback redirect
         const params = new URLSearchParams(window.location.search);
         const loginError = params.get('loginError');
@@ -2932,9 +2927,7 @@ export const Login: React.FC<{ onLoginSuccess: () => void, publicConfig?: any }>
         }
     };
 
-    const isSetupOAuthReturn = typeof window !== 'undefined' && window.location.pathname.startsWith('/auth/setup/');
-
-    if (publicInfo.isConfigured === false || isSetupOAuthReturn) {
+    if (publicInfo.isConfigured === false) {
         return <SetupWizard onComplete={fetchPublicInfo} />;
     }
 
