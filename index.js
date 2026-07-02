@@ -170,8 +170,19 @@ const resolveIntegrationUrlForFetch = (rawUrl) => {
 };
 
 const clearSessionCookie = (req, res) => {
-    const isHttps = FORCE_SECURE_COOKIES || req.secure;
-    res.clearCookie('session', { httpOnly: true, secure: isHttps, sameSite: 'strict', path: '/' });
+    const isHttps = FORCE_SECURE_COOKIES || !!(req.socket?.encrypted);
+    res.clearCookie('session', { httpOnly: true, secure: isHttps, sameSite: 'lax', path: '/' });
+};
+
+const setSessionCookie = (req, res, token) => {
+    const isHttps = FORCE_SECURE_COOKIES || !!(req.socket?.encrypted);
+    res.cookie('session', token, {
+        httpOnly: true,
+        secure: isHttps,
+        sameSite: 'lax',
+        path: '/',
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
 };
 
 app.use(express.json({ limit: '50kb' })); // Middleware to parse JSON bodies (with size limit)
@@ -576,6 +587,7 @@ const apiFetch = (url, token, options = {}) => {
 
 let cachedAdminId = null;
 const getAdminId = async (config) => {
+    if (config?.adminPlexId) return String(config.adminPlexId);
     if (cachedAdminId) return cachedAdminId;
     if (!config || !config.plexToken) return null;
     try {
@@ -583,7 +595,7 @@ const getAdminId = async (config) => {
         if (!res.ok) return null;
         const data = await res.json();
         cachedAdminId = data.id;
-        return data.id;
+        return String(data.id);
     } catch (e) {
         log('Failed to fetch admin info: ' + e.message);
         return null;
@@ -1219,116 +1231,152 @@ app.post('/api/auth/plex/login', authRateLimit, async (req, res) => {
     }
 });
 
+const handlePlexPinLogin = async (req, res, pinId, ref, { redirectOnSuccess = false } = {}) => {
+    const pinRes = await fetch(`https://plex.tv/api/v2/pins/${pinId}`, {
+        headers: {
+            'Accept': 'application/json',
+            'X-Plex-Client-Identifier': CLIENT_ID,
+        },
+    });
+    const pinData = await pinRes.json();
+
+    if (!pinData.authToken) {
+        const message = 'Not authenticated yet — please try again';
+        if (redirectOnSuccess) {
+            return res.redirect('/?loginError=' + encodeURIComponent(message));
+        }
+        return res.status(400).json({ error: message });
+    }
+
+    const userRes = await apiFetch('https://plex.tv/api/v2/user', pinData.authToken);
+    if (!userRes.ok) throw new Error('Failed to fetch user info');
+    const userData = await userRes.json();
+
+    const config = await loadFile(CONFIG_PATH, {});
+    const adminId = await getAdminId(config);
+    let isAdmin = !!(adminId && String(userData.id) === String(adminId));
+
+    if (!isAdmin && config?.serverIdentifier) {
+        isAdmin = await verifyInitialSetupPlexOwner(
+            pinData.authToken,
+            config.serverIdentifier,
+            resolveConfiguredPlexServerUrl(config),
+        );
+    }
+
+    if (isAdmin && String(config.adminPlexId || '') !== String(userData.id)) {
+        config.adminPlexId = String(userData.id);
+        await saveFile(CONFIG_PATH, config);
+        cachedAdminId = String(userData.id);
+    }
+
+    const deletedUsers = await loadFile(DELETED_USERS_PATH, []);
+    const sessionUser = {
+        id: userData.uuid,
+        plexId: userData.id,
+        email: userData.email,
+        username: userData.username,
+        isAdmin,
+    };
+
+    if (!isAdmin && isDeletedUser(deletedUsers, sessionUser)) {
+        await appendAuditLog('login_blocked_deleted_user', sessionUser, sessionUser);
+        clearSessionCookie(req, res);
+        const message = 'Your portal session has expired. Please contact the admin for access.';
+        if (redirectOnSuccess) {
+            return res.redirect('/?loginError=' + encodeURIComponent(message));
+        }
+        return res.status(403).json({ error: message });
+    }
+
+    if (!isAdmin) {
+        const users = await loadFile(USERS_PATH, []);
+        const knownUser = findLocalUserForSession(users, sessionUser);
+        const canSelfRegister = !!config.allowTemporaryAccess || (!!config.referralEnabled && !!ref);
+        if (!knownUser && !canSelfRegister) {
+            await appendAuditLog('login_blocked_non_member', sessionUser, sessionUser);
+            clearSessionCookie(req, res);
+            const message = 'Your account is not registered for this portal.';
+            if (redirectOnSuccess) {
+                return res.redirect('/?loginError=' + encodeURIComponent(message));
+            }
+            return res.status(403).json({ error: message });
+        }
+    }
+
+    if (!isAdmin && config.referralEnabled && ref) {
+        const users = await loadFile(USERS_PATH, []);
+        const isNewUser = !users.find(u => u.id === sessionUser.id || u.plexId === sessionUser.plexId);
+
+        if (isNewUser) {
+            const referrer = users.find(u => u.id === ref || u.plexId === ref);
+            if (referrer && referrer.plexAccessStatus === 'active') {
+                const trialDays = config.referralTrialDays || 3;
+                const rewardDays = config.referralRewardDays || 7;
+                const newUserObj = {
+                    id: sessionUser.id,
+                    plexId: sessionUser.plexId,
+                    username: sessionUser.username,
+                    email: sessionUser.email,
+                    joiningDate: new Date().toISOString(),
+                    expiryDate: addDays(new Date(), trialDays).toISOString(),
+                    plexAccessStatus: 'pending',
+                    isTrial: true,
+                };
+                users.push(newUserObj);
+                if (referrer.expiryDate) {
+                    referrer.expiryDate = addDays(new Date(referrer.expiryDate), rewardDays).toISOString();
+                }
+                await saveFile(USERS_PATH, users);
+                await appendAuditLog('referral_claimed', sessionUser, referrer, { trialDays, rewardDays });
+                if (config.serverIdentifier && config.plexToken) {
+                    inviteUserToPlex(newUserObj, config).catch(e => log('Failed to invite referral: ' + e.message));
+                }
+            }
+        }
+    }
+
+    const token = jwt.sign(sessionUser, JWT_SECRET, { expiresIn: '7d' });
+    setSessionCookie(req, res, token);
+
+    if (!isAdmin) {
+        const users = await loadFile(USERS_PATH, []);
+        const existingUser = users.find(u => u.id === sessionUser.id || u.plexId === sessionUser.plexId);
+        if (existingUser) {
+            existingUser.lastLogin = new Date().toISOString();
+            await saveFile(USERS_PATH, users);
+        }
+    }
+    await appendAuditLog('user_login', sessionUser, sessionUser);
+
+    if (redirectOnSuccess) {
+        return res.redirect('/portal');
+    }
+    return res.json({ message: 'Logged in successfully', user: sessionUser });
+};
+
 app.post('/api/auth/plex/callback', authRateLimit, async (req, res) => {
     const { pinId, ref } = req.body;
     if (!pinId) return res.status(400).json({ error: 'pinId is required' });
 
     try {
-        const pinRes = await fetch(`https://plex.tv/api/v2/pins/${pinId}`, {
-            headers: {
-                'Accept': 'application/json',
-                'X-Plex-Client-Identifier': CLIENT_ID
-            }
-        });
-        const pinData = await pinRes.json();
-
-        if (!pinData.authToken) {
-            return res.status(400).json({ error: 'Not authenticated yet' });
-        }
-
-        // Fetch user info
-        const userRes = await apiFetch('https://plex.tv/api/v2/user', pinData.authToken);
-        if (!userRes.ok) throw new Error('Failed to fetch user info');
-        const userData = await userRes.json();
-
-        const config = await loadFile(CONFIG_PATH, {});
-        const adminId = await getAdminId(config);
-        const isAdmin = userData.id === adminId;
-        const deletedUsers = await loadFile(DELETED_USERS_PATH, []);
-
-        const sessionUser = {
-            id: userData.uuid, // Using UUID to match if possible, or ID
-            plexId: userData.id,
-            email: userData.email,
-            username: userData.username,
-            isAdmin
-        };
-
-        if (!isAdmin && isDeletedUser(deletedUsers, sessionUser)) {
-            await appendAuditLog('login_blocked_deleted_user', sessionUser, sessionUser);
-            clearSessionCookie(req, res);
-            return res.status(403).json({ error: 'Your portal session has expired. Please contact the admin for access.' });
-        }
-
-        if (!isAdmin) {
-            const users = await loadFile(USERS_PATH, []);
-            const knownUser = findLocalUserForSession(users, sessionUser);
-            const canSelfRegister = !!config.allowTemporaryAccess || (!!config.referralEnabled && !!ref);
-            if (!knownUser && !canSelfRegister) {
-                await appendAuditLog('login_blocked_non_member', sessionUser, sessionUser);
-                clearSessionCookie(req, res);
-                return res.status(403).json({ error: 'Your account is not registered for this portal.' });
-            }
-        }
-
-        if (!isAdmin && config.referralEnabled && ref) {
-            const users = await loadFile(USERS_PATH, []);
-            const isNewUser = !users.find(u => u.id === sessionUser.id || u.plexId === sessionUser.plexId);
-
-            if (isNewUser) {
-                const referrer = users.find(u => u.id === ref || u.plexId === ref);
-                if (referrer && referrer.plexAccessStatus === 'active') {
-                    const trialDays = config.referralTrialDays || 3;
-                    const rewardDays = config.referralRewardDays || 7;
-
-                    // Add new user with trial
-                    const newUserObj = {
-                        id: sessionUser.id,
-                        plexId: sessionUser.plexId,
-                        username: sessionUser.username,
-                        email: sessionUser.email,
-                        joiningDate: new Date().toISOString(),
-                        expiryDate: addDays(new Date(), trialDays).toISOString(),
-                        plexAccessStatus: 'pending',
-                        isTrial: true
-                    };
-                    users.push(newUserObj);
-
-                    // Reward referrer
-                    if (referrer.expiryDate) {
-                        referrer.expiryDate = addDays(new Date(referrer.expiryDate), rewardDays).toISOString();
-                    }
-
-                    await saveFile(USERS_PATH, users);
-
-                    await appendAuditLog('referral_claimed', sessionUser, referrer, { trialDays, rewardDays });
-
-                    // Invite new user
-                    if (config.serverIdentifier && config.plexToken) {
-                        inviteUserToPlex(newUserObj, config).catch(e => log('Failed to invite referral: ' + e.message));
-                    }
-                }
-            }
-        }
-
-        const token = jwt.sign(sessionUser, JWT_SECRET, { expiresIn: '7d' });
-        const isHttps = FORCE_SECURE_COOKIES || req.secure;
-        res.cookie('session', token, { httpOnly: true, secure: isHttps, sameSite: 'strict', maxAge: 7 * 24 * 60 * 60 * 1000 });
-
-        if (!isAdmin) {
-            const users = await loadFile(USERS_PATH, []);
-            const existingUser = users.find(u => u.id === sessionUser.id || u.plexId === sessionUser.plexId);
-            if (existingUser) {
-                existingUser.lastLogin = new Date().toISOString();
-                await saveFile(USERS_PATH, users);
-            }
-        }
-        await appendAuditLog('user_login', sessionUser, sessionUser);
-
-        res.json({ message: 'Logged in successfully', user: sessionUser });
+        await handlePlexPinLogin(req, res, pinId, ref);
     } catch (err) {
         log('Error in plex callback: ' + err.message);
         res.status(500).json({ error: 'Failed to verify login' });
+    }
+});
+
+app.get('/api/auth/plex/callback', authRateLimit, async (req, res) => {
+    const { pinId, ref } = req.query;
+    if (!pinId) return res.redirect('/?loginError=' + encodeURIComponent('Missing pin ID'));
+
+    try {
+        await handlePlexPinLogin(req, res, String(pinId), ref, { redirectOnSuccess: true });
+    } catch (err) {
+        log('Error in plex GET callback: ' + err.message);
+        clearSessionCookie(req, res);
+        res.redirect('/?loginError=' + encodeURIComponent('Login failed. Please try again.'));
     }
 });
 
@@ -2818,8 +2866,7 @@ app.post('/api/invites/:code/claim', authRateLimit, async (req, res) => {
             isAdmin
         };
         const token = jwt.sign(sessionUser, JWT_SECRET, { expiresIn: '7d' });
-        const isHttps = FORCE_SECURE_COOKIES || req.secure;
-        res.cookie('session', token, { httpOnly: true, secure: isHttps, sameSite: 'strict', maxAge: 7 * 24 * 60 * 60 * 1000 });
+        setSessionCookie(req, res, token);
 
         res.json({ success: true, user: newUser });
     } catch (e) {

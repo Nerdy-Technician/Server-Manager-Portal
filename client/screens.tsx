@@ -3026,17 +3026,24 @@ export const Login: React.FC<{ onLoginSuccess: () => void, publicConfig?: any }>
         fetchPublicInfo();
 
         const path = window.location.pathname;
+        const params = new URLSearchParams(window.location.search);
+        const loginError = params.get('loginError');
+        if (loginError) {
+            setError(loginError);
+            window.history.replaceState({}, '', '/');
+            return;
+        }
+
         if (path.startsWith('/auth/')) {
             const pinId = path.split('/')[2];
             setIsLoading(true);
-            window.history.replaceState({}, '', '/'); // clear path
+            window.history.replaceState({}, '', '/');
             apiFetch('/api/auth/plex/callback', {
                 method: 'POST',
-                body: JSON.stringify({ pinId })
-            }).then(() => {
-                onLoginSuccess();
-            }).catch(e => {
+                body: JSON.stringify({ pinId }),
+            }).then(() => onLoginSuccess()).catch(e => {
                 setError(e.message || 'Login failed');
+            }).finally(() => {
                 setIsLoading(false);
             });
         }
@@ -3047,7 +3054,14 @@ export const Login: React.FC<{ onLoginSuccess: () => void, publicConfig?: any }>
         setError('');
         try {
             const data = await apiFetch('/api/auth/plex/login', { method: 'POST' });
-            const forwardUrl = window.location.origin + '/auth/' + data.id;
+            const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+            const isHttp = window.location.protocol === 'http:';
+            const usePostFlow = isHttp && !isLocalhost;
+
+            const forwardUrl = usePostFlow
+                ? window.location.origin + '/auth/' + data.id
+                : window.location.origin + '/api/auth/plex/callback?pinId=' + data.id;
+
             const authUrl = `https://app.plex.tv/auth#?clientID=${data.clientIdentifier}&code=${data.code}&context[device][product]=Server%20Manager%20Portal&forwardUrl=${encodeURIComponent(forwardUrl)}`;
             window.location.href = authUrl;
         } catch (e) {
