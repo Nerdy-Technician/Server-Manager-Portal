@@ -631,13 +631,22 @@ const resolveCurrentAdmin = async (sessionUser, config = null) => {
     if (!sessionUser) return false;
     const loadedConfig = config || await loadFile(CONFIG_PATH, {});
     const adminId = await getAdminId(loadedConfig);
-    if (adminId && String(sessionUser.plexId) === String(adminId)) return true;
-    // Trust the admin flag minted at login when config admin lookup is stale/unavailable.
-    if (sessionUser.isAdmin === true) {
-        if (!loadedConfig.adminPlexId || String(sessionUser.plexId) === String(loadedConfig.adminPlexId)) {
-            return true;
-        }
+    if (adminId && String(sessionUser.plexId) === String(adminId)) {
+        return true;
     }
+
+    // Trust admin flag minted at login after Plex owner verification.
+    if (sessionUser.isAdmin === true) {
+        const sessionPlexId = String(sessionUser.plexId || '');
+        if (sessionPlexId && String(loadedConfig.adminPlexId || '') !== sessionPlexId) {
+            loadedConfig.adminPlexId = sessionPlexId;
+            await saveFile(CONFIG_PATH, loadedConfig);
+            cachedAdminId = sessionPlexId;
+            log(`Repaired adminPlexId -> ${sessionPlexId} from authenticated admin session`);
+        }
+        return true;
+    }
+
     return false;
 };
 
@@ -684,14 +693,12 @@ const requireAdmin = async (req, res, next) => {
     }
 
     const config = await loadFile(CONFIG_PATH, {});
-    const adminId = await getAdminId(config);
-    if (!adminId) {
-        // If app isn't configured, we technically have no admin.
-        // For security, require them to configure it via the existing unauthenticated config route first,
-        // or allow if we want. We will block here to be safe.
+    if (!config?.plexToken || !config?.serverIdentifier) {
         return res.status(403).json({ error: 'Forbidden: App not configured' });
     }
-    if (!req.user || String(req.user.plexId) !== String(adminId)) {
+
+    const isAdmin = await resolveCurrentAdmin(req.user, config);
+    if (!isAdmin) {
         return res.status(403).json({ error: 'Forbidden: Admins only' });
     }
     req.user.isAdmin = true;
@@ -1405,17 +1412,19 @@ app.get('/api/auth/diagnostics', publicReadRateLimit, async (req, res) => {
     });
 });
 
-app.get('/api/auth/session', publicReadRateLimit, (req, res) => {
+app.get('/api/auth/session', publicReadRateLimit, async (req, res) => {
     const token = req.cookies?.session;
     if (!token) return res.json({ authenticated: false });
     try {
         const user = jwt.verify(token, JWT_SECRET);
+        const config = await loadFile(CONFIG_PATH, {});
+        const isAdmin = await resolveCurrentAdmin(user, config);
         return res.json({
             authenticated: true,
             user: {
                 username: user.username,
                 plexId: user.plexId,
-                isAdmin: !!user.isAdmin,
+                isAdmin,
             },
         });
     } catch {
@@ -1656,8 +1665,8 @@ app.post('/api/config', setupRateLimit, async (req, res) => {
         }
         try {
             const decoded = jwt.verify(sessionToken, JWT_SECRET);
-            const adminId = await getAdminId(existingConfig);
-            if (!adminId || decoded.plexId !== adminId) {
+            const isAdmin = await resolveCurrentAdmin(decoded, existingConfig);
+            if (!isAdmin) {
                 return res.status(403).json({ error: 'Forbidden: Admins only.' });
             }
             req.user = decoded;
@@ -2697,8 +2706,8 @@ app.post('/api/plex/servers', setupRateLimit, async (req, res) => {
             } catch (e) {
                 return res.status(403).json({ error: 'Forbidden: Invalid admin session.' });
             }
-            const adminId = await getAdminId(existingConfig);
-            if (!adminId || String(decoded.plexId) !== String(adminId)) {
+            const isAdmin = await resolveCurrentAdmin(decoded, existingConfig);
+            if (!isAdmin) {
                 return res.status(403).json({ error: 'Forbidden: Admins only.' });
             }
         }
