@@ -3,7 +3,9 @@ FROM node:22-alpine AS builder
 
 WORKDIR /app
 
-RUN apk add --no-cache git
+# .git is excluded from the build context; CI passes GIT_SHA so version stamps match the commit.
+ARG GIT_SHA
+ENV GIT_SHA=${GIT_SHA}
 
 COPY package.json package-lock.json ./
 RUN npm ci

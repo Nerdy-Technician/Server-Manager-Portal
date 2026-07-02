@@ -1,6 +1,9 @@
 services:
   portal:
-    build: .
+    build:
+      context: .
+      args:
+        GIT_SHA: ${GIT_SHA:-local}
     image: server-manager-portal:latest
     container_name: server-manager-portal
     restart: unless-stopped

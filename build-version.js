@@ -1,20 +1,26 @@
 import fs from 'fs';
 import { execSync } from 'child_process';
 
-let assetVersion = 'dev';
-try {
-    assetVersion = execSync('git rev-parse --short HEAD', { stdio: 'pipe' }).toString().trim();
-    fs.writeFileSync('version.txt', 'v1.0.0-' + assetVersion);
-} catch (e) {
-    if (!fs.existsSync('version.txt')) {
-        fs.writeFileSync('version.txt', 'v1.0.0');
-    }
+const normalizeSha = (sha) => {
+    if (!sha) return '';
+    const trimmed = String(sha).trim();
+    const withoutPrefix = trimmed.replace(/^v1\.0\.0-/i, '');
+    return withoutPrefix.slice(0, 7);
+};
+
+const resolveBuildVersion = () => {
+    const fromEnv = normalizeSha(process.env.GIT_SHA || process.env.GITHUB_SHA || '');
+    if (fromEnv) return fromEnv;
+
     try {
-        assetVersion = fs.readFileSync('version.txt', 'utf8').trim().replace(/^v/, '');
+        return execSync('git rev-parse --short HEAD', { stdio: 'pipe' }).toString().trim();
     } catch {
-        assetVersion = String(Date.now());
+        return `build-${Date.now()}`;
     }
-}
+};
+
+const assetVersion = resolveBuildVersion();
+fs.writeFileSync('version.txt', `v1.0.0-${assetVersion}`);
 
 try {
     const indexPath = 'index.html';
