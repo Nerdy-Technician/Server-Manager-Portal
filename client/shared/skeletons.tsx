@@ -35,17 +35,17 @@ export const PosterRowSkeleton: React.FC<{ count?: number; aspect?: '2/3' | 'squ
 );
 
 export const HomeRecentlyAddedSkeleton: React.FC = () => (
-    <div className="flex flex-col gap-6 w-full" aria-busy="true" aria-label="Loading recently added">
-        <div className="glass-card p-6 shadow-xl overflow-hidden w-full">
-            <h3 className="text-xl font-bold text-text mb-4">Recently Added Movies</h3>
+    <div className="flex flex-col gap-3 md:gap-4 w-full" aria-busy="true" aria-label="Loading recently added">
+        <div className="glass-card p-4 md:p-5 shadow-xl overflow-hidden w-full">
+            <h3 className="text-lg md:text-xl font-bold text-text mb-3">Recently Added Movies</h3>
             <PosterRowSkeleton count={6} />
         </div>
-        <div className="glass-card p-6 shadow-xl overflow-hidden w-full">
-            <h3 className="text-xl font-bold text-text mb-4">Recently Added TV Shows</h3>
+        <div className="glass-card p-4 md:p-5 shadow-xl overflow-hidden w-full">
+            <h3 className="text-lg md:text-xl font-bold text-text mb-3">Recently Added TV Shows</h3>
             <PosterRowSkeleton count={6} />
         </div>
-        <div className="glass-card p-6 shadow-xl overflow-hidden w-full">
-            <h3 className="text-xl font-bold text-text mb-4">Recently Added Music</h3>
+        <div className="glass-card p-4 md:p-5 shadow-xl overflow-hidden w-full">
+            <h3 className="text-lg md:text-xl font-bold text-text mb-3">Recently Added Music</h3>
             <PosterRowSkeleton count={6} aspect="square" />
         </div>
     </div>
@@ -106,14 +106,14 @@ export const LibraryStatsSkeleton: React.FC = () => (
 );
 
 export const WrapUpCardsSkeleton: React.FC = () => (
-    <div className="glass-card p-6 shadow-xl mb-2" aria-busy="true" aria-label="Loading personal wrap-up">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+    <div className="glass-card p-4 md:p-5 shadow-xl" aria-busy="true" aria-label="Loading personal wrap-up">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3 md:mb-4">
             <SkeletonBlock className="h-6 w-48 rounded" />
             <SkeletonBlock className="h-9 w-32 rounded-lg" />
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4" aria-hidden="true">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2.5 md:gap-3" aria-hidden="true">
             {Array.from({ length: 10 }, (_, i) => (
-                <SkeletonBlock key={i} className="rounded-xl min-h-[130px]" />
+                <SkeletonBlock key={i} className="rounded-xl min-h-[112px]" />
             ))}
         </div>
     </div>
@@ -147,8 +147,8 @@ export const ActivityGridSkeleton: React.FC<{ count?: number }> = ({ count = 3 }
 );
 
 export const TopWatchedGridSkeleton: React.FC = () => (
-    <div className="glass-card flex-1 flex flex-col h-full w-full min-h-0 p-6 shadow-xl" aria-busy="true" aria-label="Loading analytics">
-        <div className="mb-6">
+    <div className="glass-card flex-1 flex flex-col h-full w-full min-h-0 p-4 md:p-5 shadow-xl" aria-busy="true" aria-label="Loading analytics">
+        <div className="mb-3 md:mb-4">
             <SkeletonBlock className="h-6 w-40 rounded mb-2" />
             <SkeletonBlock className="h-4 w-56 rounded" />
         </div>

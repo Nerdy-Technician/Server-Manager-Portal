@@ -1103,7 +1103,7 @@ export const MediaStackDashboard: React.FC<{ isAdmin: boolean }> = ({ isAdmin })
 
                                 {/* Right Side: Vertical List */}
                                 <div className="flex-1 min-w-0 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6 md:gap-8 pb-4">
-                                    {Object.entries(groupedCalendar).map(([dateStr, items]) => (
+                                    {Object.entries(groupedCalendar).map(([dateStr, items]: [string, typeof filteredCalendar]) => (
                                         <div key={dateStr} className="flex flex-col gap-2 md:gap-3">
                                             <div className="sticky top-[64px] md:top-0 bg-card z-20 py-1 md:py-3 border-b border-white/10 md:mb-2 -mx-4 px-4 md:mx-0 md:px-0 shadow-[0_10px_20px_-10px_rgba(0,0,0,0.5)]">
                                                 <h3 className="text-sm md:text-xl font-black text-plex md:text-text tracking-tight uppercase">{dateStr}</h3>
@@ -3049,11 +3049,11 @@ export const Login: React.FC<{ onLoginSuccess: () => void, publicConfig?: any, i
 };
 
 const RebuildLibraryCacheButton: React.FC = () => {
-    const [status, setStatus] = React.useState<'idle' | 'starting' | 'building' | 'done' | 'error'>('idle');
-    const [lastBuilt, setLastBuilt] = React.useState<number | null>(null);
-    const pollRef = React.useRef<any>(null);
+    const [status, setStatus] = useState<'idle' | 'starting' | 'building' | 'done' | 'error'>('idle');
+    const [lastBuilt, setLastBuilt] = useState<number | null>(null);
+    const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-    React.useEffect(() => {
+    useEffect(() => {
         apiFetch('/api/plex/stats/status').then((s: any) => {
             if (s.lastGeneratedAt) setLastBuilt(s.lastGeneratedAt);
             if (s.isBuilding) startPolling();
@@ -3928,12 +3928,12 @@ export const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onL
     const heroBg = analytics?.recentHistory?.[0]?.thumbUrl || publicConfig?.customLogoUrl || '';
 
     return (
-        <div className="w-full flex flex-col gap-6">
+        <div className="w-full flex flex-col gap-3 md:gap-4">
             <Loader isLoading={isLoading} />
             {toast && <Toast message={toast.message} type={toast.type} onDismiss={() => setToast(null)} />}
 
             {/* Massive Hero Banner */}
-            <div className="relative w-full rounded-2xl overflow-hidden shadow-2xl bg-card border border-border mt-4">
+            <div className="relative w-full rounded-2xl overflow-hidden shadow-2xl bg-card border border-border">
                 {/* Blurred Background */}
                 <div className="absolute inset-0 bg-background overflow-hidden">
                     {dashboardData?.recentMovies?.length > 0 ? (
@@ -3956,8 +3956,8 @@ export const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onL
                     <div className="absolute inset-0 bg-gradient-to-r from-card via-card/40 to-transparent" />
                 </div>
 
-                <div className="relative pt-24 pb-8 px-6 md:px-10 flex flex-col items-center md:items-start text-center md:text-left z-10">
-                    <div className="flex flex-col md:flex-row items-center md:items-end gap-6">
+                <div className="relative pt-14 pb-5 px-4 md:pt-20 md:pb-6 md:px-10 flex flex-col items-center md:items-start text-center md:text-left z-10">
+                    <div className="flex flex-col md:flex-row items-center md:items-end gap-4 md:gap-6">
                         {/* Avatar */}
                         {(() => {
                             const thumbUrl = user?.thumb || sessionInfo.session.thumb || (sessionInfo.session.isAdmin ? sessionInfo.adminThumb : null);
@@ -4021,8 +4021,8 @@ export const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onL
                 <WrapUpCardsSkeleton />
             )}
             {(sessionInfo.session.isAdmin || user) && !analyticsLoading && analytics && (
-                <div className="glass-card p-6 shadow-xl mb-2">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                <div className="glass-card p-4 md:p-5 shadow-xl">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3 md:mb-4">
                         <h3 className="text-xl font-bold text-text">Your Personal Wrap-Up</h3>
                         <div className="flex items-center gap-2">
                             <button
@@ -4078,11 +4078,11 @@ export const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onL
                             </div>
                         </div>
                     </div>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                        <div onClick={() => setSelectedMetric('Server Rank')} className="rounded-xl overflow-hidden relative border border-border/50 group flex flex-col cursor-pointer hover:ring-2 hover:ring-plex/50 transition-all" style={{ minHeight: '130px' }}>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2.5 md:gap-3">
+                        <div onClick={() => setSelectedMetric('Server Rank')} className="rounded-xl overflow-hidden relative border border-border/50 group flex flex-col cursor-pointer hover:ring-2 hover:ring-plex/50 transition-all" style={{ minHeight: '112px' }}>
                             <div className="absolute inset-0 bg-cover bg-center z-0 transition-transform duration-700 group-hover:scale-110 opacity-60" style={{ backgroundImage: `url('https://images.unsplash.com/photo-1579546929518-9e396f3cc809?auto=format&fit=crop&q=80&w=600')` }} />
                             <div className="absolute inset-0 bg-black/60 z-10" />
-                            <div className="relative z-20 p-4 flex-1 flex flex-col items-center justify-center text-center">
+                            <div className="relative z-20 p-3 md:p-4 flex-1 flex flex-col items-center justify-center text-center">
                                 <Trophy className="w-6 h-6 text-plex mb-2 drop-shadow-md" />
                                 <p className="text-gray-300 text-[10px] uppercase tracking-widest font-bold mb-1 drop-shadow-md">Server Rank</p>
                                 <p className="text-2xl font-black text-white drop-shadow-lg leading-none mb-1">{analytics.leaderboardRank ? <><span className="text-plex text-xl mr-0.5">#</span><CountUp end={analytics.leaderboardRank} /></> : 'Unranked'}</p>
@@ -4090,10 +4090,10 @@ export const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onL
                             </div>
                         </div>
 
-                        <div onClick={() => setSelectedMetric('Total Streams')} className="rounded-xl overflow-hidden relative border border-border/50 group flex flex-col cursor-pointer hover:ring-2 hover:ring-plex/50 transition-all" style={{ minHeight: '130px' }}>
+                        <div onClick={() => setSelectedMetric('Total Streams')} className="rounded-xl overflow-hidden relative border border-border/50 group flex flex-col cursor-pointer hover:ring-2 hover:ring-plex/50 transition-all" style={{ minHeight: '112px' }}>
                             <div className="absolute inset-0 bg-cover bg-center z-0 transition-transform duration-700 group-hover:scale-110 opacity-60" style={{ backgroundImage: `url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&q=80&w=600')` }} />
                             <div className="absolute inset-0 bg-black/60 z-10" />
-                            <div className="relative z-20 p-4 flex-1 flex flex-col items-center justify-center text-center">
+                            <div className="relative z-20 p-3 md:p-4 flex-1 flex flex-col items-center justify-center text-center">
                                 <PlayCircle className="w-6 h-6 text-plex mb-2 drop-shadow-md" />
                                 <p className="text-gray-300 text-[10px] uppercase tracking-widest font-bold mb-1 drop-shadow-md">Total Streams</p>
                                 <p className="text-2xl font-black text-white drop-shadow-lg leading-none mb-1"><CountUp end={analytics.totalPlays || 0} /></p>
@@ -4105,10 +4105,10 @@ export const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onL
                             </div>
                         </div>
 
-                        <div onClick={() => setSelectedMetric('Top Binge')} className="rounded-xl overflow-hidden relative border border-border/50 group flex flex-col cursor-pointer hover:ring-2 hover:ring-plex/50 transition-all" style={{ minHeight: '130px' }}>
+                        <div onClick={() => setSelectedMetric('Top Binge')} className="rounded-xl overflow-hidden relative border border-border/50 group flex flex-col cursor-pointer hover:ring-2 hover:ring-plex/50 transition-all" style={{ minHeight: '112px' }}>
                             <div className="absolute inset-0 bg-cover bg-center z-0 transition-transform duration-700 group-hover:scale-110 opacity-60" style={{ backgroundImage: `url('${analytics.topBinge?.artUrl || 'https://images.unsplash.com/photo-1594909122845-11baa439b7bf?auto=format&fit=crop&q=80&w=600'}')` }} />
                             <div className="absolute inset-0 bg-black/60 z-10" />
-                            <div className="relative z-20 p-4 flex-1 flex flex-col items-center justify-center text-center">
+                            <div className="relative z-20 p-3 md:p-4 flex-1 flex flex-col items-center justify-center text-center">
                                 <Tv className="w-6 h-6 text-plex mb-2 drop-shadow-md" />
                                 <p className="text-gray-300 text-[10px] uppercase tracking-widest font-bold mb-1 drop-shadow-md">Top Binge</p>
                                 <p className="text-sm font-bold text-white drop-shadow-lg line-clamp-2 leading-tight mb-1">{analytics.topBinge?.title || 'Nothing yet'}</p>
@@ -4116,10 +4116,10 @@ export const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onL
                             </div>
                         </div>
 
-                        <div onClick={() => setSelectedMetric('Top Movie')} className="rounded-xl overflow-hidden relative border border-border/50 group flex flex-col cursor-pointer hover:ring-2 hover:ring-plex/50 transition-all" style={{ minHeight: '130px' }}>
+                        <div onClick={() => setSelectedMetric('Top Movie')} className="rounded-xl overflow-hidden relative border border-border/50 group flex flex-col cursor-pointer hover:ring-2 hover:ring-plex/50 transition-all" style={{ minHeight: '112px' }}>
                             <div className="absolute inset-0 bg-cover bg-center z-0 transition-transform duration-700 group-hover:scale-110 opacity-60" style={{ backgroundImage: `url('${analytics.topMovie?.artUrl || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&q=80&w=600'}')` }} />
                             <div className="absolute inset-0 bg-black/60 z-10" />
-                            <div className="relative z-20 p-4 flex-1 flex flex-col items-center justify-center text-center">
+                            <div className="relative z-20 p-3 md:p-4 flex-1 flex flex-col items-center justify-center text-center">
                                 <Clapperboard className="w-6 h-6 text-plex mb-2 drop-shadow-md" />
                                 <p className="text-gray-300 text-[10px] uppercase tracking-widest font-bold mb-1 drop-shadow-md">Top Movie</p>
                                 <p className="text-sm font-bold text-white drop-shadow-lg line-clamp-2 leading-tight mb-1">{analytics.topMovie?.title || 'Nothing yet'}</p>
@@ -4127,10 +4127,10 @@ export const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onL
                             </div>
                         </div>
 
-                        <div onClick={() => setSelectedMetric('Time of Day')} className="rounded-xl overflow-hidden relative border border-border/50 group flex flex-col cursor-pointer hover:ring-2 hover:ring-plex/50 transition-all" style={{ minHeight: '130px' }}>
+                        <div onClick={() => setSelectedMetric('Time of Day')} className="rounded-xl overflow-hidden relative border border-border/50 group flex flex-col cursor-pointer hover:ring-2 hover:ring-plex/50 transition-all" style={{ minHeight: '112px' }}>
                             <div className="absolute inset-0 bg-cover bg-center z-0 transition-transform duration-700 group-hover:scale-110 opacity-60" style={{ backgroundImage: `url('https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&q=80&w=600')` }} />
                             <div className="absolute inset-0 bg-black/60 z-10" />
-                            <div className="relative z-20 p-4 flex-1 flex flex-col items-center justify-center text-center">
+                            <div className="relative z-20 p-3 md:p-4 flex-1 flex flex-col items-center justify-center text-center">
                                 <Clock className="w-6 h-6 text-plex mb-2 drop-shadow-md" />
                                 <p className="text-gray-300 text-[10px] uppercase tracking-widest font-bold mb-1 drop-shadow-md">Time of Day</p>
                                 <p className="text-sm font-bold text-white drop-shadow-lg leading-tight mb-1">{analytics.timeOfDay || 'Unknown'}</p>
@@ -4138,10 +4138,10 @@ export const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onL
                             </div>
                         </div>
 
-                        <div onClick={() => setSelectedMetric('Top Day')} className="rounded-xl overflow-hidden relative border border-border/50 group flex flex-col cursor-pointer hover:ring-2 hover:ring-plex/50 transition-all" style={{ minHeight: '130px' }}>
+                        <div onClick={() => setSelectedMetric('Top Day')} className="rounded-xl overflow-hidden relative border border-border/50 group flex flex-col cursor-pointer hover:ring-2 hover:ring-plex/50 transition-all" style={{ minHeight: '112px' }}>
                             <div className="absolute inset-0 bg-cover bg-center z-0 transition-transform duration-700 group-hover:scale-110 opacity-60" style={{ backgroundImage: `url('https://images.unsplash.com/photo-1506784983877-45594efa4cbe?auto=format&fit=crop&q=80&w=600')` }} />
                             <div className="absolute inset-0 bg-black/60 z-10" />
-                            <div className="relative z-20 p-4 flex-1 flex flex-col items-center justify-center text-center">
+                            <div className="relative z-20 p-3 md:p-4 flex-1 flex flex-col items-center justify-center text-center">
                                 <Calendar className="w-6 h-6 text-plex mb-2 drop-shadow-md" />
                                 <p className="text-gray-300 text-[10px] uppercase tracking-widest font-bold mb-1 drop-shadow-md">Top Day</p>
                                 <p className="text-sm font-bold text-white drop-shadow-lg leading-tight mb-1">{analytics.popularDay || 'Unknown'}</p>
@@ -4149,10 +4149,10 @@ export const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onL
                             </div>
                         </div>
 
-                        <div onClick={() => setSelectedMetric('Media Profile')} className="rounded-xl overflow-hidden relative border border-border/50 group flex flex-col cursor-pointer hover:ring-2 hover:ring-plex/50 transition-all" style={{ minHeight: '130px' }}>
+                        <div onClick={() => setSelectedMetric('Media Profile')} className="rounded-xl overflow-hidden relative border border-border/50 group flex flex-col cursor-pointer hover:ring-2 hover:ring-plex/50 transition-all" style={{ minHeight: '112px' }}>
                             <div className="absolute inset-0 bg-cover bg-center z-0 transition-transform duration-700 group-hover:scale-110 opacity-60" style={{ backgroundImage: `url('https://images.unsplash.com/photo-1550684848-fac1c5b4e853?auto=format&fit=crop&q=80&w=600')` }} />
                             <div className="absolute inset-0 bg-black/60 z-10" />
-                            <div className="relative z-20 p-4 flex-1 flex flex-col items-center justify-center text-center">
+                            <div className="relative z-20 p-3 md:p-4 flex-1 flex flex-col items-center justify-center text-center">
                                 <Layers className="w-6 h-6 text-plex mb-2 drop-shadow-md" />
                                 <p className="text-gray-300 text-[10px] uppercase tracking-widest font-bold mb-1 drop-shadow-md">Top Library</p>
                                 <p className="text-sm font-bold text-white drop-shadow-lg line-clamp-2 leading-tight mb-1">{analytics.favoriteLibrary || 'None'}</p>
@@ -4160,10 +4160,10 @@ export const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onL
                             </div>
                         </div>
 
-                        <div onClick={() => setSelectedMetric('Top Library')} className="rounded-xl overflow-hidden relative border border-border/50 group flex flex-col cursor-pointer hover:ring-2 hover:ring-plex/50 transition-all" style={{ minHeight: '130px' }}>
+                        <div onClick={() => setSelectedMetric('Top Library')} className="rounded-xl overflow-hidden relative border border-border/50 group flex flex-col cursor-pointer hover:ring-2 hover:ring-plex/50 transition-all" style={{ minHeight: '112px' }}>
                             <div className="absolute inset-0 bg-cover bg-center z-0 transition-transform duration-700 group-hover:scale-110 opacity-60" style={{ backgroundImage: `url('https://images.unsplash.com/photo-1485846234645-a62644f84728?auto=format&fit=crop&q=80&w=600')` }} />
                             <div className="absolute inset-0 bg-black/60 z-10" />
-                            <div className="relative z-20 p-4 flex-1 flex flex-col items-center justify-center text-center">
+                            <div className="relative z-20 p-3 md:p-4 flex-1 flex flex-col items-center justify-center text-center">
                                 <PieChart className="w-6 h-6 text-plex mb-2 drop-shadow-md" />
                                 <p className="text-gray-300 text-[10px] uppercase tracking-widest font-bold mb-1 drop-shadow-md">Media Profile</p>
                                 <p className="text-sm font-bold text-white drop-shadow-lg leading-tight mb-1">{analytics.mediaPreference || 'Mixed Bag'}</p>
@@ -4171,10 +4171,10 @@ export const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onL
                             </div>
                         </div>
 
-                        <div onClick={() => setSelectedMetric('Watch Style')} className="rounded-xl overflow-hidden relative border border-border/50 group flex flex-col cursor-pointer hover:ring-2 hover:ring-plex/50 transition-all" style={{ minHeight: '130px' }}>
+                        <div onClick={() => setSelectedMetric('Watch Style')} className="rounded-xl overflow-hidden relative border border-border/50 group flex flex-col cursor-pointer hover:ring-2 hover:ring-plex/50 transition-all" style={{ minHeight: '112px' }}>
                             <div className="absolute inset-0 bg-cover bg-center z-0 transition-transform duration-700 group-hover:scale-110 opacity-60" style={{ backgroundImage: `url('https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&q=80&w=600')` }} />
                             <div className="absolute inset-0 bg-black/60 z-10" />
-                            <div className="relative z-20 p-4 flex-1 flex flex-col items-center justify-center text-center">
+                            <div className="relative z-20 p-3 md:p-4 flex-1 flex flex-col items-center justify-center text-center">
                                 <Compass className="w-6 h-6 text-plex mb-2 drop-shadow-md" />
                                 <p className="text-gray-300 text-[10px] uppercase tracking-widest font-bold mb-1 drop-shadow-md">Watch Style</p>
                                 <p className="text-sm font-bold text-white drop-shadow-lg leading-tight mb-1">{analytics.watchStyle || 'Unknown'}</p>
@@ -4182,10 +4182,10 @@ export const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onL
                             </div>
                         </div>
 
-                        <div onClick={() => setSelectedMetric('Streaming Habit')} className="rounded-xl overflow-hidden relative border border-border/50 group flex flex-col cursor-pointer hover:ring-2 hover:ring-plex/50 transition-all" style={{ minHeight: '130px' }}>
+                        <div onClick={() => setSelectedMetric('Streaming Habit')} className="rounded-xl overflow-hidden relative border border-border/50 group flex flex-col cursor-pointer hover:ring-2 hover:ring-plex/50 transition-all" style={{ minHeight: '112px' }}>
                             <div className="absolute inset-0 bg-cover bg-center z-0 transition-transform duration-700 group-hover:scale-110 opacity-60" style={{ backgroundImage: `url('https://images.unsplash.com/photo-1614850523459-c2f4c699c52e?auto=format&fit=crop&q=80&w=600')` }} />
                             <div className="absolute inset-0 bg-black/60 z-10" />
-                            <div className="relative z-20 p-4 flex-1 flex flex-col items-center justify-center text-center">
+                            <div className="relative z-20 p-3 md:p-4 flex-1 flex flex-col items-center justify-center text-center">
                                 <Coffee className="w-6 h-6 text-plex mb-2 drop-shadow-md" />
                                 <p className="text-gray-300 text-[10px] uppercase tracking-widest font-bold mb-1 drop-shadow-md">Streaming Habit</p>
                                 <p className="text-sm font-bold text-white drop-shadow-lg leading-tight mb-1">{analytics.streamingHabit || 'Unknown'}</p>
@@ -4196,24 +4196,24 @@ export const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onL
                 </div>
             )}
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 md:gap-4 items-stretch">
                 {/* Left Column */}
-                <div className="lg:col-span-1 flex flex-col gap-6">
+                <div className="lg:col-span-1 flex flex-col gap-3 md:gap-4">
 
 
                     {/* Subscription Status */}
                     {sessionInfo.session.isAdmin ? (
-                            <div className="glass-card p-6 shadow-xl flex flex-col items-center justify-center text-center md:h-[240px]">
-                                <div className="w-16 h-16 bg-plex/10 rounded-full flex items-center justify-center mb-4 border border-plex/30 shadow-[0_0_15px_rgba(229,160,13,0.15)]">
-                                    <Shield className="w-8 h-8 text-plex drop-shadow-md" />
+                            <div className="glass-card p-4 md:p-5 shadow-xl flex flex-col items-center justify-center text-center">
+                                <div className="w-14 h-14 md:w-16 md:h-16 bg-plex/10 rounded-full flex items-center justify-center mb-2 md:mb-3 border border-plex/30 shadow-[0_0_15px_rgba(229,160,13,0.15)]">
+                                    <Shield className="w-7 h-7 md:w-8 md:h-8 text-plex drop-shadow-md" />
                                 </div>
                                 <h3 className="text-xl md:text-2xl font-black text-text uppercase tracking-widest mb-1">Server Admin</h3>
                                 <div className="mt-2 inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-[10px] font-black bg-gradient-to-r from-amber-500/20 to-yellow-500/20 border border-amber-500/40 text-amber-400 shadow-[0_0_15px_rgba(245,158,11,0.25)] tracking-widest uppercase"><Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400 drop-shadow-[0_0_8px_rgba(245,158,11,0.8)]" /> VIP UNLIMITED</div>
                             </div>
                     ) : (
                         user ? (
-                            <div className="glass-card p-6 shadow-xl flex flex-col justify-center md:h-[240px]">
-                                <div className="flex flex-col gap-4">
+                            <div className="glass-card p-4 md:p-5 shadow-xl flex flex-col justify-center">
+                                <div className="flex flex-col gap-3 md:gap-4">
                                     <div>
                                         <p className="text-muted text-xs uppercase tracking-widest font-semibold mb-3">Access Status</p>
                                         <div className="flex flex-wrap items-center gap-3">
@@ -4266,7 +4266,7 @@ export const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onL
 
                     {/* Announcement Banner */}
                     {publicConfig?.announcement && (
-                        <div className="bg-plex/10 border border-plex/30 rounded-2xl p-4 md:p-6 shadow-lg">
+                        <div className="bg-plex/10 border border-plex/30 rounded-2xl p-3 md:p-4 shadow-lg">
                             <div className="flex items-start gap-3">
                                 <span className="text-xl mt-0.5">📢</span>
                                 <div>
@@ -4279,7 +4279,7 @@ export const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onL
 
                     {/* Referral Link */}
                     {publicConfig?.referralEnabled && user && !sessionInfo.session.isAdmin && (
-                        <div className="glass-card p-4 md:p-6 shadow-lg">
+                        <div className="glass-card p-4 md:p-5 shadow-lg">
                             <p className="text-plex font-bold text-base mb-1">🎁 Invite Friends</p>
                             <p className="text-muted text-sm leading-relaxed mb-4">Share this link. They get temporary access, and you get reward days!</p>
                             <div className="flex flex-col gap-2">
@@ -4290,11 +4290,11 @@ export const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onL
                     )}
 
                     {/* Footer sections: Preferences & Support (Moved to Left Column) */}
-                    <div className="flex flex-col gap-6">
+                    <div className="flex flex-col gap-3 md:gap-4">
                         {/* Newsletter preferences */}
                         {user && !sessionInfo.session.isAdmin && (
-                            <div className="glass-card p-6 shadow-lg flex flex-col">
-                                <p className="text-muted text-xs uppercase tracking-widest font-semibold mb-4 flex-shrink-0">Preferences</p>
+                            <div className="glass-card p-4 md:p-5 shadow-lg flex flex-col">
+                                <p className="text-muted text-xs uppercase tracking-widest font-semibold mb-3 flex-shrink-0">Preferences</p>
                                 <div className="flex items-center justify-between gap-4">
                                     <div>
                                         <p className="text-text font-bold text-sm">Weekly Newsletter</p>
@@ -4310,14 +4310,14 @@ export const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onL
 
                         {/* Support card */}
                         {!sessionInfo?.session?.isAdmin && (
-                            <div className="glass-card p-6 shadow-lg flex flex-col">
+                            <div className="glass-card p-4 md:p-5 shadow-lg flex flex-col">
                                 {user?.isTrial ? (
-                                    <div className="mb-5 flex-shrink-0">
+                                    <div className="mb-3 md:mb-4 flex-shrink-0">
                                         <p className="text-plex font-bold text-base mb-1">🍿 Enjoying your Temporary Access?</p>
                                         <p className="text-muted text-sm leading-relaxed">Once your 3-day access ends, you'll lose access. Get in touch with the admin to extend your access!</p>
                                     </div>
                                 ) : (
-                                    <div className="mb-5 flex-shrink-0">
+                                    <div className="mb-3 md:mb-4 flex-shrink-0">
                                         <p className="text-text font-bold text-base mb-1">💬 Need Help?</p>
                                         <p className="text-muted text-sm leading-relaxed">Contact the admin to extend your access, report an issue, or get support.</p>
                                     </div>
@@ -4344,14 +4344,14 @@ export const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onL
                 </div>
 
                 {/* Right Column */}
-                <div className="lg:col-span-2 flex flex-col gap-6">
+                <div className="lg:col-span-2 flex flex-col gap-3 md:gap-4">
                     {/* Server Stats Card */}
-                    <div className="glass-card p-6 shadow-xl flex flex-col justify-center relative overflow-hidden flex-shrink-0 md:h-[240px]">
+                    <div className="glass-card p-4 md:p-5 shadow-xl flex flex-col justify-center relative overflow-hidden flex-shrink-0">
                         <div className="absolute -top-10 -right-10 p-8 opacity-5">
                             <Activity className="w-64 h-64 text-plex" />
                         </div>
                         <div className="relative z-10">
-                            <div className="flex items-center justify-between mb-6">
+                            <div className="flex items-center justify-between mb-3 md:mb-4">
                                 <p className="text-muted text-sm uppercase tracking-widest font-semibold">Server Library Size</p>
                                 {sessionInfo.session.isAdmin && <RebuildLibraryCacheButton />}
                             </div>
@@ -4363,8 +4363,8 @@ export const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onL
                                     <p className="text-xs text-muted/60">This runs once and may take a few minutes for large libraries. The page will auto-update when ready.</p>
                                 </div>
                             ) : serverStats ? (
-                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                                    <div className="bg-background/60 p-4 rounded-2xl border border-white/5 flex flex-col items-center justify-center text-center shadow-inner hover:bg-background/80 transition-colors">
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 md:gap-3">
+                                    <div className="bg-background/60 p-3 md:p-4 rounded-2xl border border-white/5 flex flex-col items-center justify-center text-center shadow-inner hover:bg-background/80 transition-colors">
                                         <Film className="w-7 h-7 text-plex mb-2 opacity-80" />
                                         <span className="text-3xl font-black text-text drop-shadow-md mb-1">
                                             {serverStats.moviesBytes ? (() => {
@@ -4381,7 +4381,7 @@ export const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onL
                                             <span className="text-muted">Movies</span>
                                         </div>
                                     </div>
-                                    <div className="bg-background/60 p-4 rounded-2xl border border-white/5 flex flex-col items-center justify-center text-center shadow-inner hover:bg-background/80 transition-colors">
+                                    <div className="bg-background/60 p-3 md:p-4 rounded-2xl border border-white/5 flex flex-col items-center justify-center text-center shadow-inner hover:bg-background/80 transition-colors">
                                         <Tv className="w-7 h-7 text-plex mb-2 opacity-80" />
                                         <span className="text-3xl font-black text-text drop-shadow-md mb-1">
                                             {serverStats.showsBytes ? (() => {
@@ -4398,7 +4398,7 @@ export const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onL
                                             <span className="text-muted">Shows</span>
                                         </div>
                                     </div>
-                                    <div className="bg-background/60 p-4 rounded-2xl border border-white/5 flex flex-col items-center justify-center text-center shadow-inner hover:bg-background/80 transition-colors">
+                                    <div className="bg-background/60 p-3 md:p-4 rounded-2xl border border-white/5 flex flex-col items-center justify-center text-center shadow-inner hover:bg-background/80 transition-colors">
                                         <Music className="w-7 h-7 text-plex mb-2 opacity-80" />
                                         <span className="text-3xl font-black text-text drop-shadow-md mb-1">
                                             {serverStats.musicBytes ? (() => {
@@ -4426,7 +4426,7 @@ export const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onL
                 {/* Quick Actions + Your Analytics — shared row so bottoms align */}
                 {sessionInfo.session.isAdmin && (
                     <div className="lg:col-span-1 flex min-h-0">
-                        <div className="glass-card p-4 shadow-xl flex flex-col h-full w-full min-h-0 justify-center gap-3">
+                        <div className="glass-card p-3 md:p-4 shadow-xl flex flex-col h-full w-full min-h-0 justify-center gap-2.5">
                             <p className="text-muted text-xs uppercase tracking-widest font-semibold flex-shrink-0">Quick Actions</p>
                             <div className="grid grid-cols-3 gap-2">
                                 <button type="button" onClick={() => onViewAdmin()} className="flex flex-col items-center justify-center gap-1.5 px-2 py-3 rounded-xl font-bold text-[10px] leading-tight text-center transition-all border bg-plex/10 border-plex/30 text-plex hover:bg-plex/20">
@@ -4447,7 +4447,7 @@ export const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onL
                 )}
                 {(sessionInfo.session.isAdmin || user) && (
                     <div className={`flex min-h-0 ${sessionInfo.session.isAdmin ? 'lg:col-span-2' : 'lg:col-span-2 lg:col-start-2'}`}>
-                        <div className="glass-card p-4 shadow-sm flex flex-col h-full w-full min-h-0">
+                        <div className="glass-card p-3 md:p-4 shadow-sm flex flex-col h-full w-full min-h-0">
                             <div className="flex items-center justify-between flex-shrink-0">
                                 <h2 className="text-lg md:text-xl font-bold text-text flex items-center gap-2">
                                     <Activity className="w-5 h-5 text-plex" /> Your Analytics
@@ -4498,7 +4498,7 @@ export const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onL
                             </div>
 
                             {!analyticsLoading && analytics && analytics.totalPlays === 0 && (
-                                <div className="flex flex-col items-center justify-center p-6 text-center flex-1 min-h-0 mt-4">
+                                <div className="flex flex-col items-center justify-center p-4 md:p-5 text-center flex-1 min-h-0 mt-2 md:mt-3">
                                     <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center mb-3 text-xl shadow-inner">🍿</div>
                                     <h3 className="font-bold text-text mb-1">No watch history yet</h3>
                                     <p className="text-muted text-sm max-w-sm">Once you start watching content on the server, your personal watch stats and history will appear right here!</p>
@@ -4513,9 +4513,9 @@ export const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onL
                     <>
                         {!analyticsLoading && analytics?.recentHistory && analytics.recentHistory.length > 0 && (
                             <div className="lg:col-span-1 flex min-h-0">
-                                <div className="glass-card p-6 shadow-xl flex flex-col h-full w-full min-h-0">
-                                    <div className="flex items-center justify-between mb-6 flex-shrink-0">
-                                        <h3 className="text-xl font-bold text-text">Recently Watched</h3>
+                                <div className="glass-card p-4 md:p-5 shadow-xl flex flex-col h-full w-full min-h-0">
+                                    <div className="flex items-center justify-between mb-3 md:mb-4 flex-shrink-0">
+                                        <h3 className="text-lg md:text-xl font-bold text-text">Recently Watched</h3>
                                         {analytics.recentHistory.length > RECENT_HISTORY_PAGE_SIZE && (
                                             <div className="flex items-center gap-2">
                                                 <button
@@ -4579,10 +4579,10 @@ export const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onL
                             </div>
                         ) : analytics && analytics.totalPlays > 0 && analytics.topWatched && analytics.topWatched.length > 0 ? (
                             <div className={`flex min-h-0 ${analytics.recentHistory?.length ? 'lg:col-span-2' : 'lg:col-span-2 lg:col-start-2'}`}>
-                                <div className="glass-card p-6 shadow-xl flex flex-col h-full w-full min-h-0">
-                                    <div className="flex items-center justify-between mb-6 flex-shrink-0">
+                                <div className="glass-card p-4 md:p-5 shadow-xl flex flex-col h-full w-full min-h-0">
+                                    <div className="flex items-center justify-between mb-3 md:mb-4 flex-shrink-0">
                                         <div>
-                                            <h3 className="text-xl font-bold text-text mb-1">Your Most Watched</h3>
+                                            <h3 className="text-lg md:text-xl font-bold text-text mb-0.5">Your Most Watched</h3>
                                             <p className="text-muted text-sm">Based on your {analytics.totalPlays} total plays</p>
                                         </div>
                                         {analytics.topWatched.length > TOP_CONTENT_PAGE_SIZE && (
@@ -4637,10 +4637,10 @@ export const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onL
             {serverDataLoading && !dashboardData ? (
                 <HomeRecentlyAddedSkeleton />
             ) : dashboardData && (
-                <div className="flex flex-col gap-6 w-full">
+                <div className="flex flex-col gap-3 md:gap-4 w-full">
                     {dashboardData.recentMovies?.length > 0 && (
-                        <div className="glass-card p-6 shadow-xl overflow-hidden w-full">
-                            <h3 className="text-xl font-bold text-text mb-4">Recently Added Movies</h3>
+                        <div className="glass-card p-4 md:p-5 shadow-xl overflow-hidden w-full">
+                            <h3 className="text-lg md:text-xl font-bold text-text mb-3">Recently Added Movies</h3>
                             <div className="flex overflow-x-auto gap-4 pb-4 snap-x hide-scrollbar scroll-smooth">
                                 {dashboardData.recentMovies.map((item: any, idx: number) => (
                                     <DiscoverPosterCard
@@ -4662,8 +4662,8 @@ export const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onL
                     )}
 
                     {dashboardData.recentShows?.length > 0 && (
-                        <div className="glass-card p-6 shadow-xl overflow-hidden w-full">
-                            <h3 className="text-xl font-bold text-text mb-4">Recently Added TV Shows</h3>
+                        <div className="glass-card p-4 md:p-5 shadow-xl overflow-hidden w-full">
+                            <h3 className="text-lg md:text-xl font-bold text-text mb-3">Recently Added TV Shows</h3>
                             <div className="flex overflow-x-auto gap-4 pb-4 snap-x hide-scrollbar scroll-smooth">
                                 {dashboardData.recentShows.map((item: any, idx: number) => (
                                     <DiscoverPosterCard
@@ -4685,8 +4685,8 @@ export const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onL
                     )}
 
                     {dashboardData.recentMusic?.length > 0 && (
-                        <div className="glass-card p-6 shadow-xl overflow-hidden w-full">
-                            <h3 className="text-xl font-bold text-text mb-4">Recently Added Music</h3>
+                        <div className="glass-card p-4 md:p-5 shadow-xl overflow-hidden w-full">
+                            <h3 className="text-lg md:text-xl font-bold text-text mb-3">Recently Added Music</h3>
                             <div className="flex overflow-x-auto gap-4 pb-4 snap-x hide-scrollbar scroll-smooth">
                                 {dashboardData.recentMusic.map((item: any, idx: number) => (
                                     <DiscoverPosterCard
