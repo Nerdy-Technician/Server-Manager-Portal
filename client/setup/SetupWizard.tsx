@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import {
     Settings, Sparkles, ChevronRight, ChevronLeft, Check, Palette, Mail, Layers, Server, PartyPopper,
 } from 'lucide-react';
@@ -19,38 +19,14 @@ const STEPS = [
 
 type StepId = (typeof STEPS)[number]['id'];
 
-const SETUP_PLEX_STORAGE_KEY = 'setupWizardPlex';
-
-const readStoredSetupPlex = () => {
-    try {
-        const raw = sessionStorage.getItem(SETUP_PLEX_STORAGE_KEY);
-        if (!raw) return null;
-        return JSON.parse(raw) as {
-            token?: string;
-            servers?: PlexServer[];
-            serverIdentifier?: string;
-            step?: StepId;
-        };
-    } catch {
-        return null;
-    }
-};
-
 export const SetupWizard: React.FC<{ onComplete: () => void }> = ({ onComplete }) => {
-    const storedPlex = readStoredSetupPlex();
-
-    const [step, setStep] = useState<StepId>(() => {
-        if (storedPlex?.step) return storedPlex.step;
-        if (storedPlex?.token) return 'plex';
-        return 'welcome';
-    });
+    const [step, setStep] = useState<StepId>('welcome');
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
 
-    const [token, setToken] = useState(storedPlex?.token || '');
-    const [serverIdentifier, setServerIdentifier] = useState(storedPlex?.serverIdentifier || '');
-    const [plexServerUrl, setPlexServerUrl] = useState('');
-    const [servers, setServers] = useState<PlexServer[]>(storedPlex?.servers || []);
+    const [token, setToken] = useState('');
+    const [serverIdentifier, setServerIdentifier] = useState('');
+    const [servers, setServers] = useState<PlexServer[]>([]);
 
     const [publicDomain, setPublicDomain] = useState(typeof window !== 'undefined' ? window.location.origin : '');
     const [primaryColor, setPrimaryColor] = useState('#E5A00D');
@@ -77,16 +53,8 @@ export const SetupWizard: React.FC<{ onComplete: () => void }> = ({ onComplete }
     const stepIndex = STEPS.findIndex((s) => s.id === step);
     const canGoNext = step !== 'plex' || (token && serverIdentifier);
 
-    useEffect(() => {
-        sessionStorage.setItem(
-            SETUP_PLEX_STORAGE_KEY,
-            JSON.stringify({ token, servers, serverIdentifier, step }),
-        );
-    }, [token, servers, serverIdentifier, step]);
-
     const handleFetchServers = async () => {
-        const trimmedToken = token.trim();
-        if (!trimmedToken) {
+        if (!token) {
             setError('Please enter a Plex token first.');
             return;
         }
@@ -95,7 +63,7 @@ export const SetupWizard: React.FC<{ onComplete: () => void }> = ({ onComplete }
         try {
             const foundServers = await apiFetch('/api/plex/servers', {
                 method: 'POST',
-                body: JSON.stringify({ token: trimmedToken, plexServerUrl: plexServerUrl || undefined }),
+                body: JSON.stringify({ token }),
             });
             setServers(foundServers);
             if (foundServers.length > 0) {
@@ -105,12 +73,7 @@ export const SetupWizard: React.FC<{ onComplete: () => void }> = ({ onComplete }
                 setServerIdentifier('');
             }
         } catch (e) {
-            const message = e instanceof Error ? e.message : 'Failed to fetch servers.';
-            if (message.toLowerCase().includes('initial setup denied')) {
-                setError('Server fetch is blocked during setup from this host. Enter the Server Identifier manually using the steps below.');
-            } else {
-                setError(message);
-            }
+            setError(e instanceof Error ? e.message : 'Failed to fetch servers.');
             setServers([]);
             setServerIdentifier('');
         } finally {
@@ -138,24 +101,14 @@ export const SetupWizard: React.FC<{ onComplete: () => void }> = ({ onComplete }
     };
 
     const handleComplete = async () => {
-        const trimmedToken = token.trim();
-        if (!trimmedToken || !serverIdentifier.trim()) {
-            setError('Plex token and server identifier are required.');
-            return;
-        }
         setIsLoading(true);
         setError('');
         try {
-            await apiFetch('/api/plex/validate-token', {
-                method: 'POST',
-                body: JSON.stringify({ token: trimmedToken, plexServerUrl: plexServerUrl || undefined }),
-            });
             await apiFetch('/api/config', {
                 method: 'POST',
                 body: JSON.stringify({
-                    token: trimmedToken,
-                    serverIdentifier: serverIdentifier.trim(),
-                    plexServerUrl: plexServerUrl || undefined,
+                    token,
+                    serverIdentifier,
                     publicDomain,
                     primaryColor,
                     customLogoUrl,
@@ -176,7 +129,6 @@ export const SetupWizard: React.FC<{ onComplete: () => void }> = ({ onComplete }
                     requestAppApiKey,
                 }),
             });
-            sessionStorage.removeItem(SETUP_PLEX_STORAGE_KEY);
             onComplete();
         } catch (e) {
             setError(e instanceof Error ? e.message : 'Failed to save configuration.');
@@ -195,7 +147,7 @@ export const SetupWizard: React.FC<{ onComplete: () => void }> = ({ onComplete }
     const labelClass = 'text-sm font-bold text-muted uppercase tracking-wider';
 
     return (
-        <div className="w-full max-w-4xl mx-auto px-4 py-8 md:py-12">
+        <div className="w-full max-w-3xl mx-auto px-4 py-8 md:py-12">
             <div className="bg-card rounded-2xl shadow-2xl border border-white/10 overflow-hidden">
                 <div className="h-1 bg-gradient-to-r from-plex to-[#e5a00d]" />
 
@@ -246,61 +198,34 @@ export const SetupWizard: React.FC<{ onComplete: () => void }> = ({ onComplete }
                         <div className="flex flex-col gap-5">
                             <div>
                                 <h2 className="text-2xl font-bold text-text mb-1">Plex Connection</h2>
-                                <p className="text-muted text-sm">Enter your Plex token manually, then fetch and choose your server.</p>
+                                <p className="text-muted text-sm">Your admin Plex token and server identifier.</p>
                             </div>
-
-                            <div className="p-4 bg-plex/5 border border-plex/20 rounded-xl text-sm text-muted space-y-2">
-                                <p><strong className="text-plex">Required:</strong> Use the <strong className="text-text">server owner</strong> account token — not a shared user token.</p>
-                                <p>1) Sign in at <strong className="text-text">app.plex.tv</strong> as the Plex server owner.</p>
-                                <p>2) Open any library item, then copy <code className="bg-background px-1 rounded">X-Plex-Token=...</code> from the browser address bar.</p>
-                                <p>3) Paste the token below (no spaces). If setup fails, the token is wrong or expired — generate a fresh one at plex.tv while signed in.</p>
+                            <div className="p-4 bg-plex/5 border border-plex/20 rounded-xl text-sm text-muted">
+                                <strong className="text-plex">Tip:</strong> Log into Plex Web, open any library item XML, and find <code className="bg-background px-1 rounded">X-Plex-Token=...</code> in the URL.
                             </div>
-
                             <div className="flex flex-col gap-2">
                                 <label className={labelClass}>Plex Token</label>
                                 <div className="flex gap-2">
-                                    <input type="password" className={inputClass} value={token} onChange={(e) => setToken(e.target.value)} placeholder="X-Plex-Token" />
+                                    <input type="password" className={inputClass} value={token} onChange={(e) => setToken(e.target.value)} placeholder="X-Plex-Token" required />
                                     <button type="button" onClick={handleFetchServers} disabled={isLoading || !token} className="px-4 bg-plex/20 text-plex rounded-lg font-bold hover:bg-plex/30 whitespace-nowrap transition-colors disabled:opacity-50">
                                         Fetch Servers
                                     </button>
                                 </div>
                             </div>
-
                             {servers.length > 0 ? (
                                 <div className="flex flex-col gap-2">
                                     <label className={labelClass}>Select Server</label>
                                     <CustomSelect value={serverIdentifier} onChange={setServerIdentifier} options={servers.map((s) => ({ label: `${s.name} (${s.identifier})`, value: s.identifier }))} />
                                 </div>
-                            ) : token ? (
-                                <div className="flex flex-col gap-3">
+                            ) : (
+                                <div className="flex flex-col gap-2">
                                     <label className={labelClass}>Server Identifier</label>
-                                    <input type="text" className={inputClass} value={serverIdentifier} onChange={(e) => setServerIdentifier(e.target.value)} placeholder="No servers returned — enter identifier manually" required />
-                                    <div className="text-xs text-muted p-3 rounded-lg bg-background/60 border border-border space-y-1">
-                                        <p className="font-semibold text-text">How to find Server Identifier manually:</p>
-                                        <p>1) Open: <code className="bg-background px-1 rounded">http://YOUR_PLEX_IP:32400/identity?X-Plex-Token=YOUR_TOKEN</code></p>
-                                        <p>2) Copy <code className="bg-background px-1 rounded">machineIdentifier</code> from the response.</p>
-                                        <p>3) Paste it into the field above.</p>
-                                    </div>
+                                    <input type="text" className={inputClass} value={serverIdentifier} onChange={(e) => setServerIdentifier(e.target.value)} placeholder="Or fetch servers above" required />
                                 </div>
-                            ) : null}
-
-                            {token && serverIdentifier && (
-                                <IntegrationTestButton type="plex" payload={{ token, serverIdentifier, plexServerUrl: plexServerUrl || undefined }} />
                             )}
-
-                            <div className="flex flex-col gap-1.5">
-                                <label className={labelClass}>
-                                    Direct Plex URL <span className="text-muted font-normal">(optional — required in Docker)</span>
-                                </label>
-                                <input
-                                    type="url"
-                                    className={inputClass}
-                                    value={plexServerUrl}
-                                    onChange={(e) => setPlexServerUrl(e.target.value)}
-                                    placeholder="http://192.168.1.6:32400"
-                                />
-                                <p className="text-xs text-muted">If the test connection fails in Docker, enter your Plex server&apos;s LAN address here. Leave blank to use auto-discovery.</p>
-                            </div>
+                            {token && serverIdentifier && (
+                                <IntegrationTestButton type="plex" payload={{ token, serverIdentifier }} />
+                            )}
                         </div>
                     )}
 
@@ -390,16 +315,11 @@ export const SetupWizard: React.FC<{ onComplete: () => void }> = ({ onComplete }
                             ].map(({ label, url, setUrl, key, setKey, type, placeholder }) => (
                                 <div key={type} className="border border-border rounded-xl p-4 flex flex-col gap-3">
                                     <h3 className="font-bold text-plex">{label}</h3>
-                                    <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-3 md:items-start">
-                                        <input type="text" className={inputClass} value={url} onChange={(e) => setUrl(e.target.value)} placeholder={placeholder} />
-                                        <input type="password" className={inputClass} value={key} onChange={(e) => setKey(e.target.value)} placeholder="API Key" />
-                                        <IntegrationTestButton
-                                            type={type}
-                                            payload={{ [`${type}Url`]: url, [`${type}ApiKey`]: key }}
-                                            disabled={!url || !key}
-                                            className="md:min-w-[10rem]"
-                                        />
-                                    </div>
+                                    <input type="text" className={inputClass} value={url} onChange={(e) => setUrl(e.target.value)} placeholder={placeholder} />
+                                    <input type="password" className={inputClass} value={key} onChange={(e) => setKey(e.target.value)} placeholder="API Key" />
+                                    {url && key && (
+                                        <IntegrationTestButton type={type} payload={{ [`${type}Url`]: url, [`${type}ApiKey`]: key }} />
+                                    )}
                                 </div>
                             ))}
                             <div className="border border-border rounded-xl p-4 flex flex-col gap-3">
@@ -407,16 +327,11 @@ export const SetupWizard: React.FC<{ onComplete: () => void }> = ({ onComplete }
                                 <CustomSelect value={requestAppType} onChange={setRequestAppType} options={[...REQUEST_APP_OPTIONS]} />
                                 {requestAppType !== 'none' && (
                                     <>
-                                        <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-3 md:items-start">
-                                            <input type="text" className={inputClass} value={requestAppUrl} onChange={(e) => setRequestAppUrl(e.target.value)} placeholder="http://localhost:5055" />
-                                            <input type="password" className={inputClass} value={requestAppApiKey} onChange={(e) => setRequestAppApiKey(e.target.value)} placeholder="API Key" />
-                                            <IntegrationTestButton
-                                                type="requestApp"
-                                                payload={{ requestAppType, requestAppUrl, requestAppApiKey }}
-                                                disabled={!requestAppUrl || !requestAppApiKey}
-                                                className="md:min-w-[10rem]"
-                                            />
-                                        </div>
+                                        <input type="text" className={inputClass} value={requestAppUrl} onChange={(e) => setRequestAppUrl(e.target.value)} placeholder="http://localhost:5055" />
+                                        <input type="password" className={inputClass} value={requestAppApiKey} onChange={(e) => setRequestAppApiKey(e.target.value)} placeholder="API Key" />
+                                        {requestAppUrl && requestAppApiKey && (
+                                            <IntegrationTestButton type="requestApp" payload={{ requestAppType, requestAppUrl, requestAppApiKey }} />
+                                        )}
                                     </>
                                 )}
                             </div>

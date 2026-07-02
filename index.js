@@ -169,20 +169,9 @@ const resolveIntegrationUrlForFetch = (rawUrl) => {
     return normalizeExternalBaseUrl(rawUrl, { allowPrivate: true, allowHttp: true });
 };
 
-const resolveConfiguredPlexServerUrl = (config = {}) => {
-    const fromConfig = String(config.plexServerUrl || '').trim().replace(/\/+$/, '');
-    const fromEnv = String(process.env.PLEX_SERVER_URL || '').trim().replace(/\/+$/, '');
-    return fromConfig || fromEnv;
-};
-
-const normalizePlexToken = (token) => {
-    if (token === undefined || token === null || token === SECRET_MASK) return token;
-    return String(token).trim();
-};
-
 const clearSessionCookie = (req, res) => {
-    const isHttps = FORCE_SECURE_COOKIES || !!(req.socket?.encrypted);
-    res.clearCookie('session', { httpOnly: true, secure: isHttps, sameSite: 'lax', path: '/' });
+    const isHttps = FORCE_SECURE_COOKIES || req.secure;
+    res.clearCookie('session', { httpOnly: true, secure: isHttps, sameSite: 'strict', path: '/' });
 };
 
 app.use(express.json({ limit: '50kb' })); // Middleware to parse JSON bodies (with size limit)
@@ -190,57 +179,6 @@ app.use(cookieParser()); // Middleware to parse cookies
 
 // Trust the first proxy (e.g. Nginx/Caddy) so req.secure reflects HTTPS correctly
 app.set('trust proxy', 1);
-
-const verifyInitialSetupPlexOwner = async (plexToken, serverIdentifier, plexServerUrl = '') => {
-    if (!plexToken || !serverIdentifier || plexToken === SECRET_MASK) return false;
-    try {
-        const servers = await fetchOwnedPlexServers(plexToken);
-        if (servers.some(server => String(server.identifier) === String(serverIdentifier))) {
-            return true;
-        }
-    } catch (e) {
-        log(`Initial setup Plex owner verification via Plex.tv failed: ${e.message}`);
-    }
-
-    // Fallback for Docker/LAN setups where Plex.tv resource discovery can fail:
-    // probe the direct Plex URL /identity endpoint and compare machineIdentifier.
-    if (plexServerUrl) {
-        try {
-            const directUrl = resolveIntegrationUrlForFetch(plexServerUrl);
-            const identityRes = await fetchWithTimeout(`${directUrl}/identity`, {
-                headers: {
-                    'X-Plex-Token': plexToken,
-                    'Accept': 'application/json'
-                }
-            }, 6000);
-            if (!identityRes.ok) return false;
-
-            const identityText = await identityRes.text();
-            let machineIdentifier = '';
-
-            try {
-                const parsed = JSON.parse(identityText);
-                const container = parsed?.MediaContainer || parsed || {};
-                machineIdentifier = String(container.machineIdentifier || '');
-            } catch {
-                const machineMatch = identityText.match(/machineIdentifier="([^"]+)"/i)
-                    || identityText.match(/<machineIdentifier>([^<]+)<\/machineIdentifier>/i);
-                machineIdentifier = machineMatch ? String(machineMatch[1]) : '';
-            }
-
-            if (machineIdentifier && String(machineIdentifier) === String(serverIdentifier)) {
-                if (await validatePlexServerAdminToken(plexToken, plexServerUrl)) {
-                    return true;
-                }
-                log('Direct URL identity matched but token cannot access server libraries (invalid or non-admin token).');
-            }
-        } catch (e) {
-            log(`Initial setup Plex owner verification via direct URL failed: ${e.message}`);
-        }
-    }
-
-    return false;
-};
 
 // --- In-Memory Cache for Plex Metadata ---
 const plexMetadataCache = new Map();
@@ -637,28 +575,15 @@ const apiFetch = (url, token, options = {}) => {
 };
 
 let cachedAdminId = null;
-const getPlexAccountIdForToken = async (plexToken) => {
-    if (!plexToken) return null;
-    try {
-        const res = await apiFetch('https://plex.tv/api/v2/user', plexToken);
-        if (!res.ok) return null;
-        const data = await res.json();
-        return data.id ? String(data.id) : null;
-    } catch (e) {
-        log('Failed to fetch Plex account id: ' + e.message);
-        return null;
-    }
-};
-
 const getAdminId = async (config) => {
-    if (config?.adminPlexId) return String(config.adminPlexId);
     if (cachedAdminId) return cachedAdminId;
     if (!config || !config.plexToken) return null;
     try {
-        const adminId = await getPlexAccountIdForToken(config.plexToken);
-        if (!adminId) return null;
-        cachedAdminId = adminId;
-        return adminId;
+        const res = await apiFetch('https://plex.tv/api/v2/user', config.plexToken);
+        if (!res.ok) return null;
+        const data = await res.json();
+        cachedAdminId = data.id;
+        return data.id;
     } catch (e) {
         log('Failed to fetch admin info: ' + e.message);
         return null;
@@ -765,9 +690,6 @@ const syncUsers = async (config) => {
     if (!res.ok) {
         const errorText = await res.text();
         log(`Error fetching Plex shared users. Status: ${res.status}. Response: ${errorText}`);
-        if (res.status === 401) {
-            throw new Error('Invalid Plex token in config. Update the token in Settings (or config/config.json) using the server owner X-Plex-Token from app.plex.tv.');
-        }
         throw new Error(`Failed to fetch Plex shared users. Status: ${res.status}`);
     }
 
@@ -818,7 +740,7 @@ const syncUsers = async (config) => {
             // Update existing user with latest info from Plex, but keep local expiry/trial data.
             return { ...existingUser, id: pUser.id, username: pUser.username, email: pUser.email, thumb: pUser.thumb, plexAccessStatus: 'active' };
         }
-        log(`New user found: ${pUser.username}. Adding with unlimited access.`);
+        log(`New user found: ${pUser.username}. Setting default 1-day expiry.`);
         appendAuditLog('plex_sync_new_user_added', null, pUser).catch(() => { });
         return {
             id: pUser.id,
@@ -826,7 +748,7 @@ const syncUsers = async (config) => {
             email: pUser.email,
             thumb: pUser.thumb,
             joiningDate: new Date().toISOString(),
-            expiryDate: null,
+            expiryDate: addDays(new Date(), 1).toISOString(),
             plexAccessStatus: 'active',
             isTrial: false
         };
@@ -1321,26 +1243,7 @@ app.post('/api/auth/plex/callback', authRateLimit, async (req, res) => {
 
         const config = await loadFile(CONFIG_PATH, {});
         const adminId = await getAdminId(config);
-        let isAdmin = !!(adminId && String(userData.id) === String(adminId));
-
-        // If the stored adminPlexId doesn't match, check whether this user actually
-        // owns the configured Plex server — this handles first-login-after-setup
-        // scenarios where adminPlexId wasn't saved correctly.
-        if (!isAdmin && config?.serverIdentifier) {
-            isAdmin = await verifyInitialSetupPlexOwner(
-                pinData.authToken,
-                config.serverIdentifier,
-                resolveConfiguredPlexServerUrl(config),
-            );
-        }
-
-        // Whenever we confirm this user is the admin, persist their Plex ID so
-        // future logins don't need the extra ownership-verification API call.
-        if (isAdmin && String(config.adminPlexId || '') !== String(userData.id)) {
-            config.adminPlexId = String(userData.id);
-            await saveFile(CONFIG_PATH, config);
-            cachedAdminId = String(userData.id);
-        }
+        const isAdmin = userData.id === adminId;
         const deletedUsers = await loadFile(DELETED_USERS_PATH, []);
 
         const sessionUser = {
@@ -1409,11 +1312,8 @@ app.post('/api/auth/plex/callback', authRateLimit, async (req, res) => {
         }
 
         const token = jwt.sign(sessionUser, JWT_SECRET, { expiresIn: '7d' });
-        // Use req.socket?.encrypted (actual TLS on the socket) rather than req.secure
-        // (which can be spoofed by X-Forwarded-Proto from Docker/proxy networking)
-        // to avoid setting Secure cookies over plain HTTP in Docker environments.
-        const isHttps = FORCE_SECURE_COOKIES || !!(req.socket?.encrypted);
-        res.cookie('session', token, { httpOnly: true, secure: isHttps, sameSite: 'lax', path: '/', maxAge: 7 * 24 * 60 * 60 * 1000 });
+        const isHttps = FORCE_SECURE_COOKIES || req.secure;
+        res.cookie('session', token, { httpOnly: true, secure: isHttps, sameSite: 'strict', maxAge: 7 * 24 * 60 * 60 * 1000 });
 
         if (!isAdmin) {
             const users = await loadFile(USERS_PATH, []);
@@ -1429,124 +1329,6 @@ app.post('/api/auth/plex/callback', authRateLimit, async (req, res) => {
     } catch (err) {
         log('Error in plex callback: ' + err.message);
         res.status(500).json({ error: 'Failed to verify login' });
-    }
-});
-
-// GET callback: plex.tv redirects here directly, server sets cookie and redirects to /portal.
-// This is more reliable than the fetch-based POST approach because browsers handle
-// Set-Cookie headers from navigation responses much more consistently than from fetch() responses.
-app.get('/api/auth/plex/callback', authRateLimit, async (req, res) => {
-    const { pinId, ref } = req.query;
-    if (!pinId) return res.redirect('/?loginError=' + encodeURIComponent('Missing pin ID'));
-
-    try {
-        const pinRes = await fetch(`https://plex.tv/api/v2/pins/${pinId}`, {
-            headers: { 'Accept': 'application/json', 'X-Plex-Client-Identifier': CLIENT_ID }
-        });
-        const pinData = await pinRes.json();
-
-        if (!pinData.authToken) {
-            return res.redirect('/?loginError=' + encodeURIComponent('Not authenticated yet — please try again'));
-        }
-
-        const userRes = await apiFetch('https://plex.tv/api/v2/user', pinData.authToken);
-        if (!userRes.ok) throw new Error('Failed to fetch user info');
-        const userData = await userRes.json();
-
-        const config = await loadFile(CONFIG_PATH, {});
-        const adminId = await getAdminId(config);
-        let isAdmin = !!(adminId && String(userData.id) === String(adminId));
-
-        if (!isAdmin && config?.serverIdentifier) {
-            isAdmin = await verifyInitialSetupPlexOwner(
-                pinData.authToken,
-                config.serverIdentifier,
-                resolveConfiguredPlexServerUrl(config),
-            );
-        }
-
-        if (isAdmin && String(config.adminPlexId || '') !== String(userData.id)) {
-            config.adminPlexId = String(userData.id);
-            await saveFile(CONFIG_PATH, config);
-            cachedAdminId = String(userData.id);
-        }
-
-        const deletedUsers = await loadFile(DELETED_USERS_PATH, []);
-        const sessionUser = {
-            id: userData.uuid,
-            plexId: userData.id,
-            email: userData.email,
-            username: userData.username,
-            isAdmin
-        };
-
-        if (!isAdmin && isDeletedUser(deletedUsers, sessionUser)) {
-            await appendAuditLog('login_blocked_deleted_user', sessionUser, sessionUser);
-            clearSessionCookie(req, res);
-            return res.redirect('/?loginError=' + encodeURIComponent('Your portal session has expired. Please contact the admin for access.'));
-        }
-
-        if (!isAdmin) {
-            const users = await loadFile(USERS_PATH, []);
-            const knownUser = findLocalUserForSession(users, sessionUser);
-            const canSelfRegister = !!config.allowTemporaryAccess || (!!config.referralEnabled && !!ref);
-            if (!knownUser && !canSelfRegister) {
-                await appendAuditLog('login_blocked_non_member', sessionUser, sessionUser);
-                clearSessionCookie(req, res);
-                return res.redirect('/?loginError=' + encodeURIComponent('Your account is not registered for this portal.'));
-            }
-        }
-
-        if (!isAdmin && config.referralEnabled && ref) {
-            const users = await loadFile(USERS_PATH, []);
-            const isNewUser = !users.find(u => u.id === sessionUser.id || u.plexId === sessionUser.plexId);
-            if (isNewUser) {
-                const referrer = users.find(u => u.id === ref || u.plexId === ref);
-                if (referrer && referrer.plexAccessStatus === 'active') {
-                    const trialDays = config.referralTrialDays || 3;
-                    const rewardDays = config.referralRewardDays || 7;
-                    const newUserObj = {
-                        id: sessionUser.id,
-                        plexId: sessionUser.plexId,
-                        username: sessionUser.username,
-                        email: sessionUser.email,
-                        joiningDate: new Date().toISOString(),
-                        expiryDate: addDays(new Date(), trialDays).toISOString(),
-                        plexAccessStatus: 'pending',
-                        isTrial: true
-                    };
-                    users.push(newUserObj);
-                    if (referrer.expiryDate) {
-                        referrer.expiryDate = addDays(new Date(referrer.expiryDate), rewardDays).toISOString();
-                    }
-                    await saveFile(USERS_PATH, users);
-                    await appendAuditLog('referral_claimed', sessionUser, referrer, { trialDays, rewardDays });
-                    if (config.serverIdentifier && config.plexToken) {
-                        inviteUserToPlex(newUserObj, config).catch(e => log('Failed to invite referral: ' + e.message));
-                    }
-                }
-            }
-        }
-
-        const token = jwt.sign(sessionUser, JWT_SECRET, { expiresIn: '7d' });
-        const isHttps = FORCE_SECURE_COOKIES || !!(req.socket?.encrypted);
-        res.cookie('session', token, { httpOnly: true, secure: isHttps, sameSite: 'lax', path: '/', maxAge: 7 * 24 * 60 * 60 * 1000 });
-
-        if (!isAdmin) {
-            const users = await loadFile(USERS_PATH, []);
-            const existingUser = users.find(u => u.id === sessionUser.id || u.plexId === sessionUser.plexId);
-            if (existingUser) {
-                existingUser.lastLogin = new Date().toISOString();
-                await saveFile(USERS_PATH, users);
-            }
-        }
-        await appendAuditLog('user_login', sessionUser, sessionUser);
-
-        res.redirect('/portal');
-    } catch (err) {
-        log('Error in plex GET callback: ' + err.message);
-        clearSessionCookie(req, res);
-        res.redirect('/?loginError=' + encodeURIComponent('Login failed. Please try again.'));
     }
 });
 
@@ -1730,8 +1512,6 @@ app.get('/api/config', requireAdmin, async (req, res) => {
 app.post('/api/config', setupRateLimit, async (req, res) => {
     const {
         token, serverIdentifier, checkIntervalMinutes,
-        adminPlexId: adminPlexIdFromBody,
-        plexServerUrl: plexServerUrlFromBody,
         smtpHost, smtpPort, smtpUser, smtpPass, smtpFrom, smtpSecure, emailDaysBefore,
         newsletterFrequency, newsletterDay, publicDomain, requestUrl, contactUrl, contactWhatsApp, contactEmail,
         sonarrUrl, sonarrApiKey, radarrUrl, radarrApiKey, tautulliUrl, tautulliApiKey,
@@ -1745,9 +1525,6 @@ app.post('/api/config', setupRateLimit, async (req, res) => {
         return res.status(400).json({ error: 'Token and serverIdentifier are required.' });
     }
 
-    const normalizedToken = normalizePlexToken(token);
-    const normalizedServerIdentifier = String(serverIdentifier).trim();
-
     const existingConfig = await loadFile(CONFIG_PATH, {});
     const isConfigured = !!(existingConfig && existingConfig.plexToken && existingConfig.serverIdentifier);
     const wasMaintenanceEnabled = !!existingConfig.maintenanceExperimentalEnabled;
@@ -1760,35 +1537,18 @@ app.post('/api/config', setupRateLimit, async (req, res) => {
         try {
             const decoded = jwt.verify(sessionToken, JWT_SECRET);
             const adminId = await getAdminId(existingConfig);
-            if (!adminId || String(decoded.plexId) !== String(adminId)) {
+            if (!adminId || decoded.plexId !== adminId) {
                 return res.status(403).json({ error: 'Forbidden: Admins only.' });
             }
             req.user = decoded;
         } catch (e) {
             return res.status(403).json({ error: 'Forbidden: Invalid or expired session. Please log in again.' });
         }
-    } else {
-        const candidatePlexServerUrl = (plexServerUrlFromBody !== undefined
-            ? String(plexServerUrlFromBody || '').trim()
-            : String(existingConfig.plexServerUrl || '').trim()) || resolveConfiguredPlexServerUrl(existingConfig);
-
-        if (!canRunInitialSetup(req)) {
-            const verifiedPlexOwner = await verifyInitialSetupPlexOwner(normalizedToken, normalizedServerIdentifier, candidatePlexServerUrl);
-            if (!verifiedPlexOwner) {
-                if (!SETUP_TOKEN) {
-                    return res.status(403).json({ error: 'Initial setup is restricted. Sign in with the Plex server owner account, configure SETUP_TOKEN, or run setup from localhost.' });
-                }
-                return res.status(403).json({ error: 'Initial setup denied: invalid setup token or Plex server owner verification failed.' });
-            }
+    } else if (!canRunInitialSetup(req)) {
+        if (!SETUP_TOKEN) {
+            return res.status(403).json({ error: 'Initial setup is restricted. Configure SETUP_TOKEN or run setup from localhost.' });
         }
-
-        const tokenValidation = await validatePlexTokenForSetup(normalizedToken, candidatePlexServerUrl);
-        if (!tokenValidation.ok) {
-            return res.status(400).json({ error: tokenValidation.error });
-        }
-        if (tokenValidation.warning) {
-            log(`Initial setup token validation: ${tokenValidation.warning}`);
-        }
+        return res.status(403).json({ error: 'Initial setup denied: invalid setup token.' });
     }
     const interval = parseInt(checkIntervalMinutes, 10);
     let safeSonarrUrl = '';
@@ -1823,9 +1583,8 @@ app.post('/api/config', setupRateLimit, async (req, res) => {
 
     const config = {
         ...existingConfig,
-        plexToken: resolveSecret(normalizedToken, existingConfig.plexToken),
-        serverIdentifier: normalizedServerIdentifier,
-        plexServerUrl: (plexServerUrlFromBody !== undefined ? String(plexServerUrlFromBody || '').trim() : existingConfig.plexServerUrl) || '',
+        plexToken: resolveSecret(token, existingConfig.plexToken),
+        serverIdentifier,
         checkIntervalMinutes: (interval > 0 ? interval : 60),
         smtpHost: smtpHost || '',
         smtpPort: parseInt(smtpPort, 10) || 587,
@@ -1869,14 +1628,6 @@ app.post('/api/config', setupRateLimit, async (req, res) => {
         autoBackupRetentionCount: Math.max(1, parseInt(autoBackupRetentionCount, 10) || 10),
         maintenanceExperimentalEnabled: maintenanceExperimentalEnabled !== undefined ? !!maintenanceExperimentalEnabled : !!existingConfig.maintenanceExperimentalEnabled
     };
-    // Prefer the plexId sent directly by the setup wizard (avoids an extra API call).
-    // Fall back to fetching it from Plex if not provided or still unknown.
-    const resolvedAdminPlexId = (adminPlexIdFromBody && adminPlexIdFromBody !== SECRET_MASK && String(adminPlexIdFromBody).trim())
-        || existingConfig.adminPlexId
-        || await getPlexAccountIdForToken(config.plexToken);
-    if (resolvedAdminPlexId) {
-        config.adminPlexId = String(resolvedAdminPlexId);
-    }
     await saveFile(CONFIG_PATH, config);
     cachedAdminId = null;
     // Invalidate caches tied to the Plex token/server so changes take effect immediately.
@@ -2005,9 +1756,10 @@ const assertIntegrationTestAccess = async (req, res) => {
             res.status(403).json({ error: 'Forbidden: invalid session.' });
             return false;
         }
+    } else if (!canRunInitialSetup(req)) {
+        res.status(403).json({ error: 'Initial setup denied: localhost or valid setup token required.' });
+        return false;
     }
-    // During first-run setup there is no admin session yet. Allow test-only
-    // connection probes so the wizard can validate services before saving config.
     return true;
 };
 
@@ -2082,7 +1834,7 @@ app.post('/api/config/test-integration', setupRateLimit, async (req, res) => {
 
     const {
         type,
-        token, serverIdentifier, plexServerUrl,
+        token, serverIdentifier,
         sonarrUrl, sonarrApiKey,
         radarrUrl, radarrApiKey,
         tautulliUrl, tautulliApiKey,
@@ -2096,16 +1848,21 @@ app.post('/api/config/test-integration', setupRateLimit, async (req, res) => {
             const plexToken = resolveTestCredential(token, stored.plexToken);
             const serverId = resolveTestCredential(serverIdentifier, stored.serverIdentifier);
             if (!plexToken || !serverId) return res.status(400).json({ error: 'Plex token and server identifier are required.' });
-            const resolvedPlexServerUrl = (plexServerUrl || '').trim().replace(/\/$/, '') || stored.plexServerUrl || '';
-            const testConfig = { ...stored, plexToken, serverIdentifier: serverId, plexServerUrl: resolvedPlexServerUrl };
-            const { container, uri, directReachable } = await testPlexServerConnection(testConfig);
+            cachedPlexConnectionUri = null;
+            lastPlexConnectionUriFetch = 0;
+            const testConfig = { ...stored, plexToken, serverIdentifier: serverId };
+            const uri = await getPlexConnectionUri(testConfig);
+            const identityRes = await fetchWithTimeout(`${uri}/identity?X-Plex-Token=${encodeURIComponent(plexToken)}`, {
+                headers: { Accept: 'application/json' },
+            }, 12000);
+            if (!identityRes.ok) throw new Error(`Plex server returned HTTP ${identityRes.status}`);
+            const identity = await identityRes.json().catch(() => ({}));
+            const container = identity.MediaContainer || identity;
             const version = container.version || container.Version || '';
-            const message = directReachable && version
+            const message = version
                 ? `Connected to Plex Media Server (v${version})`
-                : directReachable
-                    ? 'Connected to Plex Media Server'
-                    : 'Plex account and server verified via Plex.tv. Direct server access from the container could not be confirmed, but setup can continue.';
-            return res.json({ ok: true, message, details: { version: version || null, machineIdentifier: container.machineIdentifier || serverId, uri, directReachable } });
+                : 'Connected to Plex Media Server';
+            return res.json({ ok: true, message, details: { version: version || null, machineIdentifier: container.machineIdentifier || serverId, uri } });
         }
 
         if (type === 'sonarr') {
@@ -2168,12 +1925,8 @@ app.post('/api/config/test-integration', setupRateLimit, async (req, res) => {
 
         return res.status(400).json({ error: 'Unknown integration type.' });
     } catch (e) {
-        const safeMessage = sanitizeConnectionError(e.message || 'Connection test failed.', [
-            token, sonarrApiKey, radarrApiKey, tautulliApiKey, requestAppApiKey,
-            stored.plexToken, stored.sonarrApiKey, stored.radarrApiKey, stored.tautulliApiKey, stored.requestAppApiKey
-        ]);
-        log(`Integration test failed (${type}): ${safeMessage}`);
-        res.status(500).json({ error: safeMessage });
+        log(`Integration test failed (${type}): ${e.message}`);
+        res.status(500).json({ error: e.message || 'Connection test failed.' });
     }
 });
 
@@ -2208,35 +1961,6 @@ const pickPlexConnection = (connections = []) => {
     return connections.find(c => c.local) || connections[0];
 };
 
-const orderPlexConnectionsForTest = (connections = []) => {
-    if (!Array.isArray(connections) || connections.length === 0) return [];
-    // For connectivity probing we always try local/LAN connections first because
-    // remote plex.direct URLs routinely time-out inside Docker (DNS-rebind
-    // protection on the host blocks those names), which wastes 12 s per entry
-    // before we reach the LAN IP that actually works.
-    const local = connections.filter(c => c?.uri && c.local && !isLoopbackPlexUri(c.uri));
-    const remote = connections.filter(c => c?.uri && !c.local && !isLoopbackPlexUri(c.uri));
-    const loopback = connections.filter(c => c?.uri && isLoopbackPlexUri(c.uri));
-    const seen = new Set();
-    const ordered = [];
-    for (const c of [...local, ...remote, ...loopback]) {
-        if (c?.uri && !seen.has(c.uri)) { seen.add(c.uri); ordered.push(c); }
-    }
-    return ordered;
-};
-
-const sanitizeConnectionError = (message = '', secrets = []) => {
-    let safe = String(message || 'Connection test failed.');
-    for (const secret of secrets) {
-        if (secret && typeof secret === 'string') {
-            safe = safe.split(secret).join('[redacted]');
-        }
-    }
-    safe = safe.replace(/([?&](?:X-Plex-Token|apikey|api_key|apiKey|token|key)=)[^&\s]+/gi, '$1[redacted]');
-    safe = safe.replace(/(X-(?:Plex-)?Api-Key[=:]\s*)[^\s,;]+/gi, '$1[redacted]');
-    return safe;
-};
-
 const fetchWithTimeout = async (url, options = {}, timeoutMs = 15000) => {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -2247,142 +1971,8 @@ const fetchWithTimeout = async (url, options = {}, timeoutMs = 15000) => {
     }
 };
 
-const validatePlexAccountToken = async (plexToken) => {
-    const token = normalizePlexToken(plexToken);
-    if (!token || token === SECRET_MASK) return { ok: false, reason: 'missing' };
-    try {
-        const res = await apiFetch('https://plex.tv/api/v2/user', token);
-        if (res.ok) return { ok: true, source: 'plex.tv' };
-        if (res.status === 401) return { ok: false, reason: 'invalid' };
-        return { ok: false, reason: 'error', status: res.status };
-    } catch (e) {
-        return { ok: false, reason: 'unreachable', message: e.message };
-    }
-};
-
-const validatePlexServerAdminToken = async (plexToken, plexServerUrl) => {
-    const token = normalizePlexToken(plexToken);
-    const directUrl = resolveIntegrationUrlForFetch(plexServerUrl);
-    if (!token || !directUrl) return false;
-    try {
-        const res = await fetchWithTimeout(`${directUrl}/library/sections?X-Plex-Container-Size=1`, {
-            headers: { 'X-Plex-Token': token, Accept: 'application/json' },
-        }, 6000);
-        return res.ok;
-    } catch {
-        return false;
-    }
-};
-
-const validatePlexTokenForSetup = async (plexToken, plexServerUrl = '') => {
-    const token = normalizePlexToken(plexToken);
-    if (!token) {
-        return { ok: false, error: 'Plex token is required.' };
-    }
-
-    const accountCheck = await validatePlexAccountToken(token);
-    if (accountCheck.ok) {
-        return { ok: true, source: accountCheck.source };
-    }
-
-    if (accountCheck.reason === 'invalid') {
-        return {
-            ok: false,
-            error: 'Invalid Plex token. Sign in at app.plex.tv as the server owner, open any library item, and copy X-Plex-Token from the page URL.',
-        };
-    }
-
-    const directUrl = String(plexServerUrl || '').trim();
-    if (directUrl && await validatePlexServerAdminToken(token, directUrl)) {
-        return { ok: true, source: 'direct-server', warning: 'Plex.tv is unreachable; token verified via your direct Plex URL.' };
-    }
-
-    if (accountCheck.reason === 'unreachable' && !directUrl) {
-        return {
-            ok: false,
-            error: 'Could not reach Plex.tv to verify your token. Enter your direct Plex URL (e.g. http://192.168.1.6:32400) and try again.',
-        };
-    }
-
-    return {
-        ok: false,
-        error: 'Could not verify Plex token. Check the token, direct Plex URL, and that the container can reach Plex.',
-    };
-};
-
-const probeOnePlexUrl = async (uri, plexToken) => {
-    const identityRes = await fetchWithTimeout(`${uri}/identity`, {
-        headers: { 'X-Plex-Token': plexToken, 'Accept': 'application/json' },
-    }, 5000);
-    if (!identityRes.ok) throw new Error(`HTTP ${identityRes.status}`);
-    const identity = await identityRes.json().catch(() => ({}));
-    return { container: identity.MediaContainer || identity, uri, directReachable: true };
-};
-
-const testPlexServerConnection = async (config) => {
-    const plexToken = config.plexToken;
-    const failures = [];
-
-    // 1. Try user-supplied direct URL first (PLEX_SERVER_URL env var or config.plexServerUrl).
-    //    This is the most reliable path in Docker where Plex-advertised IPs may be unreachable.
-    const envDirectUrl = (process.env.PLEX_SERVER_URL || '').trim().replace(/\/$/, '');
-    const cfgDirectUrl = (config.plexServerUrl || '').trim().replace(/\/$/, '');
-    for (const directUrl of [cfgDirectUrl, envDirectUrl].filter(Boolean)) {
-        try {
-            return await probeOnePlexUrl(directUrl, plexToken);
-        } catch (e) {
-            failures.push(`${directUrl}: ${sanitizeConnectionError(e.message, [plexToken])}`);
-        }
-    }
-
-    // 2. Fetch the advertised connection list from Plex.tv and try each URI.
-    const response = await fetchWithTimeout('https://plex.tv/api/v2/resources?includeHttps=1', {
-        headers: {
-            'X-Plex-Token': plexToken,
-            'X-Plex-Client-Identifier': CLIENT_ID,
-            'Accept': 'application/json'
-        }
-    }, 20000);
-    if (!response.ok) throw new Error('Failed to fetch resources from Plex.tv');
-
-    const resources = await response.json();
-    const server = resources.find(r => r.clientIdentifier === config.serverIdentifier);
-    if (!server || !server.connections || server.connections.length === 0) {
-        throw new Error('Server not found in Plex resources');
-    }
-
-    for (const connection of orderPlexConnectionsForTest(server.connections)) {
-        if (!connection?.uri) continue;
-        try {
-            return await probeOnePlexUrl(connection.uri, plexToken);
-        } catch (e) {
-            failures.push(`${connection.uri}: ${sanitizeConnectionError(e.message, [plexToken])}`);
-        }
-    }
-
-    log(`Plex direct connection probe failed during test: ${failures.join(' | ')}`);
-    return {
-        container: {
-            machineIdentifier: server.clientIdentifier || config.serverIdentifier,
-            version: server.productVersion || server.version || ''
-        },
-        uri: null,
-        directReachable: false
-    };
-};
-
 // Plex interaction helpers
 const getPlexConnectionUri = async (config) => {
-    // Allow a hard-coded URL to bypass discovery — useful when the container
-    // cannot reach plex.direct domains (DNS-rebind protection on LAN routers).
-    const envUrl = (process.env.PLEX_SERVER_URL || '').trim().replace(/\/$/, '');
-    const cfgUrl = (config.plexServerUrl || '').trim().replace(/\/$/, '');
-    const overrideUrl = cfgUrl || envUrl;
-    if (overrideUrl) {
-        cachedPlexConnectionUri = overrideUrl;
-        lastPlexConnectionUriFetch = Date.now();
-        return overrideUrl;
-    }
     if (cachedPlexConnectionUri && (Date.now() - lastPlexConnectionUriFetch < 60 * 60 * 1000)) {
         return cachedPlexConnectionUri;
     }
@@ -2974,84 +2564,9 @@ app.post('/api/newsletter/send-now', requireAdmin, async (req, res) => {
     }
 });
 
-const fetchOwnedPlexServers = async (plexToken) => {
-    const response = await fetch('https://plex.tv/pms/servers', {
-        headers: {
-            'X-Plex-Token': plexToken,
-            'Accept': 'application/xml',
-        },
-    });
-    if (!response.ok) {
-        const errorText = await response.text();
-        log(`Error fetching Plex servers (XML). Status: ${response.status}. Response: ${errorText}`);
-        throw new Error('Failed to fetch servers from Plex. Please double-check your Plex account.');
-    }
-    const xmlText = await response.text();
-    // Match both self-closing <Server ... /> and regular <Server ...> tags
-    const serverTags = xmlText.match(/<Server\b[^>]*\/?>/g) || [];
-    return serverTags.map((tag) => {
-        const nameMatch = tag.match(/name="([^"]+)"/);
-        const idMatch = tag.match(/machineIdentifier="([^"]+)"/);
-        if (idMatch) {
-            return { name: nameMatch ? nameMatch[1] : 'Unknown', identifier: idMatch[1] };
-        }
-        return null;
-    }).filter(Boolean);
-};
-
-const assertInitialSetupAccess = async (req, res, options = {}) => {
-    const existingConfig = await loadFile(CONFIG_PATH, {});
-    const isConfigured = !!(existingConfig?.plexToken && existingConfig?.serverIdentifier);
-    if (isConfigured) {
-        res.status(403).json({ error: 'Portal is already configured.' });
-        return false;
-    }
-    if (options.allowUnconfigured === true) return true;
-    if (canRunInitialSetup(req)) return true;
-    const sessionToken = req.cookies && req.cookies.session;
-    if (sessionToken) {
-        try {
-            jwt.verify(sessionToken, JWT_SECRET);
-            return true;
-        } catch (e) { /* fall through */ }
-    }
-    res.status(403).json({ error: 'Initial setup denied: localhost, valid setup token, or admin session required.' });
-    return false;
-};
-
-app.post('/api/plex/validate-token', setupRateLimit, async (req, res) => {
-    const { token, plexServerUrl } = req.body || {};
-    const normalizedToken = normalizePlexToken(token);
-    if (!normalizedToken) return res.status(400).json({ error: 'Plex token is required.' });
-
-    const existingConfig = await loadFile(CONFIG_PATH, {});
-    const isConfigured = !!(existingConfig?.plexToken && existingConfig?.serverIdentifier);
-    if (isConfigured) {
-        const sessionToken = req.cookies && req.cookies.session;
-        if (!sessionToken) return res.status(403).json({ error: 'Forbidden: Admin session required.' });
-        try {
-            const decoded = jwt.verify(sessionToken, JWT_SECRET);
-            const adminId = await getAdminId(existingConfig);
-            if (!adminId || String(decoded.plexId) !== String(adminId)) {
-                return res.status(403).json({ error: 'Forbidden: Admins only.' });
-            }
-        } catch (e) {
-            return res.status(403).json({ error: 'Forbidden: Invalid admin session.' });
-        }
-    } else if (!(await assertInitialSetupAccess(req, res, { allowUnconfigured: true }))) {
-        return;
-    }
-
-    const directUrl = String(plexServerUrl || '').trim() || resolveConfiguredPlexServerUrl(existingConfig);
-    const result = await validatePlexTokenForSetup(normalizedToken, directUrl);
-    if (!result.ok) return res.status(400).json({ error: result.error });
-    return res.json({ ok: true, message: result.warning || 'Plex token is valid.' });
-});
-
 app.post('/api/plex/servers', setupRateLimit, async (req, res) => {
-    const { token, plexServerUrl } = req.body;
-    const normalizedToken = normalizePlexToken(token);
-    if (!normalizedToken) return res.status(400).json({ error: 'Plex token is required.' });
+    const { token } = req.body;
+    if (!token) return res.status(400).json({ error: 'Plex token is required.' });
 
     try {
         const existingConfig = await loadFile(CONFIG_PATH, {});
@@ -3072,67 +2587,35 @@ app.post('/api/plex/servers', setupRateLimit, async (req, res) => {
                 return res.status(403).json({ error: 'Forbidden: Admins only.' });
             }
         } else if (!canRunInitialSetup(req)) {
-            const sessionToken = req.cookies && req.cookies.session;
-            let allowed = false;
-            if (sessionToken) {
-                try {
-                    jwt.verify(sessionToken, JWT_SECRET);
-                    allowed = true;
-                } catch (e) { /* ignore */ }
-            }
-            if (!allowed) {
-                return res.status(403).json({ error: 'Initial setup denied: localhost or valid setup token required.' });
-            }
+            return res.status(403).json({ error: 'Initial setup denied: localhost or valid setup token required.' });
         }
 
         log('Fetching Plex servers using /pms/servers XML API...');
-        let servers = [];
-        try {
-            servers = await fetchOwnedPlexServers(normalizedToken);
-        } catch (e) {
-            log(`Owned Plex server discovery failed: ${e.message}`);
-        }
-
-        // Fallback: if Plex.tv discovery returns nothing, try the direct URL's
-        // /identity endpoint and extract machineIdentifier for manual setups.
-        if (servers.length === 0 && plexServerUrl) {
-            try {
-                const baseUrl = resolveIntegrationUrlForFetch(plexServerUrl);
-                const identityRes = await fetchWithTimeout(`${baseUrl}/identity`, {
-                    headers: {
-                        'X-Plex-Token': normalizedToken,
-                        'Accept': 'application/json'
-                    }
-                }, 6000);
-                if (identityRes.ok) {
-                    const identityText = await identityRes.text();
-                    let machineIdentifier = '';
-                    let friendlyName = '';
-
-                    try {
-                        const parsed = JSON.parse(identityText);
-                        const container = parsed?.MediaContainer || parsed || {};
-                        machineIdentifier = String(container.machineIdentifier || '');
-                        friendlyName = String(container.friendlyName || container.name || '');
-                    } catch {
-                        // XML fallback
-                        const machineMatch = identityText.match(/machineIdentifier="([^"]+)"/i)
-                            || identityText.match(/<machineIdentifier>([^<]+)<\/machineIdentifier>/i);
-                        const nameMatch = identityText.match(/friendlyName="([^"]+)"/i)
-                            || identityText.match(/<friendlyName>([^<]+)<\/friendlyName>/i);
-                        machineIdentifier = machineMatch ? String(machineMatch[1]) : '';
-                        friendlyName = nameMatch ? String(nameMatch[1]) : '';
-                    }
-
-                    if (machineIdentifier) {
-                        servers = [{ name: friendlyName || 'Direct Plex Server', identifier: machineIdentifier }];
-                        log(`Derived server identifier from direct URL: ${machineIdentifier}`);
-                    }
-                }
-            } catch (e) {
-                log(`Direct Plex URL identity lookup failed: ${e.message}`);
+        const response = await fetch('https://plex.tv/pms/servers', {
+            headers: {
+                'X-Plex-Token': token,
+                'Accept': 'application/xml'
             }
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            log(`Error fetching Plex servers (XML). Status: ${response.status}. Response: ${errorText}`);
+            throw new Error('Failed to fetch servers from Plex. Please double-check your Plex token.');
         }
+
+        const xmlText = await response.text();
+        const serverTags = xmlText.match(/<Server\b[^>]*\/>/g) || [];
+
+        const servers = serverTags.map(tag => {
+            const nameMatch = tag.match(/name="([^"]+)"/);
+            const idMatch = tag.match(/machineIdentifier="([^"]+)"/);
+
+            if (nameMatch && idMatch) {
+                return { name: nameMatch[1], identifier: idMatch[1] };
+            }
+            return null;
+        }).filter(Boolean); // Filter out any null entries from failed regex matches
 
         if (servers.length === 0) {
             log('API call successful, but no servers with a machineIdentifier were found in the response.');
@@ -3377,8 +2860,8 @@ app.post('/api/invites/:code/claim', authRateLimit, async (req, res) => {
             isAdmin
         };
         const token = jwt.sign(sessionUser, JWT_SECRET, { expiresIn: '7d' });
-        const isHttps = FORCE_SECURE_COOKIES || !!(req.socket?.encrypted);
-        res.cookie('session', token, { httpOnly: true, secure: isHttps, sameSite: 'lax', path: '/', maxAge: 7 * 24 * 60 * 60 * 1000 });
+        const isHttps = FORCE_SECURE_COOKIES || req.secure;
+        res.cookie('session', token, { httpOnly: true, secure: isHttps, sameSite: 'strict', maxAge: 7 * 24 * 60 * 60 * 1000 });
 
         res.json({ success: true, user: newUser });
     } catch (e) {

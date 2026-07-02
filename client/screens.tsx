@@ -2822,7 +2822,7 @@ const LivePlexStats: React.FC = () => {
             <div className="bg-plex/10 text-plex text-xs font-bold px-4 py-1.5 rounded-full border border-plex/20 uppercase tracking-wider mb-4">
                 Live Library Stats
             </div>
-            <div className={`grid gap-3 w-full ${stats.music > 0 ? 'grid-cols-3' : 'grid-cols-2 max-w-md mx-auto'}`}>
+            <div className="grid grid-cols-3 gap-3 w-full">
                 <div className="bg-white/5 border border-white/10 rounded-xl p-4 flex flex-col items-center justify-center gap-1 shadow-lg backdrop-blur-sm">
                     <span className="text-xl">🎬</span>
                     <span className="text-plex font-bold text-xl">{stats.movies.toLocaleString()}</span>
@@ -2876,16 +2876,6 @@ export const Login: React.FC<{ onLoginSuccess: () => void, publicConfig?: any }>
         fetchPublicInfo();
 
         const path = window.location.pathname;
-        // Check for login error from the server-side GET callback redirect
-        const params = new URLSearchParams(window.location.search);
-        const loginError = params.get('loginError');
-        if (loginError) {
-            setError(loginError);
-            window.history.replaceState({}, '', '/');
-            return;
-        }
-
-        // Legacy fallback: handle /auth/<pinId> path (old flow, kept for backward compat)
         if (path.startsWith('/auth/')) {
             const pinId = path.split('/')[2];
             setIsLoading(true);
@@ -2894,10 +2884,9 @@ export const Login: React.FC<{ onLoginSuccess: () => void, publicConfig?: any }>
                 method: 'POST',
                 body: JSON.stringify({ pinId })
             }).then(() => {
-                return Promise.resolve(onLoginSuccess());
+                onLoginSuccess();
             }).catch(e => {
                 setError(e.message || 'Login failed');
-            }).finally(() => {
                 setIsLoading(false);
             });
         }
@@ -2908,17 +2897,7 @@ export const Login: React.FC<{ onLoginSuccess: () => void, publicConfig?: any }>
         setError('');
         try {
             const data = await apiFetch('/api/auth/plex/login', { method: 'POST' });
-            // Use standard GET callback on secure/localhost contexts, but fall back to the
-            // POST flow on remote HTTP IP addresses or non-SSL domains where the browser
-            // blocks Set-Cookie on secure-to-insecure HTTPS-to-HTTP redirects.
-            const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-            const isHttp = window.location.protocol === 'http:';
-            const usePostFlow = isHttp && !isLocalhost;
-            
-            const forwardUrl = usePostFlow
-                ? window.location.origin + '/auth/' + data.id
-                : window.location.origin + '/api/auth/plex/callback?pinId=' + data.id;
-                
+            const forwardUrl = window.location.origin + '/auth/' + data.id;
             const authUrl = `https://app.plex.tv/auth#?clientID=${data.clientIdentifier}&code=${data.code}&context[device][product]=Server%20Manager%20Portal&forwardUrl=${encodeURIComponent(forwardUrl)}`;
             window.location.href = authUrl;
         } catch (e) {
