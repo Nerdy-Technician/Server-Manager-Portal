@@ -147,13 +147,13 @@ export const ActivityGridSkeleton: React.FC<{ count?: number }> = ({ count = 3 }
 );
 
 export const TopWatchedGridSkeleton: React.FC = () => (
-    <div className="bg-card border border-border rounded-2xl p-6 shadow-xl" aria-busy="true" aria-label="Loading analytics">
+    <div className="bg-card border border-border rounded-2xl p-6 shadow-xl flex-1 flex flex-col h-full w-full min-h-0" aria-busy="true" aria-label="Loading analytics">
         <div className="mb-6">
             <SkeletonBlock className="h-6 w-40 rounded mb-2" />
             <SkeletonBlock className="h-4 w-56 rounded" />
         </div>
-        <div className="grid grid-cols-4 md:grid-cols-8 gap-2 md:gap-3" aria-hidden="true">
-            {Array.from({ length: 16 }, (_, i) => (
+        <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-2.5 md:gap-3.5 flex-1 content-start" aria-hidden="true">
+            {Array.from({ length: 30 }, (_, i) => (
                 <div key={i} className="flex flex-col gap-1.5">
                     <SkeletonBlock className="aspect-[2/3] w-full rounded-lg" />
                     <SkeletonBlock className="h-2.5 w-full rounded" />

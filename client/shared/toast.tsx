@@ -8,7 +8,7 @@ export const pushToast = (prev: ToastMessage[], message: string, type: 'success'
     return next.length > MAX_VISIBLE_TOASTS ? next.slice(-MAX_VISIBLE_TOASTS) : next;
 };
 
-const Toast: React.FC<{ message: string; type: 'success' | 'error'; onDismiss: () => void }> = ({ message, type, onDismiss }) => {
+export const Toast: React.FC<{ message: string; type: 'success' | 'error'; onDismiss: () => void }> = ({ message, type, onDismiss }) => {
     const [isVisible, setIsVisible] = useState(false);
 
     useEffect(() => {
