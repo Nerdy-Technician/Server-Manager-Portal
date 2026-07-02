@@ -3054,15 +3054,9 @@ export const Login: React.FC<{ onLoginSuccess: () => void, publicConfig?: any }>
         setError('');
         try {
             const data = await apiFetch('/api/auth/plex/login', { method: 'POST' });
-            const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-            const isHttp = window.location.protocol === 'http:';
-            const usePostFlow = isHttp && !isLocalhost;
-
-            const forwardUrl = usePostFlow
-                ? window.location.origin + '/auth/' + data.id
-                : window.location.origin + '/api/auth/plex/callback?pinId=' + data.id;
-
-            const authUrl = `https://app.plex.tv/auth#?clientID=${data.clientIdentifier}&code=${data.code}&context[device][product]=Server%20Manager%20Portal&forwardUrl=${encodeURIComponent(forwardUrl)}`;
+            const clientId = data.clientIdentifier || data.clientId || '';
+            const forwardUrl = window.location.origin + '/api/auth/plex/callback?pinId=' + data.id;
+            const authUrl = `https://app.plex.tv/auth#?clientID=${encodeURIComponent(clientId)}&code=${data.code}&context[device][product]=Server%20Manager%20Portal&forwardUrl=${encodeURIComponent(forwardUrl)}`;
             window.location.href = authUrl;
         } catch (e) {
             setError('Failed to initiate Plex login');
@@ -6947,8 +6941,9 @@ export const PublicInviteClaim: React.FC<{ code: string }> = ({ code }) => {
         setError(null);
         try {
             const data = await apiFetch('/api/auth/plex/login', { method: 'POST' });
+            const clientId = data.clientIdentifier || data.clientId || '';
             const forwardUrl = window.location.origin + '/invite/' + code + '#auth/' + data.id;
-            const authUrl = `https://app.plex.tv/auth#?clientID=${data.clientIdentifier}&code=${data.code}&context[device][product]=Server%20Manager%20Portal&forwardUrl=${encodeURIComponent(forwardUrl)}`;
+            const authUrl = `https://app.plex.tv/auth#?clientID=${encodeURIComponent(clientId)}&code=${data.code}&context[device][product]=Server%20Manager%20Portal&forwardUrl=${encodeURIComponent(forwardUrl)}`;
             window.location.href = authUrl;
         } catch (error) {
             setError('Failed to initiate Plex login');

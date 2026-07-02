@@ -169,18 +169,22 @@ const resolveIntegrationUrlForFetch = (rawUrl) => {
     return normalizeExternalBaseUrl(rawUrl, { allowPrivate: true, allowHttp: true });
 };
 
+// Only mark cookies Secure when explicitly enabled. Auto-detecting HTTPS breaks plain
+// HTTP LAN access (e.g. http://192.168.x.x:2121) when FORCE_SECURE_COOKIES was left on.
+const sessionCookieBase = () => ({
+    httpOnly: true,
+    secure: FORCE_SECURE_COOKIES,
+    sameSite: 'lax',
+    path: '/',
+});
+
 const clearSessionCookie = (req, res) => {
-    const isHttps = FORCE_SECURE_COOKIES || !!(req.socket?.encrypted);
-    res.clearCookie('session', { httpOnly: true, secure: isHttps, sameSite: 'lax', path: '/' });
+    res.clearCookie('session', sessionCookieBase());
 };
 
 const setSessionCookie = (req, res, token) => {
-    const isHttps = FORCE_SECURE_COOKIES || !!(req.socket?.encrypted);
     res.cookie('session', token, {
-        httpOnly: true,
-        secure: isHttps,
-        sameSite: 'lax',
-        path: '/',
+        ...sessionCookieBase(),
         maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 };
@@ -626,7 +630,14 @@ const resolveCurrentAdmin = async (sessionUser, config = null) => {
     if (!sessionUser) return false;
     const loadedConfig = config || await loadFile(CONFIG_PATH, {});
     const adminId = await getAdminId(loadedConfig);
-    return !!(adminId && String(sessionUser.plexId) === String(adminId));
+    if (adminId && String(sessionUser.plexId) === String(adminId)) return true;
+    // Trust the admin flag minted at login when config admin lookup is stale/unavailable.
+    if (sessionUser.isAdmin === true) {
+        if (!loadedConfig.adminPlexId || String(sessionUser.plexId) === String(loadedConfig.adminPlexId)) {
+            return true;
+        }
+    }
+    return false;
 };
 
 const requireAuth = (req, res, next) => {
@@ -1224,7 +1235,7 @@ app.post('/api/auth/plex/login', authRateLimit, async (req, res) => {
         });
         if (!response.ok) throw new Error('Failed to generate Plex PIN');
         const data = await response.json();
-        res.json(data);
+        res.json({ ...data, clientIdentifier: CLIENT_ID });
     } catch (err) {
         log('Error in plex login: ' + err.message);
         res.status(500).json({ error: 'Failed to initiate login' });
@@ -1348,6 +1359,8 @@ const handlePlexPinLogin = async (req, res, pinId, ref, { redirectOnSuccess = fa
         }
     }
     await appendAuditLog('user_login', sessionUser, sessionUser);
+
+    log(`Plex login success for ${sessionUser.username} (admin=${isAdmin}, secureCookie=${FORCE_SECURE_COOKIES})`);
 
     if (redirectOnSuccess) {
         return res.redirect('/portal');
@@ -1687,8 +1700,24 @@ app.post('/api/config', setupRateLimit, async (req, res) => {
         autoBackupRetentionCount: Math.max(1, parseInt(autoBackupRetentionCount, 10) || 10),
         maintenanceExperimentalEnabled: maintenanceExperimentalEnabled !== undefined ? !!maintenanceExperimentalEnabled : !!existingConfig.maintenanceExperimentalEnabled
     };
+    if (!config.adminPlexId && config.plexToken && config.plexToken !== SECRET_MASK) {
+        try {
+            const ownerRes = await apiFetch('https://plex.tv/api/v2/user', config.plexToken);
+            if (ownerRes.ok) {
+                const ownerData = await ownerRes.json();
+                if (ownerData?.id) {
+                    config.adminPlexId = String(ownerData.id);
+                    cachedAdminId = config.adminPlexId;
+                }
+            }
+        } catch (e) {
+            log(`Could not resolve admin Plex ID during config save: ${e.message}`);
+        }
+    }
+
     await saveFile(CONFIG_PATH, config);
-    cachedAdminId = null;
+    if (!cachedAdminId && config.adminPlexId) cachedAdminId = String(config.adminPlexId);
+    else if (!config.adminPlexId) cachedAdminId = null;
     // Invalidate caches tied to the Plex token/server so changes take effect immediately.
     cachedPlexConnectionUri = null;
     lastPlexConnectionUriFetch = 0;
@@ -7440,11 +7469,33 @@ async function monitorConcurrentSessions() {
 
 app.listen(PORT, BIND_HOST, async () => {
     log(`--- Server Manager Portal Service starting on http://${BIND_HOST}:${PORT} ---`);
+    log(`Runtime: CONFIG_DIR=${CONFIG_DIR}, FORCE_SECURE_COOKIES=${FORCE_SECURE_COOKIES}, appVersion=${appVersion}`);
+
+    log(`Runtime: CONFIG_DIR=${CONFIG_DIR}, FORCE_SECURE_COOKIES=${FORCE_SECURE_COOKIES}, appVersion=${appVersion}`);
+    if (FORCE_SECURE_COOKIES) {
+        log('WARNING: FORCE_SECURE_COOKIES=true — plain HTTP logins (http://LAN-IP:2121) will fail until this is set to false.');
+    }
 
     await migrateConfigFiles((message) => log(`[config] ${message}`));
 
     // Ensure unique CLIENT_ID per installation to avoid Plex Auth blocking
-    const config = await loadFile(CONFIG_PATH, {});
+    let config = await loadFile(CONFIG_PATH, {});
+    if (!config.adminPlexId && config.plexToken && config.plexToken !== SECRET_MASK) {
+        try {
+            const ownerRes = await apiFetch('https://plex.tv/api/v2/user', config.plexToken);
+            if (ownerRes.ok) {
+                const ownerData = await ownerRes.json();
+                if (ownerData?.id) {
+                    config.adminPlexId = String(ownerData.id);
+                    await saveFile(CONFIG_PATH, config);
+                    cachedAdminId = config.adminPlexId;
+                    log(`Backfilled adminPlexId=${config.adminPlexId} from configured Plex token`);
+                }
+            }
+        } catch (e) {
+            log(`Admin Plex ID backfill skipped: ${e.message}`);
+        }
+    }
     if (!config.clientId || config.clientId.startsWith('smp-')) {
         config.clientId = randomUUID();
         await saveFile(CONFIG_PATH, config);
