@@ -1317,6 +1317,7 @@ const handlePlexPinLogin = async (req, res, pinId, ref, { redirectOnSuccess = fa
         plexId: userData.id,
         email: userData.email,
         username: userData.username,
+        thumb: userData.thumb || null,
         isAdmin,
     };
 
@@ -1504,6 +1505,7 @@ app.get('/api/users/me', requireAuth, async (req, res) => {
 
     let serverName = 'Plex Server';
     let adminThumb = null;
+    let sessionThumb = req.user.thumb || null;
     let requestUrl = 'https://yourdomain.com';
     let navOrder = ['home', 'discover', 'users', 'status', 'analytics', 'mediastack', 'maintenance', 'request', 'settings', 'logout'];
     try {
@@ -1513,11 +1515,22 @@ app.get('/api/users/me', requireAuth, async (req, res) => {
             adminThumb = profile.thumb;
             requestUrl = config.requestUrl || 'https://yourdomain.com';
             if (config.navOrder) navOrder = config.navOrder;
+
+            if (!sessionThumb) {
+                const uri = await getPlexConnectionUri(config);
+                if (uri) {
+                    const accountId = await resolveLocalPlexAccountId(config, uri, req.user);
+                    const { map } = await fetchPlexServerAccounts(uri, config);
+                    if (accountId && map[accountId]?.thumb) {
+                        sessionThumb = map[accountId].thumb;
+                    }
+                }
+            }
         }
     } catch (e) { }
 
     res.json({
-        session: req.user,
+        session: { ...req.user, thumb: sessionThumb, isAdmin },
         account: localUser || null,
         serverName,
         adminThumb,
@@ -1785,6 +1798,8 @@ app.post('/api/config', setupRateLimit, async (req, res) => {
     // Invalidate caches tied to the Plex token/server so changes take effect immediately.
     cachedPlexConnectionUri = null;
     lastPlexConnectionUriFetch = 0;
+    cachedPlexAccounts = null;
+    cachedPlexAccountsAt = 0;
     cachedAdminProfile = null;
     lastAdminProfileFetch = 0;
     cachedArrCatalog = null;
@@ -2095,10 +2110,94 @@ const verifyInitialSetupPlexOwner = async (plexToken, serverIdentifier, plexServ
 };
 
 // Plex interaction helpers
+let cachedPlexAccounts = null;
+let cachedPlexAccountsAt = 0;
+
+const fetchPlexServerAccounts = async (uri, config) => {
+    if (cachedPlexAccounts && (Date.now() - cachedPlexAccountsAt < 5 * 60 * 1000)) {
+        return cachedPlexAccounts;
+    }
+    const accountsRes = await fetchWithTimeout(`${uri}/accounts?X-Plex-Token=${config.plexToken}`, {
+        headers: { Accept: 'application/json' },
+    }, 8000).then(r => r.json()).catch(() => null);
+
+    const accounts = accountsRes?.MediaContainer?.Account || [];
+    const map = {};
+    accounts.forEach((acc) => {
+        map[String(acc.id)] = {
+            id: String(acc.id),
+            name: acc.name || '',
+            thumb: acc.thumb || null,
+        };
+    });
+    cachedPlexAccounts = { list: accounts, map };
+    cachedPlexAccountsAt = Date.now();
+    return cachedPlexAccounts;
+};
+
+const resolveLocalPlexAccountId = async (config, uri, sessionUser) => {
+    const norm = (v) => String(v || '').trim().toLowerCase();
+    const users = await loadFile(USERS_PATH, []);
+    const portalUser = findLocalUserForSession(users, sessionUser);
+    if (portalUser?.plexAccountId) return String(portalUser.plexAccountId);
+
+    const { list: accounts } = await fetchPlexServerAccounts(uri, config);
+    if (!accounts.length) {
+        return sessionUser?.plexId ? String(sessionUser.plexId) : null;
+    }
+
+    const byName = accounts.find((a) => norm(a.name) === norm(sessionUser?.username));
+    if (byName) return String(byName.id);
+
+    if (sessionUser?.email) {
+        const byEmail = accounts.find((a) =>
+            norm(a.name) === norm(sessionUser.email) || norm(a.email) === norm(sessionUser.email),
+        );
+        if (byEmail) return String(byEmail.id);
+    }
+
+    if (sessionUser?.plexId) {
+        const byPlexId = accounts.find((a) => String(a.id) === String(sessionUser.plexId));
+        if (byPlexId) return String(byPlexId.id);
+    }
+
+    // Home admin is usually local account 1, but only as a last resort for admins.
+    if (sessionUser?.isAdmin) {
+        const home = accounts.find((a) => String(a.id) === '1') || accounts[0];
+        if (home) return String(home.id);
+    }
+
+    return null;
+};
+
 const getPlexConnectionUri = async (config) => {
     if (cachedPlexConnectionUri && (Date.now() - lastPlexConnectionUriFetch < 60 * 60 * 1000)) {
         return cachedPlexConnectionUri;
     }
+
+    let directUrl = resolveConfiguredPlexServerUrl(config);
+    if (!directUrl || (isLoopbackPlexUri(directUrl) && shouldPreferRemotePlexConnection())) {
+        directUrl = await resolvePlexServerUrlForVerification(config.plexToken, config, config.serverIdentifier);
+    }
+    if (directUrl) {
+        const normalized = resolveIntegrationUrlForFetch(directUrl);
+        if (normalized) {
+            try {
+                const probe = await fetchWithTimeout(`${normalized}/identity`, {
+                    headers: { 'X-Plex-Token': config.plexToken, Accept: 'application/json' },
+                }, 4000);
+                if (probe.ok) {
+                    cachedPlexConnectionUri = normalized;
+                    lastPlexConnectionUriFetch = Date.now();
+                    log(`Using direct Plex server URL: ${cachedPlexConnectionUri}`);
+                    return cachedPlexConnectionUri;
+                }
+            } catch (e) {
+                log(`Direct Plex URL probe failed (${directUrl}): ${e.message}`);
+            }
+        }
+    }
+
     const response = await fetchWithTimeout('https://plex.tv/api/v2/resources?includeHttps=1', {
         headers: {
             'X-Plex-Token': config.plexToken,
@@ -2138,7 +2237,7 @@ app.get('/api/plex/image', requireAuth, requireMember, async (req, res) => {
             url = `${uri}${thumbPath}?X-Plex-Token=${config.plexToken}`;
         }
 
-        const response = await fetch(url);
+        const response = await fetchWithTimeout(url, {}, 15000);
         if (!response.ok) throw new Error('fetch failed');
         const buffer = Buffer.from(await response.arrayBuffer());
         res.setHeader('Content-Type', response.headers.get('content-type') || 'image/jpeg');
@@ -4302,14 +4401,8 @@ app.get('/api/plex/analytics/me', requireAuth, requireMember, async (req, res) =
         const uri = await getPlexConnectionUri(config);
         if (!uri) return res.status(503).json({ error: 'Cannot connect to Plex' });
 
-        let accountID = req.user.plexId;
-        if (req.user.isAdmin) {
-            accountID = 1; // Server owner is always account ID 1 locally
-        } else if (!accountID) {
-            const users = await loadFile(USERS_PATH, []);
-            const localUser = users.find(u => u.email === req.user.email || u.username === req.user.username);
-            accountID = localUser ? localUser.id : null;
-        }
+        req.user.isAdmin = await resolveCurrentAdmin(req.user, config);
+        const accountID = await resolveLocalPlexAccountId(config, uri, req.user);
 
         if (!accountID) {
             return res.json({ totalPlays: 0, topLibraries: [], topWatched: [], topMusic: [], recentHistory: [] });
