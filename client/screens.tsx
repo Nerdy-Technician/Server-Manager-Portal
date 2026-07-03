@@ -3801,6 +3801,7 @@ const discoverViewsOverlay = (views: number) => (
 
 const DISCOVER_DESKTOP_ITEM_LIMIT = 20;
 const DISCOVER_MOBILE_ITEM_LIMIT = 12;
+const RECENTLY_ADDED_ITEM_LIMIT = 100;
 const DISCOVER_LIMIT_OPTIONS = [
     { value: '12', label: '12 Items' },
     { value: '20', label: '20 Items' },
@@ -3964,7 +3965,7 @@ export const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onL
         const fetchDashboard = async () => {
             if (!isMounted) return;
             try {
-                const res = await apiFetch('/api/plex/dashboard?limit=15');
+                const res = await apiFetch(`/api/plex/dashboard?limit=${RECENTLY_ADDED_ITEM_LIMIT}`);
                 if (isMounted) setDashboardData(res);
             } catch (e) {
                 console.error('Failed to refresh dashboard data', e);
@@ -4817,7 +4818,7 @@ export const LibraryDashboard: React.FC<{ onBack: () => void, isAdmin?: boolean,
 
     const fetchDashboardOnly = useCallback(async () => {
         try {
-            const res = await apiFetch(`/api/plex/dashboard?limit=${recentLimit}`);
+            const res = await apiFetch(`/api/plex/dashboard?limit=${RECENTLY_ADDED_ITEM_LIMIT}`);
             if (res.error) {
                 setPollError(res.error);
                 return;
@@ -4827,14 +4828,14 @@ export const LibraryDashboard: React.FC<{ onBack: () => void, isAdmin?: boolean,
         } catch (err: any) {
             setPollError(err?.message || 'Live dashboard update failed');
         }
-    }, [recentLimit]);
+    }, []);
 
     const fetchData = useCallback(async () => {
         setError(null);
         if (!hasLoadedDashboard.current) setDashboardLoading(true);
         if (!hasLoadedTrending.current) setTrendingLoading(true);
         try {
-            const res = await apiFetch(`/api/plex/dashboard?limit=${recentLimit}`);
+            const res = await apiFetch(`/api/plex/dashboard?limit=${RECENTLY_ADDED_ITEM_LIMIT}`);
             if (res.error) throw new Error(res.error);
             setDashboardData(res);
         } catch (err: any) {
@@ -4855,7 +4856,7 @@ export const LibraryDashboard: React.FC<{ onBack: () => void, isAdmin?: boolean,
             hasLoadedTrending.current = true;
             setTrendingLoading(false);
         }
-    }, [recentLimit]);
+    }, []);
 
     useEffect(() => {
         fetchData();
@@ -5015,7 +5016,7 @@ export const LibraryDashboard: React.FC<{ onBack: () => void, isAdmin?: boolean,
                 </section>
 
                 <div className="flex justify-end gap-4 items-center mb-8">
-                    <span className="text-xs uppercase tracking-wider text-muted font-semibold">Recently Added Limit</span>
+                    <span className="text-xs uppercase tracking-wider text-muted font-semibold">Trending Limit</span>
                     <CustomSelect
                         compact
                         className="w-32"
@@ -5030,7 +5031,7 @@ export const LibraryDashboard: React.FC<{ onBack: () => void, isAdmin?: boolean,
                     <div className="flex flex-col">
                         <h2 className="text-plex text-sm uppercase tracking-[2px] mb-6 font-bold border-b border-white/10 pb-2">RECENTLY ADDED MOVIES</h2>
                         <div className={discoverPosterGridClass}>
-                            {dashboardData && dashboardData.recentMovies.slice(0, recentLimit).map((item, i) => (
+                            {dashboardData && dashboardData.recentMovies.slice(0, RECENTLY_ADDED_ITEM_LIMIT).map((item, i) => (
                                 <DiscoverPosterCard key={i} item={item} showQualityBadges={showQualityBadges} />
                             ))}
                             {(!dashboardData || dashboardData.recentMovies.length === 0) && <div className="text-center text-muted p-8 border border-dashed border-border rounded-xl mt-4 w-full col-span-full">No recent movies</div>}
@@ -5041,7 +5042,7 @@ export const LibraryDashboard: React.FC<{ onBack: () => void, isAdmin?: boolean,
                     <div className="flex flex-col">
                         <h2 className="text-plex text-sm uppercase tracking-[2px] mb-6 font-bold border-b border-white/10 pb-2">RECENTLY ADDED TV SHOWS</h2>
                         <div className={discoverPosterGridClass}>
-                            {dashboardData && dashboardData.recentShows.slice(0, recentLimit).map((item, i) => (
+                            {dashboardData && dashboardData.recentShows.slice(0, RECENTLY_ADDED_ITEM_LIMIT).map((item, i) => (
                                 <DiscoverPosterCard key={i} item={item} showQualityBadges={showQualityBadges} />
                             ))}
                             {(!dashboardData || dashboardData.recentShows.length === 0) && <div className="text-center text-muted p-8 border border-dashed border-border rounded-xl mt-4 w-full col-span-full">No recent TV shows</div>}
@@ -5052,7 +5053,7 @@ export const LibraryDashboard: React.FC<{ onBack: () => void, isAdmin?: boolean,
                     <div className="flex flex-col">
                         <h2 className="text-plex text-sm uppercase tracking-[2px] mb-6 font-bold border-b border-white/10 pb-2">RECENTLY ADDED MUSIC</h2>
                         <div className={discoverPosterGridClass}>
-                            {dashboardData && dashboardData.recentMusic.slice(0, recentLimit).map((item, i) => (
+                            {dashboardData && dashboardData.recentMusic.slice(0, RECENTLY_ADDED_ITEM_LIMIT).map((item, i) => (
                                 <DiscoverPosterCard key={i} item={item} aspect="square" showQualityBadges={showQualityBadges} />
                             ))}
                             {(!dashboardData || dashboardData.recentMusic.length === 0) && <div className="text-center text-muted p-8 border border-dashed border-border rounded-xl mt-4 w-full col-span-full">No recent music</div>}

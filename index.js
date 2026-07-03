@@ -4191,7 +4191,7 @@ app.get('/api/plex/dashboard', requireAuth, requireMember, async (req, res) => {
         const uri = await getPlexConnectionUri(config);
         if (!uri) return res.status(503).json({ error: 'Cannot connect to Plex' });
 
-        const limit = parseInt(req.query.limit) || 50;
+        const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 100, 1), 250);
 
         const cacheKey = `plex_dashboard_data_${limit}`;
         const cachedData = await withCache(cacheKey, 800, async () => {
@@ -4268,10 +4268,12 @@ app.get('/api/plex/dashboard', requireAuth, requireMember, async (req, res) => {
                 if (data && data.MediaContainer && data.MediaContainer.Metadata) {
                     data.MediaContainer.Metadata.forEach(m => {
                         const ratingKey = String(m.grandparentRatingKey || m.parentRatingKey || m.ratingKey || '');
+                        const isMusic = sectionType === 'artist';
                         const item = {
                             ratingKey,
                             sourceRatingKey: String(m.ratingKey || ''),
-                            title: m.grandparentTitle || m.parentTitle || m.title,
+                            title: isMusic ? (m.title || m.parentTitle || m.grandparentTitle) : (m.grandparentTitle || m.parentTitle || m.title),
+                            parentTitle: isMusic ? (m.parentTitle || m.grandparentTitle || null) : undefined,
                             type: m.type,
                             year: m.year,
                             thumb: m.grandparentThumb || m.parentThumb || m.thumb,
@@ -4292,8 +4294,9 @@ app.get('/api/plex/dashboard', requireAuth, requireMember, async (req, res) => {
                 const seen = new Set();
                 list.sort((a, b) => b.addedAt - a.addedAt);
                 for (const item of list) {
-                    if (!seen.has(item.title)) {
-                        seen.add(item.title);
+                    const dedupeKey = item.ratingKey || item.title;
+                    if (!seen.has(dedupeKey)) {
+                        seen.add(dedupeKey);
                         unique.push(item);
                         if (unique.length >= limit) break;
                     }
