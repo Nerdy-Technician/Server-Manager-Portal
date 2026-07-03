@@ -5025,7 +5025,16 @@ app.get('/api/plex/analytics/me', requireAuth, requireMember, async (req, res) =
         let totalPlays = 0;
         const libraryCounts = {};
         const contentCounts = {};
-        const recentHistory = [];
+
+        const mapHistoryToRecent = (item) => ({
+            title: item.type === 'episode' ? (item.grandparentTitle || item.parentTitle || item.title) : item.type === 'track' ? (item.parentTitle || item.grandparentTitle || item.title) : item.title,
+            episodeTitle: item.type === 'episode' || item.type === 'track' ? item.title : null,
+            viewedAt: item.viewedAt,
+            thumb: item.type === 'episode' ? (item.grandparentThumb || item.parentThumb || item.thumb) : item.type === 'track' ? (item.parentThumb || item.grandparentThumb || item.thumb) : item.thumb,
+            type: item.type,
+            plexUrl: `https://app.plex.tv/desktop/#!/server/${config.serverIdentifier}/details?key=${encodeURIComponent(item.key)}`
+        });
+        const recentHistory = historyItems.slice(0, 50).map(mapHistoryToRecent);
 
         let plexTotalHourOfDay = 0;
         let plexHourCount = 0;
@@ -5056,17 +5065,6 @@ app.get('/api/plex/analytics/me', requireAuth, requireMember, async (req, res) =
             if (item.type === 'movie') moviesCount++;
             else if (item.type === 'episode') showsCount++;
             else if (item.type === 'track') musicCount++;
-
-            if (recentHistory.length < 200) {
-                recentHistory.push({
-                    title: item.type === 'episode' ? (item.grandparentTitle || item.parentTitle || item.title) : item.type === 'track' ? (item.parentTitle || item.grandparentTitle || item.title) : item.title,
-                    episodeTitle: item.type === 'episode' || item.type === 'track' ? item.title : null,
-                    viewedAt: item.viewedAt,
-                    thumb: item.type === 'episode' ? (item.grandparentThumb || item.parentThumb || item.thumb) : item.type === 'track' ? (item.parentThumb || item.grandparentThumb || item.thumb) : item.thumb,
-                    type: item.type,
-                    plexUrl: `https://app.plex.tv/desktop/#!/server/${config.serverIdentifier}/details?key=${encodeURIComponent(item.key)}`
-                });
-            }
 
             if (item.librarySectionID) {
                 const libTitle = sectionsMap[item.librarySectionID] || `Library ${item.librarySectionID}`;

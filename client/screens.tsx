@@ -3846,7 +3846,7 @@ export const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onL
     );
     const topWatchedPageSize = isDesktopMostWatched ? 18 : 12;
     const [recentHistoryPage, setRecentHistoryPage] = useState(0);
-    const RECENT_HISTORY_PAGE_SIZE = 18;
+    const recentHistoryPageSize = isDesktopMostWatched ? 12 : 8;
     const [analyticsDays, setAnalyticsDays] = useState<number | 'all'>(30);
     const [analyticsDaysOpen, setAnalyticsDaysOpen] = useState(false);
     const [wrapUpDaysOpen, setWrapUpDaysOpen] = useState(false);
@@ -3948,6 +3948,12 @@ export const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onL
         const maxPage = Math.max(0, Math.ceil(analytics.topWatched.length / topWatchedPageSize) - 1);
         setTopContentPage((p) => Math.min(p, maxPage));
     }, [topWatchedPageSize, analytics?.topWatched?.length]);
+
+    useEffect(() => {
+        if (!analytics?.recentHistory?.length) return;
+        const maxPage = Math.max(0, Math.ceil(analytics.recentHistory.length / recentHistoryPageSize) - 1);
+        setRecentHistoryPage((p) => Math.min(p, maxPage));
+    }, [recentHistoryPageSize, analytics?.recentHistory?.length]);
 
     useEffect(() => {
         let pollTimer: ReturnType<typeof setTimeout> | null = null;
@@ -4211,7 +4217,7 @@ export const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onL
                         <div className="glass-card p-4 md:p-5 shadow-xl flex flex-col h-full w-full min-h-0">
                         <div className="flex items-center justify-between mb-3 md:mb-4 flex-shrink-0">
                         <h3 className="text-lg md:text-xl font-bold text-text">Recently Watched</h3>
-                        {analytics.recentHistory.length > RECENT_HISTORY_PAGE_SIZE && (
+                        {analytics.recentHistory.length > recentHistoryPageSize && (
                         <div className="flex items-center gap-2">
                         <button
                         onClick={() => setRecentHistoryPage(p => Math.max(0, p - 1))}
@@ -4221,11 +4227,11 @@ export const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onL
                         <ChevronUp className="w-4 h-4 -rotate-90" />
                         </button>
                         <span className="text-xs text-muted font-medium w-8 text-center">
-                        {recentHistoryPage + 1} / {Math.ceil(analytics.recentHistory.length / RECENT_HISTORY_PAGE_SIZE)}
+                        {recentHistoryPage + 1} / {Math.ceil(analytics.recentHistory.length / recentHistoryPageSize)}
                         </span>
                         <button
-                        onClick={() => setRecentHistoryPage(p => Math.min(Math.ceil(analytics.recentHistory.length / RECENT_HISTORY_PAGE_SIZE) - 1, p + 1))}
-                        disabled={recentHistoryPage >= Math.ceil(analytics.recentHistory.length / RECENT_HISTORY_PAGE_SIZE) - 1}
+                        onClick={() => setRecentHistoryPage(p => Math.min(Math.ceil(analytics.recentHistory.length / recentHistoryPageSize) - 1, p + 1))}
+                        disabled={recentHistoryPage >= Math.ceil(analytics.recentHistory.length / recentHistoryPageSize) - 1}
                         className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-text"
                         >
                         <ChevronDown className="w-4 h-4 -rotate-90" />
@@ -4234,7 +4240,7 @@ export const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onL
                         )}
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-2 items-stretch flex-1 min-h-0 content-start">
-                        {analytics.recentHistory.slice(recentHistoryPage * RECENT_HISTORY_PAGE_SIZE, (recentHistoryPage + 1) * RECENT_HISTORY_PAGE_SIZE).map((item: any, idx: number) => (
+                        {analytics.recentHistory.slice(recentHistoryPage * recentHistoryPageSize, (recentHistoryPage + 1) * recentHistoryPageSize).map((item: any, idx: number) => (
                         <div key={idx} className="flex items-center self-stretch gap-3 p-2 bg-black/20 rounded-xl border border-white/5 hover:border-plex/50 hover:bg-black/40 hover:shadow-[0_0_15px_rgba(229,160,13,0.15)] transition-all group relative">
                         <a href={item.plexUrl} target="_blank" rel="noreferrer" className="flex items-center flex-1 min-w-0 gap-3">
                         <div className="w-10 h-10 rounded-lg overflow-hidden bg-background flex-shrink-0 shadow-md">

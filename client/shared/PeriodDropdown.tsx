@@ -41,6 +41,7 @@ export const PeriodDropdown: React.FC<Props> = ({
             return;
         }
         updatePosition();
+        if (!buttonRef.current) return;
         const onReflow = () => updatePosition();
         window.addEventListener('resize', onReflow);
         window.addEventListener('scroll', onReflow, true);

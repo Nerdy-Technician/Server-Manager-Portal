@@ -8,7 +8,8 @@ export type DropdownPosition = { top: number; left: number; width: number };
 export const getFixedDropdownPosition = (
     rect: DOMRect,
     { width = 160, itemCount = 6, align = 'right' }: { width?: number; itemCount?: number; align?: 'left' | 'right' } = {},
-): DropdownPosition => {
+): DropdownPosition | null => {
+    if (rect.width <= 0 || rect.height <= 0) return null;
     const padding = 8;
     const menuWidth = Math.max(width, rect.width);
     const menuHeight = itemCount * 42 + 8;
