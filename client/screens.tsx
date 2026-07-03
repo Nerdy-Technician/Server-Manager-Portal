@@ -3789,12 +3789,15 @@ const discoverViewsOverlay = (views: number) => (
     </div>
 );
 
+const DISCOVER_DEFAULT_ITEM_LIMIT = 20;
+const discoverPosterGridClass = 'grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-10 gap-3 w-full pb-4';
+
 const TrendingDiscoverSection: React.FC<{ title: string; items: any[]; limit: number; showQualityBadges?: boolean }> = ({ title, items, limit, showQualityBadges = true }) => {
     if (!items?.length) return null;
     return (
         <div className="flex flex-col">
             <h3 className="text-plex text-sm uppercase tracking-[2px] mb-6 font-bold border-b border-white/10 pb-2">{title}</h3>
-            <div className="grid grid-cols-3 sm:grid-cols-4 md:[grid-template-columns:repeat(auto-fill,minmax(150px,150px))] md:justify-start gap-3 w-full pb-4">
+            <div className={discoverPosterGridClass}>
                 {items.slice(0, limit).map((item, i) => (
                     <DiscoverPosterCard
                         key={i}
@@ -3817,8 +3820,10 @@ export const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onL
     const [dashboardData, setDashboardData] = useState<any>(null);
     const [serverDataLoading, setServerDataLoading] = useState(true);
     const [topContentPage, setTopContentPage] = useState(0);
-    // 6 columns × 5 rows on desktop — one full grid before pagination
-    const TOP_CONTENT_PAGE_SIZE = 30;
+    const [isDesktopMostWatched, setIsDesktopMostWatched] = useState(
+        () => typeof window !== 'undefined' && window.matchMedia('(min-width: 1024px)').matches
+    );
+    const topWatchedPageSize = isDesktopMostWatched ? 18 : 12;
     const [recentHistoryPage, setRecentHistoryPage] = useState(0);
     const RECENT_HISTORY_PAGE_SIZE = 18;
     const [analyticsDays, setAnalyticsDays] = useState<number | 'all'>(30);
@@ -3899,6 +3904,19 @@ export const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onL
         fetchAnalytics();
         return () => { cancelled = true; };
     }, [user, sessionInfo.session.isAdmin, analyticsDays]);
+
+    useEffect(() => {
+        const mq = window.matchMedia('(min-width: 1024px)');
+        const onChange = (e: MediaQueryListEvent) => setIsDesktopMostWatched(e.matches);
+        mq.addEventListener('change', onChange);
+        return () => mq.removeEventListener('change', onChange);
+    }, []);
+
+    useEffect(() => {
+        if (!analytics?.topWatched?.length) return;
+        const maxPage = Math.max(0, Math.ceil(analytics.topWatched.length / topWatchedPageSize) - 1);
+        setTopContentPage((p) => Math.min(p, maxPage));
+    }, [topWatchedPageSize, analytics?.topWatched?.length]);
 
     useEffect(() => {
         let pollTimer: any = null;
@@ -4240,7 +4258,7 @@ export const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onL
                         <h3 className="text-lg md:text-xl font-bold text-text mb-0.5">Your Most Watched</h3>
                         <p className="text-muted text-sm">Based on your {analytics.totalPlays} total plays</p>
                         </div>
-                        {analytics.topWatched.length > TOP_CONTENT_PAGE_SIZE && (
+                        {analytics.topWatched.length > topWatchedPageSize && (
                         <div className="flex items-center gap-2">
                         <button
                         onClick={() => setTopContentPage(p => Math.max(0, p - 1))}
@@ -4250,11 +4268,11 @@ export const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onL
                         <ChevronUp className="w-4 h-4 -rotate-90" />
                         </button>
                         <span className="text-xs text-muted font-medium w-8 text-center">
-                        {topContentPage + 1} / {Math.ceil(analytics.topWatched.length / TOP_CONTENT_PAGE_SIZE)}
+                        {topContentPage + 1} / {Math.ceil(analytics.topWatched.length / topWatchedPageSize)}
                         </span>
                         <button
-                        onClick={() => setTopContentPage(p => Math.min(Math.ceil(analytics.topWatched.length / TOP_CONTENT_PAGE_SIZE) - 1, p + 1))}
-                        disabled={topContentPage >= Math.ceil(analytics.topWatched.length / TOP_CONTENT_PAGE_SIZE) - 1}
+                        onClick={() => setTopContentPage(p => Math.min(Math.ceil(analytics.topWatched.length / topWatchedPageSize) - 1, p + 1))}
+                        disabled={topContentPage >= Math.ceil(analytics.topWatched.length / topWatchedPageSize) - 1}
                         className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-text"
                         >
                         <ChevronDown className="w-4 h-4 -rotate-90" />
@@ -4263,7 +4281,7 @@ export const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onL
                         )}
                         </div>
                         <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-2.5 md:gap-3.5 flex-1 min-h-0 content-start">
-                        {analytics.topWatched.slice(topContentPage * TOP_CONTENT_PAGE_SIZE, (topContentPage + 1) * TOP_CONTENT_PAGE_SIZE).map((item: any) => (
+                        {analytics.topWatched.slice(topContentPage * topWatchedPageSize, (topContentPage + 1) * topWatchedPageSize).map((item: any) => (
                         <a key={item.key} href={item.plexUrl} target="_blank" rel="noreferrer" className="group flex flex-col gap-1.5">
                         <div className="relative rounded-lg overflow-hidden aspect-[2/3] bg-background border border-white/5 transition-[box-shadow,border-color] duration-300 group-hover:shadow-xl group-hover:border-plex/50">
                         {item.thumbUrl ? (
@@ -4741,7 +4759,7 @@ export const LibraryDashboard: React.FC<{ onBack: () => void, isAdmin?: boolean,
     const [error, setError] = useState<string | null>(null);
     const [recentLimit, setRecentLimit] = useState(() => {
         const saved = localStorage.getItem('discoverRecentLimit');
-        return saved ? Number(saved) : 12;
+        return saved ? Number(saved) : DISCOVER_DEFAULT_ITEM_LIMIT;
     });
     const [selectedSession, setSelectedSession] = useState<any | null>(null);
     const showQualityBadges = publicConfig?.showPosterQualityBadges !== false;
@@ -4802,7 +4820,7 @@ export const LibraryDashboard: React.FC<{ onBack: () => void, isAdmin?: boolean,
     }
 
     const totalStreams = dashboardData?.activeSessions?.length || 0;
-    const trendingCount = Math.min(recentLimit, 12);
+    const trendingCount = recentLimit;
     const transcodingStreams = dashboardData?.activeSessions?.filter(s => s.isTranscoding).length || 0;
     const directStreams = totalStreams - transcodingStreams;
     const totalBandwidthKbps = dashboardData?.activeSessions?.reduce((acc, s) => acc + (s.bandwidth || 0), 0) || 0;
@@ -4946,6 +4964,7 @@ export const LibraryDashboard: React.FC<{ onBack: () => void, isAdmin?: boolean,
                 <div className="flex justify-end gap-4 items-center mb-8">
                     <span style={{ fontSize: '0.85rem', color: '#999' }}>RECENTLY ADDED LIMIT</span>
                     <select className="w-full md:w-32 p-2 rounded-lg border border-border bg-background text-text outline-none focus:border-plex focus:ring-1 focus:ring-plex transition-all cursor-pointer text-sm" value={recentLimit} onChange={(e) => setRecentLimit(Number(e.target.value))}>
+                        <option value={20}>20 Items</option>
                         <option value={12}>12 Items</option>
                         <option value={25}>25 Items</option>
                         <option value={50}>50 Items</option>
@@ -4960,7 +4979,7 @@ export const LibraryDashboard: React.FC<{ onBack: () => void, isAdmin?: boolean,
                     {/* RECENT MOVIES */}
                     <div className="flex flex-col">
                         <h2 className="text-plex text-sm uppercase tracking-[2px] mb-6 font-bold border-b border-white/10 pb-2">RECENTLY ADDED MOVIES</h2>
-                        <div className="grid grid-cols-3 sm:grid-cols-4 md:[grid-template-columns:repeat(auto-fill,minmax(150px,150px))] md:justify-start gap-3 w-full pb-4">
+                        <div className={discoverPosterGridClass}>
                             {dashboardData && dashboardData.recentMovies.slice(0, recentLimit).map((item, i) => (
                                 <DiscoverPosterCard key={i} item={item} showQualityBadges={showQualityBadges} />
                             ))}
@@ -4971,7 +4990,7 @@ export const LibraryDashboard: React.FC<{ onBack: () => void, isAdmin?: boolean,
                     {/* RECENT TV SHOWS */}
                     <div className="flex flex-col">
                         <h2 className="text-plex text-sm uppercase tracking-[2px] mb-6 font-bold border-b border-white/10 pb-2">RECENTLY ADDED TV SHOWS</h2>
-                        <div className="grid grid-cols-3 sm:grid-cols-4 md:[grid-template-columns:repeat(auto-fill,minmax(150px,150px))] md:justify-start gap-3 w-full pb-4">
+                        <div className={discoverPosterGridClass}>
                             {dashboardData && dashboardData.recentShows.slice(0, recentLimit).map((item, i) => (
                                 <DiscoverPosterCard key={i} item={item} showQualityBadges={showQualityBadges} />
                             ))}
@@ -4982,7 +5001,7 @@ export const LibraryDashboard: React.FC<{ onBack: () => void, isAdmin?: boolean,
                     {/* RECENT MUSIC */}
                     <div className="flex flex-col">
                         <h2 className="text-plex text-sm uppercase tracking-[2px] mb-6 font-bold border-b border-white/10 pb-2">RECENTLY ADDED MUSIC</h2>
-                        <div className="grid grid-cols-3 sm:grid-cols-4 md:[grid-template-columns:repeat(auto-fill,minmax(150px,150px))] md:justify-start gap-3 w-full pb-4">
+                        <div className={discoverPosterGridClass}>
                             {dashboardData && dashboardData.recentMusic.slice(0, recentLimit).map((item, i) => (
                                 <DiscoverPosterCard key={i} item={item} aspect="square" showQualityBadges={showQualityBadges} />
                             ))}

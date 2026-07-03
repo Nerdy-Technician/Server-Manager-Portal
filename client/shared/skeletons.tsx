@@ -18,8 +18,8 @@ export const PosterCardSkeleton: React.FC<{
     </div>
 );
 
-export const PosterGridSkeleton: React.FC<{ count?: number; aspect?: '2/3' | 'square' }> = ({ count = 12, aspect = '2/3' }) => (
-    <div className="grid grid-cols-3 sm:grid-cols-4 md:[grid-template-columns:repeat(auto-fill,minmax(150px,150px))] md:justify-start gap-3 w-full pb-4" aria-hidden="true">
+export const PosterGridSkeleton: React.FC<{ count?: number; aspect?: '2/3' | 'square' }> = ({ count = 20, aspect = '2/3' }) => (
+    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-10 gap-3 w-full pb-4" aria-hidden="true">
         {Array.from({ length: count }, (_, i) => (
             <PosterCardSkeleton key={i} aspect={aspect} variant="discover" />
         ))}
@@ -58,8 +58,8 @@ export const DiscoverSectionSkeleton: React.FC<{ title: string; count?: number; 
     </div>
 );
 
-export const DiscoverPageSkeleton: React.FC<{ recentLimit?: number }> = ({ recentLimit = 12 }) => {
-    const count = Math.min(recentLimit, 12);
+export const DiscoverPageSkeleton: React.FC<{ recentLimit?: number }> = ({ recentLimit = 20 }) => {
+    const count = recentLimit;
     return (
         <div className="w-full flex flex-col min-h-screen" aria-busy="true" aria-label="Loading discover">
             <main className="w-full pb-8 mt-4 md:mt-0">
@@ -163,7 +163,7 @@ export const TopWatchedGridSkeleton: React.FC = () => (
     </div>
 );
 
-export const TrendingSectionsSkeleton: React.FC<{ count?: number; sections?: number }> = ({ count = 12, sections = 3 }) => (
+export const TrendingSectionsSkeleton: React.FC<{ count?: number; sections?: number }> = ({ count = 20, sections = 3 }) => (
     <div className="mt-16 w-full flex flex-col gap-12" aria-busy="true" aria-label="Loading trending">
         <div className="flex flex-col gap-2 items-center text-center mb-4">
             <SkeletonBlock className="h-10 w-72 max-w-full rounded" />
