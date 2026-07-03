@@ -1221,8 +1221,16 @@ input[type="date"], input[type="time"], input[type="datetime-local"], input[type
   z-index: 1500;
 }
 
+.z-\[190\] {
+  z-index: 190;
+}
+
 .z-\[2000\] {
   z-index: 2000;
+}
+
+.z-\[200\] {
+  z-index: 200;
 }
 
 .z-\[3000\] {

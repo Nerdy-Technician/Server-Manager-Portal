@@ -6,7 +6,7 @@ import { SettingsDashboard } from './settings/SettingsDashboard';
 import { LibraryMaintenancePanel } from './maintenance/LibraryMaintenancePanel';
 import { appConfirm } from './shared/confirm';
 import { apiFetch } from './shared/api';
-import { formatDate, getDaysUntilExpiry, addMonths, addYears, formatTime, formatEventName, formatDateTime, hexToRgb, formatSizeCeil } from './shared/format';
+import { formatDate, getDaysUntilExpiry, addMonths, addYears, formatTime, formatEventName, formatDateTime, hexToRgb, formatSizeCeil, formatStreamingHour } from './shared/format';
 import { CustomSelect, ConfirmModal, StyledCheckbox } from './shared/ui';
 import { Loader, Toast, ToastContainer, pushToast } from './shared/toast';
 import {
@@ -3427,7 +3427,7 @@ const WrapUpModal: React.FC<{ metric: string; analytics: any; days: number | str
                     <div className="flex flex-col items-center justify-center text-center p-6">
                         <Clock className="w-16 h-16 text-plex mb-4 drop-shadow-lg" />
                         <h2 className="text-3xl font-black text-white mb-2">{analytics.timeOfDay || 'Unknown'}</h2>
-                        <p className="text-muted mb-6">You typically stream around {analytics.avgHour ? Math.round(analytics.avgHour) + ':00' : 'Unknown'}.</p>
+                        <p className="text-muted mb-6">You typically stream around {formatStreamingHour(analytics.peakHour ?? analytics.avgHour)}.</p>
 
                         <div className="w-full mt-2 mb-6">
                             <p className="text-left text-xs uppercase tracking-widest font-bold text-muted mb-3 border-b border-white/10 pb-2">24-Hour Heat Map</p>
@@ -3444,7 +3444,7 @@ const WrapUpModal: React.FC<{ metric: string; analytics: any; days: number | str
                                             {hour % 6 === 0 && <span className="text-[8px] mt-1 font-bold text-muted absolute top-full pointer-events-none">{hour}h</span>}
 
                                             <div className="absolute bottom-full mb-1 opacity-0 group-hover:opacity-100 bg-black/80 text-white text-[10px] px-1.5 py-0.5 rounded pointer-events-none whitespace-nowrap z-10 transition-opacity">
-                                                {count} plays at {hour}:00
+                                                {count} plays at {formatStreamingHour(hour)}
                                             </div>
                                         </div>
                                     )

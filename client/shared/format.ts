@@ -29,6 +29,15 @@ export const addYears = (date: Date, years: number): Date => {
     return d;
 };
 
+/** Format a 0–23 hour for streaming stats (e.g. 22 → "10:00 PM"). */
+export const formatStreamingHour = (hour24: number | null | undefined): string => {
+    if (hour24 == null || Number.isNaN(hour24)) return 'Unknown';
+    const hour = Math.max(0, Math.min(23, Math.round(hour24)));
+    const period = hour >= 12 ? 'PM' : 'AM';
+    const hour12 = hour % 12 || 12;
+    return `${hour12}:00 ${period}`;
+};
+
 export const formatTime = (date: Date) => {
     try {
         const is24 = typeof window !== 'undefined' && (window as any).__USE_24_HOUR_CLOCK__ === true;

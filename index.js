@@ -4399,12 +4399,45 @@ app.post('/api/announcements/push', requireAdmin, async (req, res) => {
 });
 
 const TAUTULLI_HISTORY_PAGE_SIZE = 500;
+let cachedTautulliUsers = null;
+let cachedTautulliUsersAt = 0;
+let cachedTautulliTimezone = null;
+let cachedTautulliTimezoneAt = 0;
 
-const buildHourStatsFromUnixTimestamps = (timestamps) => {
+const getHourInTimezone = (unixSec, timeZone) => {
+    try {
+        const parts = new Intl.DateTimeFormat('en-GB', {
+            timeZone: timeZone || 'UTC',
+            hour: 'numeric',
+            hour12: false,
+        }).formatToParts(new Date(unixSec * 1000));
+        const hourPart = parts.find((p) => p.type === 'hour');
+        if (hourPart) return Number(hourPart.value);
+    } catch (e) {
+        log(`Invalid timezone "${timeZone}" for hour stats: ${e.message}`);
+    }
+    return new Date(unixSec * 1000).getUTCHours();
+};
+
+const getWeekdayInTimezone = (unixSec, timeZone) => {
+    try {
+        const weekday = new Intl.DateTimeFormat('en-GB', {
+            timeZone: timeZone || 'UTC',
+            weekday: 'short',
+        }).format(new Date(unixSec * 1000));
+        const map = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+        if (map[weekday] != null) return map[weekday];
+    } catch (e) {
+        log(`Invalid timezone "${timeZone}" for weekday stats: ${e.message}`);
+    }
+    return new Date(unixSec * 1000).getUTCDay();
+};
+
+const buildHourStatsFromUnixTimestamps = (timestamps, timeZone) => {
     const hourDistribution = new Array(24).fill(0);
     let totalHourOfDay = 0;
     for (const ts of timestamps) {
-        const hour = new Date(ts * 1000).getHours();
+        const hour = getHourInTimezone(ts, timeZone);
         totalHourOfDay += hour;
         hourDistribution[hour]++;
     }
@@ -4415,7 +4448,116 @@ const buildHourStatsFromUnixTimestamps = (timestamps) => {
     };
 };
 
-const fetchTautulliUserHistoryStarts = async (config, tUrl, filter, { afterUnixSec = 0, maxItems = 5000 } = {}) => {
+const resolvePeakHour = (hourDistribution) => {
+    if (!Array.isArray(hourDistribution) || hourDistribution.length === 0) return null;
+    let peakHour = 0;
+    let peakCount = 0;
+    for (let h = 0; h < hourDistribution.length; h++) {
+        if (hourDistribution[h] > peakCount) {
+            peakCount = hourDistribution[h];
+            peakHour = h;
+        }
+    }
+    return peakCount > 0 ? peakHour : null;
+};
+
+const resolveTimeOfDayPersona = (hour) => {
+    if (hour == null) return 'Night Owl';
+    if (hour >= 5 && hour < 12) return 'Early Bird';
+    if (hour >= 12 && hour < 18) return 'Afternoon Watcher';
+    if (hour >= 18) return 'Evening Streamer';
+    return 'Night Owl';
+};
+
+const fetchTautulliUsers = async (config) => {
+    if (!config?.tautulliUrl || !config?.tautulliApiKey) return [];
+    if (cachedTautulliUsers && (Date.now() - cachedTautulliUsersAt < 15 * 60 * 1000)) {
+        return cachedTautulliUsers;
+    }
+    const tUrl = resolveIntegrationUrlForFetch(config.tautulliUrl);
+    if (!tUrl) return [];
+    const response = await fetch(`${tUrl}/api/v2?apikey=${encodeURIComponent(config.tautulliApiKey)}&cmd=get_users`, {
+        headers: { Accept: 'application/json' },
+    }).then((r) => r.json()).catch(() => null);
+    const users = Array.isArray(response?.response?.data) ? response.response.data : [];
+    cachedTautulliUsers = users;
+    cachedTautulliUsersAt = Date.now();
+    return users;
+};
+
+const resolveTautulliUserId = (users, { username, email, plexAccountName }) => {
+    const norm = (v) => String(v || '').trim().toLowerCase();
+    if (!Array.isArray(users) || users.length === 0) return null;
+
+    const candidates = [username, plexAccountName, email].filter(Boolean).map(norm);
+    for (const candidate of candidates) {
+        const match = users.find((u) =>
+            norm(u.username) === candidate
+            || norm(u.friendly_name) === candidate
+            || norm(u.email) === candidate,
+        );
+        if (match?.user_id != null && match.user_id !== '') return String(match.user_id);
+    }
+    return null;
+};
+
+const fetchTautulliTimezone = async (config) => {
+    if (!config?.tautulliUrl || !config?.tautulliApiKey) {
+        return process.env.PORTAL_TIMEZONE || process.env.TZ || 'UTC';
+    }
+    if (cachedTautulliTimezone && (Date.now() - cachedTautulliTimezoneAt < 60 * 60 * 1000)) {
+        return cachedTautulliTimezone;
+    }
+    const tUrl = resolveIntegrationUrlForFetch(config.tautulliUrl);
+    if (!tUrl) return process.env.PORTAL_TIMEZONE || process.env.TZ || 'UTC';
+
+    const response = await fetch(`${tUrl}/api/v2?apikey=${encodeURIComponent(config.tautulliApiKey)}&cmd=get_settings`, {
+        headers: { Accept: 'application/json' },
+    }).then((r) => r.json()).catch(() => null);
+    const settings = response?.response?.data || {};
+    const timezone = settings?.timezone
+        || settings?.General?.timezone
+        || settings?.General?.TIMEZONE
+        || process.env.PORTAL_TIMEZONE
+        || process.env.TZ
+        || 'UTC';
+    cachedTautulliTimezone = timezone;
+    cachedTautulliTimezoneAt = Date.now();
+    return timezone;
+};
+
+const fetchTautulliPlaysByHourOfDay = async (config, tUrl, tautulliUserId, timeRangeDays) => {
+    const timeRange = timeRangeDays === 'all' ? 'all' : String(timeRangeDays || 30);
+    const params = new URLSearchParams({
+        apikey: config.tautulliApiKey,
+        cmd: 'get_plays_by_hourofday',
+        time_range: timeRange,
+        y_axis: 'plays',
+        user_id: String(tautulliUserId),
+        grouping: '0',
+    });
+    const response = await fetch(`${tUrl}/api/v2?${params.toString()}`, {
+        headers: { Accept: 'application/json' },
+    }).then((r) => r.json()).catch(() => null);
+    const data = response?.response?.data;
+    if (!data?.series || !Array.isArray(data.series)) return null;
+
+    const hourDistribution = new Array(24).fill(0);
+    for (const series of data.series) {
+        if (!Array.isArray(series.data)) continue;
+        series.data.forEach((count, idx) => {
+            if (idx < 24) hourDistribution[idx] += Number(count) || 0;
+        });
+    }
+    const hourCount = hourDistribution.reduce((sum, count) => sum + count, 0);
+    if (hourCount === 0) return null;
+
+    let totalHourOfDay = 0;
+    for (let h = 0; h < 24; h++) totalHourOfDay += h * hourDistribution[h];
+    return { totalHourOfDay, hourCount, hourDistribution };
+};
+
+const fetchTautulliUserHistoryStarts = async (config, tUrl, tautulliUserId, { afterUnixSec = 0, maxItems = 5000 } = {}) => {
     const startedTimestamps = [];
     let offset = 0;
     let done = false;
@@ -4429,10 +4571,9 @@ const fetchTautulliUserHistoryStarts = async (config, tUrl, filter, { afterUnixS
             order_dir: 'desc',
             start: String(offset),
             length: String(length),
+            user_id: String(tautulliUserId),
+            grouping: '0',
         });
-        for (const [key, value] of Object.entries(filter)) {
-            if (value != null && value !== '') params.set(key, String(value));
-        }
 
         const response = await fetch(`${tUrl}/api/v2?${params.toString()}`, { headers: { Accept: 'application/json' } })
             .then((r) => r.json())
@@ -4442,7 +4583,7 @@ const fetchTautulliUserHistoryStarts = async (config, tUrl, filter, { afterUnixS
         if (!Array.isArray(rows) || rows.length === 0) break;
 
         for (const row of rows) {
-            const started = Number(row.started || 0);
+            const started = Number(row.started || row.date || 0);
             if (!started) continue;
             if (afterUnixSec > 0 && started < afterUnixSec) {
                 done = true;
@@ -4462,24 +4603,39 @@ const fetchTautulliUserHistoryStarts = async (config, tUrl, filter, { afterUnixS
     return startedTimestamps;
 };
 
-const resolveTautulliHourStats = async (config, { username, userId, afterUnixSec, maxItems = 5000 }) => {
+const tautulliHourStatsMatchPlexPlays = (tautulliCount, plexCount) => {
+    if (!tautulliCount || !plexCount) return false;
+    if (tautulliCount === plexCount) return true;
+    const tolerance = Math.max(2, Math.ceil(plexCount * 0.25));
+    return Math.abs(tautulliCount - plexCount) <= tolerance;
+};
+
+const resolveTautulliHourStats = async (config, { username, email, plexAccountName, days, afterUnixSec, maxItems = 5000, plexPlayCount = 0 }) => {
     if (!config?.tautulliUrl || !config?.tautulliApiKey) return null;
     const tUrl = resolveIntegrationUrlForFetch(config.tautulliUrl);
     if (!tUrl) return null;
 
-    const filters = [];
-    if (username) filters.push({ user: username });
-    if (userId) filters.push({ user_id: userId });
-
-    for (const filter of filters) {
-        try {
-            const starts = await fetchTautulliUserHistoryStarts(config, tUrl, filter, { afterUnixSec, maxItems });
-            if (starts.length > 0) return buildHourStatsFromUnixTimestamps(starts);
-        } catch (e) {
-            log(`Tautulli hour stats lookup failed (${JSON.stringify(filter)}): ${e.message}`);
-        }
+    const users = await fetchTautulliUsers(config);
+    const tautulliUserId = resolveTautulliUserId(users, { username, email, plexAccountName });
+    if (!tautulliUserId) {
+        log(`Tautulli hour stats: no matching user for "${username || plexAccountName || email || 'unknown'}".`);
+        return null;
     }
-    return null;
+
+    const timeRangeDays = days === 'all' ? 'all' : (parseInt(days, 10) || 30);
+    let stats = await fetchTautulliPlaysByHourOfDay(config, tUrl, tautulliUserId, timeRangeDays);
+    if (!stats) {
+        const timezone = await fetchTautulliTimezone(config);
+        const starts = await fetchTautulliUserHistoryStarts(config, tUrl, tautulliUserId, { afterUnixSec, maxItems });
+        if (starts.length > 0) stats = buildHourStatsFromUnixTimestamps(starts, timezone);
+    }
+
+    if (!stats?.hourCount) return null;
+    if (plexPlayCount > 0 && !tautulliHourStatsMatchPlexPlays(stats.hourCount, plexPlayCount)) {
+        log(`Tautulli hour stats count (${stats.hourCount}) mismatches Plex plays (${plexPlayCount}) for user ${tautulliUserId}; ignoring Tautulli hours.`);
+        return null;
+    }
+    return stats;
 };
 
 app.get('/api/tautulli/stats', requireAuth, requireMember, async (req, res) => {
@@ -4847,16 +5003,19 @@ app.get('/api/plex/analytics/me', requireAuth, requireMember, async (req, res) =
         let showsCount = 0;
         let musicCount = 0;
 
+        const statsTimezone = await fetchTautulliTimezone(config);
+        const { list: plexAccounts } = await fetchPlexServerAccounts(uri, config);
+        const plexAccountName = plexAccounts.find((a) => String(a.id) === String(accountID))?.name || null;
+
         historyRes.MediaContainer.Metadata.forEach(item => {
             if (cutoffDate > 0 && item.viewedAt < cutoffDate) return;
             totalPlays++;
 
-            const viewDate = new Date(item.viewedAt * 1000);
-            const hour = viewDate.getHours();
+            const hour = getHourInTimezone(item.viewedAt, statsTimezone);
             plexTotalHourOfDay += hour;
             plexHourCount++;
             plexHourDistribution[hour]++;
-            dayOfWeekCounts[viewDate.getDay()]++;
+            dayOfWeekCounts[getWeekdayInTimezone(item.viewedAt, statsTimezone)]++;
 
             if (item.type === 'movie') moviesCount++;
             else if (item.type === 'episode') showsCount++;
@@ -4902,9 +5061,12 @@ app.get('/api/plex/analytics/me', requireAuth, requireMember, async (req, res) =
 
         const tautulliHourStats = await resolveTautulliHourStats(config, {
             username: req.user?.username,
-            userId: accountID,
+            email: req.user?.email,
+            plexAccountName,
+            days: req.query.days || 30,
             afterUnixSec: cutoffDate,
             maxItems: limit,
+            plexPlayCount: totalPlays,
         });
         if (tautulliHourStats?.hourCount > 0) {
             totalHourOfDay = tautulliHourStats.totalHourOfDay;
@@ -4927,11 +5089,9 @@ app.get('/api/plex/analytics/me', requireAuth, requireMember, async (req, res) =
             return c;
         });
 
-        const avgHour = hourCount > 0 ? (totalHourOfDay / hourCount) : 12;
-        let timeOfDay = 'Night Owl';
-        if (avgHour >= 5 && avgHour < 12) timeOfDay = 'Early Bird';
-        else if (avgHour >= 12 && avgHour < 18) timeOfDay = 'Afternoon Watcher';
-        else if (avgHour >= 18) timeOfDay = 'Evening Streamer';
+        const avgHour = hourCount > 0 ? (totalHourOfDay / hourCount) : null;
+        const peakHour = resolvePeakHour(hourDistribution);
+        const timeOfDay = resolveTimeOfDayPersona(peakHour);
 
         const allShowsList = Object.values(contentCounts).filter(c => c.type === 'show').sort((a, b) => b.plays - a.plays);
         let topShowsRaw = allShowsList.slice(0, 5);
@@ -5084,6 +5244,7 @@ app.get('/api/plex/analytics/me', requireAuth, requireMember, async (req, res) =
             weekdayPlays,
             uniqueTitles,
             avgHour,
+            peakHour,
             dayOfWeekCounts,
             hourDistribution,
             allLibraries,

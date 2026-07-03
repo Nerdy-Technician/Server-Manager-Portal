@@ -2,6 +2,7 @@ import React, { useCallback, useRef, useState } from 'react';
 import { X, Copy, Download, Share2 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { WrapUpCardGrid, periodLabel } from './WrapUpCards';
+import { formatStreamingHour } from './format';
 
 export const buildWrapUpShareText = (analytics: any, days: number | string, serverName: string, username?: string) => {
     const period = periodLabel(days);
@@ -20,7 +21,7 @@ export const buildWrapUpShareText = (analytics: any, days: number | string, serv
         `▶️ Total Streams: ${analytics.totalPlays || 0} (🎬 ${analytics.moviesCount || 0} · 📺 ${analytics.showsCount || 0}${analytics.musicCount ? ` · 🎵 ${analytics.musicCount}` : ''})`,
         `📺 Top Binge: ${analytics.topBinge?.title || '—'} (${analytics.topBinge?.plays || 0} eps)`,
         `🎬 Top Movie: ${analytics.topMovie?.title || '—'} (${analytics.topMovie?.plays || 0} plays)`,
-        `🕐 Time of Day: ${analytics.timeOfDay || '—'} (avg ${analytics.avgHour ? `${Math.round(analytics.avgHour)}:00` : '—'})`,
+        `🕐 Time of Day: ${analytics.timeOfDay || '—'} (peak ${formatStreamingHour(analytics.peakHour ?? analytics.avgHour)})`,
         `📅 Top Day: ${analytics.popularDay || '—'} (${topDayStreams} streams)`,
         `📚 Top Library: ${analytics.favoriteLibrary || '—'} (${analytics.topLibraries?.[0]?.plays || 0} plays)`,
         `🎭 Media Profile: ${analytics.mediaPreference || '—'}`,

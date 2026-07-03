@@ -3,6 +3,7 @@ import {
     Trophy, PlayCircle, Tv, Clapperboard, Clock, Calendar, Layers, PieChart, Compass, Coffee,
     type LucideIcon,
 } from 'lucide-react';
+import { formatStreamingHour } from './format';
 
 export const periodLabel = (days: number | string) => {
     if (days === 'all') return 'All Time';
@@ -97,7 +98,7 @@ export const buildWrapUpCards = (analytics: any): WrapUpCardDef[] => {
             icon: Clock,
             valueClassName: 'text-sm font-bold leading-tight',
             value: analytics.timeOfDay || 'Unknown',
-            subValue: `Avg Time: ${analytics.avgHour ? `${Math.round(analytics.avgHour)}:00` : 'Unknown'}`,
+            subValue: `Peak Time: ${formatStreamingHour(analytics.peakHour ?? analytics.avgHour)}`,
         },
         {
             metric: 'Top Day',
