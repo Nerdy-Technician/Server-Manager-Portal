@@ -80,7 +80,10 @@ export const SettingsDashboard: React.FC = () => {
         setLoading(true);
         try {
             await apiFetch('/api/config', { method: 'POST', body: JSON.stringify(newConfig) });
-            setInitialSettings(newConfig);
+            const configData = await apiFetch('/api/config');
+            if (configData.settings) {
+                setInitialSettings(configData.settings);
+            }
             window.dispatchEvent(new CustomEvent('portal-public-config-updated'));
             addToast('Settings Saved!');
         } catch (e: any) {
@@ -225,6 +228,12 @@ export const SettingsDashboard: React.FC = () => {
     const [requestAppApiKey, setRequestAppApiKey] = useState('');
     const [maintenanceExperimentalEnabled, setMaintenanceExperimentalEnabled] = useState(false);
     const [dashboardLayout, setDashboardLayout] = useState<DashboardLayoutConfig>(DEFAULT_DASHBOARD_LAYOUT);
+    const dashboardLayoutRef = useRef<DashboardLayoutConfig>(DEFAULT_DASHBOARD_LAYOUT);
+
+    const updateDashboardLayout = useCallback((next: DashboardLayoutConfig) => {
+        dashboardLayoutRef.current = next;
+        setDashboardLayout(next);
+    }, []);
 
     // Branding & UI States
     const [primaryColor, setPrimaryColor] = useState('#E5A00D');
@@ -675,7 +684,9 @@ export const SettingsDashboard: React.FC = () => {
             if (initialSettings.autoBackupIntervalDays !== undefined) setAutoBackupIntervalDays(Number(initialSettings.autoBackupIntervalDays) || 2);
             if (initialSettings.autoBackupRetentionCount !== undefined) setAutoBackupRetentionCount(Number(initialSettings.autoBackupRetentionCount) || 10);
             if (initialSettings.maintenanceExperimentalEnabled !== undefined) setMaintenanceExperimentalEnabled(!!initialSettings.maintenanceExperimentalEnabled);
-            setDashboardLayout(normalizeSectionLayout(initialSettings.dashboardLayout));
+            const layout = normalizeSectionLayout(initialSettings.dashboardLayout);
+            dashboardLayoutRef.current = layout;
+            setDashboardLayout(layout);
             setTestRecipient('');
             setServers([]);
         }
@@ -787,7 +798,7 @@ export const SettingsDashboard: React.FC = () => {
             autoBackupIntervalDays,
             autoBackupRetentionCount,
             maintenanceExperimentalEnabled,
-            dashboardLayout: normalizeSectionLayout(dashboardLayout)
+            dashboardLayout: normalizeSectionLayout(dashboardLayoutRef.current)
         });
         document.documentElement.style.setProperty('--color-plex', hexToRgb(primaryColor));
     };
@@ -1317,7 +1328,7 @@ export const SettingsDashboard: React.FC = () => {
                     )}
 
                     {activeTab === 'home-layout' && (
-                        <HomeLayoutSettings layout={dashboardLayout} onChange={setDashboardLayout} />
+                        <HomeLayoutSettings layout={dashboardLayout} onChange={updateDashboardLayout} />
                     )}
 
                     {activeTab === 'navigation' && (

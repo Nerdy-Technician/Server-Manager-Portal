@@ -1615,6 +1615,18 @@ const normalizeDashboardLayout = (raw) => {
     };
 };
 
+const normalizeSectionLayout = (raw) => {
+    const normalized = normalizeDashboardLayout(raw);
+    const input = raw && typeof raw === 'object' ? raw : null;
+    if (!input || !Array.isArray(input.hiddenSections)) {
+        return { ...normalized, hiddenSections: [] };
+    }
+    if (normalized.hiddenSections.length >= 4) {
+        return { ...normalized, hiddenSections: [] };
+    }
+    return normalized;
+};
+
 // Config endpoints
 app.get('/api/config', requireAdmin, async (req, res) => {
     const config = await loadFile(CONFIG_PATH, {});
@@ -1671,7 +1683,7 @@ app.get('/api/config', requireAdmin, async (req, res) => {
                 autoBackupIntervalDays: Number(config.autoBackupIntervalDays) > 0 ? Number(config.autoBackupIntervalDays) : 2,
                 autoBackupRetentionCount: Number(config.autoBackupRetentionCount) > 0 ? Number(config.autoBackupRetentionCount) : 10,
                 maintenanceExperimentalEnabled: !!config.maintenanceExperimentalEnabled,
-                dashboardLayout: normalizeDashboardLayout(config.dashboardLayout)
+                dashboardLayout: normalizeSectionLayout(config.dashboardLayout)
             },
         });
     } else {
@@ -1856,7 +1868,9 @@ app.post('/api/config', setupRateLimit, async (req, res) => {
         autoBackupIntervalDays: Math.max(1, parseInt(autoBackupIntervalDays, 10) || 2),
         autoBackupRetentionCount: Math.max(1, parseInt(autoBackupRetentionCount, 10) || 10),
         maintenanceExperimentalEnabled: maintenanceExperimentalEnabled !== undefined ? !!maintenanceExperimentalEnabled : !!existingConfig.maintenanceExperimentalEnabled,
-        dashboardLayout: normalizeDashboardLayout(dashboardLayout !== undefined ? dashboardLayout : existingConfig.dashboardLayout)
+        dashboardLayout: ('dashboardLayout' in req.body)
+            ? normalizeSectionLayout(req.body.dashboardLayout)
+            : normalizeSectionLayout(existingConfig.dashboardLayout)
     };
     await saveFile(CONFIG_PATH, config);
     await syncAdminPlexIdFromConfigToken(config, { persist: true });
@@ -1900,7 +1914,7 @@ app.get('/api/config/public', async (req, res) => {
             use24HourClock: !!config.use24HourClock,
             allowTemporaryAccess: !!config.allowTemporaryAccess,
             showPosterQualityBadges: config.showPosterQualityBadges !== false,
-            dashboardLayout: normalizeDashboardLayout(config.dashboardLayout)
+            dashboardLayout: normalizeSectionLayout(config.dashboardLayout)
         });
     } catch (error) {
         res.json({

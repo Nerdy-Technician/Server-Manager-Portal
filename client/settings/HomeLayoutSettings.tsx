@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { GripVertical, RotateCcw } from 'lucide-react';
+import { Eye, EyeOff, GripVertical, RotateCcw } from 'lucide-react';
 import {
     DEFAULT_DASHBOARD_LAYOUT,
     DASHBOARD_SECTION_LABELS,
@@ -22,6 +22,26 @@ const reorderSections = (sections: DashboardSectionId[], from: number, to: numbe
     return next;
 };
 
+const SectionVisibilityToggle: React.FC<{ visible: boolean; onToggle: () => void }> = ({ visible, onToggle }) => (
+    <button
+        type="button"
+        onClick={(e) => {
+            e.stopPropagation();
+            onToggle();
+        }}
+        aria-pressed={visible}
+        aria-label={visible ? 'Section shown on home page' : 'Section hidden on home page'}
+        className={`inline-flex items-center gap-1.5 shrink-0 px-3 py-1.5 rounded-lg text-xs font-bold border transition-all
+            ${visible
+                ? 'bg-plex/15 border-plex/40 text-plex hover:bg-plex/25 shadow-[0_0_12px_rgba(229,160,13,0.12)]'
+                : 'bg-white/5 border-border/50 text-muted hover:border-white/20 hover:text-text'
+            }`}
+    >
+        {visible ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+        {visible ? 'Shown' : 'Hidden'}
+    </button>
+);
+
 const SectionPreview: React.FC<{ layout: DashboardLayoutConfig }> = ({ layout }) => (
     <div className="rounded-xl border border-border/50 bg-background/40 p-4 space-y-2">
         <p className="text-xs font-bold uppercase tracking-wider text-muted mb-3">Live preview</p>
@@ -32,26 +52,26 @@ const SectionPreview: React.FC<{ layout: DashboardLayoutConfig }> = ({ layout })
                 return (
                     <div
                         key={id}
-                        className={`rounded-lg border transition-opacity ${hidden ? 'opacity-35 border-border/30 bg-white/[0.02]' : 'border-plex/25 bg-plex/5'}`}
+                        className={`rounded-lg border transition-all ${hidden ? 'opacity-35 border-border/30 bg-white/[0.02]' : 'border-plex/40 bg-plex/[0.08] shadow-[0_0_16px_rgba(229,160,13,0.08)]'}`}
                     >
                         {id === 'mainGrid' && !hidden ? (
                             <div className={`${meta.previewClass} p-2 flex gap-2`}>
                                 <div className="w-1/3 flex flex-col gap-1">
-                                    <div className="flex-1 rounded bg-white/10 border border-white/10" title="Left column" />
-                                    <div className="h-4 rounded bg-white/10 border border-white/10" />
+                                    <div className="flex-1 rounded bg-plex/20 border border-plex/30" title="Left column" />
+                                    <div className="h-4 rounded bg-plex/15 border border-plex/25" />
                                 </div>
                                 <div className="w-2/3 flex flex-col gap-1">
-                                    <div className="h-8 rounded bg-white/10 border border-white/10" />
-                                    <div className="flex-1 rounded bg-white/10 border border-white/10" />
+                                    <div className="h-8 rounded bg-plex/20 border border-plex/30" />
+                                    <div className="flex-1 rounded bg-plex/15 border border-plex/25" />
                                 </div>
                             </div>
                         ) : id === 'watchRow' && !hidden ? (
                             <div className={`${meta.previewClass} p-2 flex gap-2`}>
-                                <div className="w-1/3 rounded bg-white/10 border border-white/10" />
-                                <div className="w-2/3 rounded bg-white/10 border border-white/10" />
+                                <div className="w-1/3 rounded bg-plex/20 border border-plex/30" />
+                                <div className="w-2/3 rounded bg-plex/15 border border-plex/25" />
                             </div>
                         ) : (
-                            <div className={`${meta.previewClass} rounded bg-white/10 border border-white/10 mx-2 my-2`} />
+                            <div className={`${meta.previewClass} rounded bg-plex/15 border border-plex/25 mx-2 my-2`} />
                         )}
                         <div className="px-3 pb-2 flex items-center justify-between gap-2">
                             <div className="min-w-0">
@@ -116,7 +136,7 @@ export const HomeLayoutSettings: React.FC<Props> = ({ layout, onChange }) => {
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 max-w-5xl">
                 <div>
                     <h4 className="text-sm font-bold uppercase tracking-wider text-muted mb-3">Page sections</h4>
-                    <p className="text-xs text-muted mb-3">Drag the handle to reorder. Uncheck Show to hide a section.</p>
+                    <p className="text-xs text-muted mb-3">Drag the handle to reorder. Use Shown/Hidden to toggle each section — all are visible by default.</p>
                     <div className="flex flex-col gap-2">
                         {layout.sections.map((id, index) => {
                             const hidden = layout.hiddenSections.includes(id);
@@ -153,16 +173,7 @@ export const HomeLayoutSettings: React.FC<Props> = ({ layout, onChange }) => {
                                         </div>
                                         <div className="text-xs text-muted mt-0.5">{SECTION_PREVIEW_META[id].description}</div>
                                     </div>
-                                    <label className="flex items-center gap-2 text-xs text-muted cursor-pointer shrink-0">
-                                        <input
-                                            type="checkbox"
-                                            checked={!hidden}
-                                            onChange={() => toggleSectionHidden(id)}
-                                            className="accent-plex"
-                                            onClick={(e) => e.stopPropagation()}
-                                        />
-                                        Show
-                                    </label>
+                                    <SectionVisibilityToggle visible={!hidden} onToggle={() => toggleSectionHidden(id)} />
                                 </div>
                             );
                         })}
@@ -170,6 +181,12 @@ export const HomeLayoutSettings: React.FC<Props> = ({ layout, onChange }) => {
                 </div>
 
                 <SectionPreview layout={layout} />
+            </div>
+
+            <div className="max-w-5xl rounded-xl border border-plex/30 bg-plex/5 px-4 py-3">
+                <p className="text-xs text-plex font-semibold">
+                    Click <span className="text-text">Save Settings</span> at the bottom of this page to apply layout changes for everyone.
+                </p>
             </div>
 
             <div className="max-w-5xl rounded-xl border border-border/30 bg-background/20 px-4 py-3">

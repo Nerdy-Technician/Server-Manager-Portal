@@ -149,8 +149,17 @@ export const lockWidgetLayout = (layout: DashboardLayoutConfig): DashboardLayout
     hiddenWidgets: [],
 });
 
-export const normalizeSectionLayout = (raw: unknown): DashboardLayoutConfig =>
-    lockWidgetLayout(normalizeDashboardLayout(raw));
+export const normalizeSectionLayout = (raw: unknown): DashboardLayoutConfig => {
+    const normalized = lockWidgetLayout(normalizeDashboardLayout(raw));
+    const input = raw && typeof raw === 'object' ? (raw as Partial<DashboardLayoutConfig>) : null;
+    if (!input || !Array.isArray(input.hiddenSections)) {
+        return { ...normalized, hiddenSections: [] };
+    }
+    if (normalized.hiddenSections.length >= ALL_SECTIONS.length) {
+        return { ...normalized, hiddenSections: [] };
+    }
+    return normalized;
+};
 
 export const SECTION_PREVIEW_META: Record<
     DashboardSectionId,
