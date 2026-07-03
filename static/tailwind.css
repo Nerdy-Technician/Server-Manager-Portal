@@ -1221,20 +1221,20 @@ input[type="date"], input[type="time"], input[type="datetime-local"], input[type
   z-index: 1500;
 }
 
-.z-\[190\] {
-  z-index: 190;
-}
-
 .z-\[2000\] {
   z-index: 2000;
 }
 
-.z-\[200\] {
-  z-index: 200;
-}
-
 .z-\[3000\] {
   z-index: 3000;
+}
+
+.z-\[9998\] {
+  z-index: 9998;
+}
+
+.z-\[9999\] {
+  z-index: 9999;
 }
 
 .col-span-1 {
