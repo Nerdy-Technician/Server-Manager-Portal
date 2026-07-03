@@ -63,55 +63,66 @@ export const ShareWrapUpModal: React.FC<ShareWrapUpModalProps> = ({
     const renderExportBlob = useCallback(async (): Promise<Blob | null> => {
         const node = exportRef.current;
         if (!node) return null;
-        if (document.fonts?.ready) {
-            await document.fonts.ready;
+
+        const prevWidth = node.style.width;
+        const prevMaxWidth = node.style.maxWidth;
+        node.style.width = `${EXPORT_WIDTH_PX}px`;
+        node.style.maxWidth = 'none';
+
+        try {
+            if (document.fonts?.ready) {
+                await document.fonts.ready;
+            }
+            await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+
+            const canvas = await html2canvas(node, {
+                useCORS: true,
+                allowTaint: true,
+                backgroundColor: '#0d0e10',
+                scale: 2,
+                logging: false,
+                scrollX: 0,
+                scrollY: -window.scrollY,
+                width: node.scrollWidth,
+                height: node.scrollHeight,
+                onclone: (clonedDoc, clonedNode) => {
+                    const exportRoot = clonedNode as HTMLElement;
+                    exportRoot.style.overflow = 'visible';
+                    exportRoot.style.width = `${EXPORT_WIDTH_PX}px`;
+                    exportRoot.style.maxWidth = 'none';
+                    exportRoot.style.paddingBottom = '1.5rem';
+
+                    clonedDoc.querySelectorAll('img').forEach((img) => {
+                        const src = img.getAttribute('src') || '';
+                        if (src.startsWith('http') && !src.startsWith(window.location.origin)) {
+                            img.style.visibility = 'hidden';
+                        }
+                    });
+                    clonedDoc.querySelectorAll('[data-wrap-up-card]').forEach((card) => {
+                        const el = card as HTMLElement;
+                        el.style.isolation = 'isolate';
+                        el.style.contain = 'layout paint';
+                        el.style.overflow = 'visible';
+                    });
+                    clonedDoc.querySelectorAll('svg').forEach((svg) => {
+                        const el = svg as SVGElement;
+                        el.style.overflow = 'hidden';
+                        el.setAttribute('overflow', 'hidden');
+                    });
+                    clonedDoc.querySelectorAll('[class*="line-clamp"]').forEach((el) => {
+                        const node = el as HTMLElement;
+                        node.style.display = 'block';
+                        node.style.overflow = 'visible';
+                        node.style.webkitLineClamp = 'unset';
+                        node.style.lineHeight = '1.35';
+                    });
+                },
+            });
+            return new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+        } finally {
+            node.style.width = prevWidth;
+            node.style.maxWidth = prevMaxWidth;
         }
-        await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-
-        const canvas = await html2canvas(node, {
-            useCORS: true,
-            allowTaint: true,
-            backgroundColor: '#0d0e10',
-            scale: 2,
-            logging: false,
-            scrollX: 0,
-            scrollY: -window.scrollY,
-            width: node.scrollWidth,
-            height: node.scrollHeight,
-            onclone: (clonedDoc, clonedNode) => {
-                const exportRoot = clonedNode as HTMLElement;
-                exportRoot.style.overflow = 'visible';
-                exportRoot.style.width = `${EXPORT_WIDTH_PX}px`;
-                exportRoot.style.maxWidth = 'none';
-                exportRoot.style.paddingBottom = '1.5rem';
-
-                clonedDoc.querySelectorAll('img').forEach((img) => {
-                    const src = img.getAttribute('src') || '';
-                    if (src.startsWith('http') && !src.startsWith(window.location.origin)) {
-                        img.style.visibility = 'hidden';
-                    }
-                });
-                clonedDoc.querySelectorAll('[data-wrap-up-card]').forEach((card) => {
-                    const el = card as HTMLElement;
-                    el.style.isolation = 'isolate';
-                    el.style.contain = 'layout paint';
-                    el.style.overflow = 'visible';
-                });
-                clonedDoc.querySelectorAll('svg').forEach((svg) => {
-                    const el = svg as SVGElement;
-                    el.style.overflow = 'hidden';
-                    el.setAttribute('overflow', 'hidden');
-                });
-                clonedDoc.querySelectorAll('[class*="line-clamp"]').forEach((el) => {
-                    const node = el as HTMLElement;
-                    node.style.display = 'block';
-                    node.style.overflow = 'visible';
-                    node.style.webkitLineClamp = 'unset';
-                    node.style.lineHeight = '1.35';
-                });
-            },
-        });
-        return new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
     }, []);
 
     const handleCopyText = async () => {
@@ -192,8 +203,8 @@ export const ShareWrapUpModal: React.FC<ShareWrapUpModalProps> = ({
     };
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm" onClick={onClose}>
-            <div className="glass-card shadow-2xl max-w-3xl w-full p-5 md:p-6 relative max-h-[92vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 md:p-4 bg-black/80 backdrop-blur-sm" onClick={onClose}>
+            <div className="glass-card shadow-2xl w-[calc(100vw-1.5rem)] max-w-[1080px] p-5 md:p-6 relative max-h-[92vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
                 <button type="button" onClick={onClose} className="absolute top-4 right-4 p-2 rounded-full hover:bg-white/10 text-muted hover:text-text transition-colors z-10">
                     <X className="w-5 h-5" />
                 </button>
@@ -201,11 +212,10 @@ export const ShareWrapUpModal: React.FC<ShareWrapUpModalProps> = ({
                 <h3 className="text-xl font-bold text-text mb-1 pr-10">Share Your Wrap-Up</h3>
                 <p className="text-muted text-sm mb-4">Preview matches what Save Image exports — same cards as your dashboard.</p>
 
-                <div className="overflow-y-auto overflow-x-auto flex-1 min-h-0 custom-scrollbar -mx-1 px-1 mb-4">
+                <div className="overflow-y-auto overflow-x-hidden flex-1 min-h-0 custom-scrollbar mb-4">
                     <div
                         ref={exportRef}
-                        className="rounded-2xl border border-white/10 bg-[#0d0e10] p-5 pb-6 overflow-visible"
-                        style={{ width: EXPORT_WIDTH_PX, maxWidth: 'none' }}
+                        className="w-full rounded-2xl border border-white/10 bg-[#0d0e10] p-5 pb-6 overflow-visible"
                     >
                         <div className="mb-4 pb-3 border-b border-white/10">
                             <p className="text-[10px] uppercase tracking-[0.2em] font-bold text-plex mb-1">Personal Wrap-Up</p>
