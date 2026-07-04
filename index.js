@@ -4951,7 +4951,7 @@ const aggregateAnalyticsWindow = (historyItems, { afterTs = 0, beforeTs = null }
     };
 };
 
-const summarizeLibraryHealth = (topLibraries = [], stats = {}) => {
+const summarizeLibraryHealth = (topLibraries = [], stats = {}, cachedData = {}) => {
     const libraryPlays = (topLibraries || []).reduce((sum, lib) => sum + toNumber(lib.plays, 0), 0);
     const leadingLibraryPlays = toNumber(topLibraries?.[0]?.plays, 0);
     const concentrationPct = libraryPlays > 0 ? Number(((leadingLibraryPlays / libraryPlays) * 100).toFixed(1)) : 0;
@@ -4960,6 +4960,12 @@ const summarizeLibraryHealth = (topLibraries = [], stats = {}) => {
     const totalCatalogBytes = toNumber(stats.moviesBytes) + toNumber(stats.showsBytes) + toNumber(stats.musicBytes);
     const sizeGB = Number((totalCatalogBytes / (1024 * 1024 * 1024)).toFixed(1));
     const fourKPercent = toNumber(stats.fourKPercent, 0);
+
+    const uniqueWatchedItems = Object.keys(cachedData.contentCountsMovies || {}).length + 
+                               Object.keys(cachedData.contentCountsShows || {}).length + 
+                               Object.keys(cachedData.contentCountsMusic || {}).length;
+    const totalPlayableItems = toNumber(stats.movies) + toNumber(stats.episodes) + toNumber(stats.tracks);
+    const catalogWatchedPct = totalPlayableItems > 0 ? Number(((uniqueWatchedItems / totalPlayableItems) * 100).toFixed(1)) : 0;
 
     let healthLabel = 'Concentrated';
     if (activeLibraries >= 5 && concentrationPct <= 55 && fourKPercent >= 20) {
@@ -4976,6 +4982,7 @@ const summarizeLibraryHealth = (topLibraries = [], stats = {}) => {
         sizeGB,
         fourKPercent,
         healthLabel,
+        catalogWatchedPct,
         movies: toNumber(stats.movies, 0),
         shows: toNumber(stats.shows, 0),
         episodes: toNumber(stats.episodes, 0),
@@ -5044,7 +5051,7 @@ app.get('/api/plex/analytics', requireAuth, requireMember, async (req, res) => {
         data.maxConcurrentStreams = stats.maxConcurrentStreams || 0;
         data.maxDirectPlays = stats.maxDirectPlays || 0;
         data.maxTranscodes = stats.maxTranscodes || 0;
-        data.libraryHealth = summarizeLibraryHealth(data.topLibraries || [], stats);
+        data.libraryHealth = summarizeLibraryHealth(data.topLibraries || [], stats, cachedData);
 
         const priorPeriod = cachedData.priorPeriod;
         if (priorPeriod && reqDays !== 'all') {

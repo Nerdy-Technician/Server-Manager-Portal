@@ -1649,6 +1649,7 @@ export const AnalyticsDashboard: React.FC<{ isAdmin: boolean, sessionInfo: any }
             totalCatalogBytes?: number,
             sizeGB: number,
             fourKPercent: number,
+            catalogWatchedPct?: number,
             healthLabel: string,
             movies?: number,
             shows?: number,
@@ -1889,7 +1890,7 @@ export const AnalyticsDashboard: React.FC<{ isAdmin: boolean, sessionInfo: any }
                                 <div className="glass-card-sm p-4">
                                     <p className="text-muted text-xs uppercase tracking-wider font-bold mb-1">Usage Concentration</p>
                                     <p className="text-xl font-black text-text">{libraryHealth.concentrationPct}%</p>
-                                    <p className="text-[11px] text-muted">4K Coverage: {libraryHealth.fourKPercent}%</p>
+                                    <p className="text-[11px] text-muted truncate">Watched: {libraryHealth.catalogWatchedPct || 0}% • 4K: {libraryHealth.fourKPercent}%</p>
                                 </div>
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
