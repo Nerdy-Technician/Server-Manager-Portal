@@ -168,9 +168,13 @@
     margin-bottom: 1.5rem;
   }
 
-  /* Discover: column counts follow content width (sidebar-aware), never squash */
-  .discover-poster-grid {
+  /* Discover: container on parent — grids query content width (sidebar-aware) */
+  .discover-layout-container {
     container-type: inline-size;
+    width: 100%;
+  }
+
+  .discover-poster-grid {
     display: grid;
     width: 100%;
     padding-bottom: 1rem;
@@ -204,7 +208,6 @@
   }
 
   .discover-activity-grid {
-    container-type: inline-size;
     display: grid;
     width: 100%;
     gap: 1rem;

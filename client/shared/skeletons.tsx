@@ -63,7 +63,7 @@ export const DiscoverPageSkeleton: React.FC<{ recentLimit?: number; wideLayout?:
     const count = recentLimit;
     return (
         <div className="w-full flex flex-col min-h-screen" aria-busy="true" aria-label="Loading discover">
-            <main className="w-full pb-8 mt-4 md:mt-0">
+            <main className="discover-layout-container w-full pb-8 mt-4 md:mt-0">
                 <section className="mb-12 w-full">
                     <h2 className="text-plex text-sm uppercase tracking-[2px] mb-6 font-bold border-b border-white/10 pb-2">ACTIVITY</h2>
                     <ActivityGridSkeleton count={wideLayout ? 4 : 3} wideLayout={wideLayout} />

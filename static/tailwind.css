@@ -985,10 +985,14 @@ input[type="date"], input[type="time"], input[type="datetime-local"], input[type
   margin-bottom: 1.5rem;
 }
 
-/* Discover: column counts follow content width (sidebar-aware), never squash */
+/* Discover: container on parent — grids query content width (sidebar-aware) */
+
+.discover-layout-container {
+  container-type: inline-size;
+  width: 100%;
+}
 
 .discover-poster-grid {
-  container-type: inline-size;
   display: grid;
   width: 100%;
   padding-bottom: 1rem;
@@ -1022,7 +1026,6 @@ input[type="date"], input[type="time"], input[type="datetime-local"], input[type
 }
 
 .discover-activity-grid {
-  container-type: inline-size;
   display: grid;
   width: 100%;
   gap: 1rem;
@@ -1190,10 +1193,6 @@ input[type="date"], input[type="time"], input[type="datetime-local"], input[type
   right: 0.5rem;
 }
 
-.right-2\.5 {
-  right: 0.625rem;
-}
-
 .right-3 {
   right: 0.75rem;
 }
@@ -1224,10 +1223,6 @@ input[type="date"], input[type="time"], input[type="datetime-local"], input[type
 
 .top-2 {
   top: 0.5rem;
-}
-
-.top-2\.5 {
-  top: 0.625rem;
 }
 
 .top-20 {
@@ -2110,8 +2105,8 @@ input[type="date"], input[type="time"], input[type="datetime-local"], input[type
   max-width: 280px;
 }
 
-.max-w-\[45\%\] {
-  max-width: 45%;
+.max-w-\[42\%\] {
+  max-width: 42%;
 }
 
 .max-w-full {
@@ -3854,10 +3849,6 @@ input[type="date"], input[type="time"], input[type="datetime-local"], input[type
 
 .pr-4 {
   padding-right: 1rem;
-}
-
-.pr-\[46\%\] {
-  padding-right: 46%;
 }
 
 .pt-0\.5 {

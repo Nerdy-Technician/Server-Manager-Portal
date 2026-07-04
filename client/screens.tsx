@@ -4888,7 +4888,7 @@ export const LibraryDashboard: React.FC<{ onBack: () => void, isAdmin?: boolean,
 
     return (
         <div className="w-full flex flex-col min-h-screen">
-            <main className="w-full pb-8 mt-4 md:mt-0">
+            <main className="discover-layout-container w-full pb-8 mt-4 md:mt-0">
                 {error && <div className="toast error show">{error}</div>}
                 {pollError && !error && <div className="toast error show">{pollError}</div>}
 
@@ -4927,28 +4927,30 @@ export const LibraryDashboard: React.FC<{ onBack: () => void, isAdmin?: boolean,
                                             <div className="w-full pb-[127%]"></div>
                                             <img src={portalUrl(`/api/plex/image?path=${encodeURIComponent(session.thumb)}&width=300&height=500`)} alt={session.title} loading="lazy" className="absolute inset-0 w-full h-full object-cover drop-shadow-2xl" />
                                         </div>
-                                        <div className="p-3 flex flex-col flex-grow min-w-0 justify-center relative">
-                                            {session.user && (
-                                                <div className="absolute top-2.5 right-2.5 flex items-center gap-1.5 bg-black/50 backdrop-blur-md rounded-full pr-2.5 p-0.5 shadow-md border border-white/5 max-w-[45%]">
-                                                    <img src={session.userThumb ? session.userThumb : 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'} alt={session.user} className="w-5 h-5 rounded-full object-cover flex-shrink-0" onError={(e) => { e.currentTarget.src = 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'; }} />
-                                                    <span className="text-[10px] font-bold text-white/90 truncate">{session.user}</span>
-                                                </div>
-                                            )}
-
-                                            <div className="activity-header mb-1 pr-[46%]">
-                                                <div className="activity-title-group">
-                                                    <div className="text-sm md:text-base font-bold text-text line-clamp-2 leading-tight">{session.grandparentTitle ? session.grandparentTitle : session.title}</div>
-                                                    {session.type === 'episode' && session.season !== undefined && session.episode !== undefined ? (
-                                                        <div className="text-[10px] md:text-xs text-muted line-clamp-2 leading-snug mt-0.5">
-                                                            {session.title} | S{String(session.season).padStart(2, '0')}E{String(session.episode).padStart(2, '0')}
+                                        <div className="p-3 flex flex-col flex-grow min-w-0 justify-between relative gap-2">
+                                            <div className="min-w-0">
+                                                <div className="flex items-start justify-between gap-2 mb-1">
+                                                    <div className="activity-header min-w-0 flex-1">
+                                                        <div className="activity-title-group">
+                                                            <div className="text-sm md:text-base font-bold text-text line-clamp-2 leading-tight">{session.grandparentTitle ? session.grandparentTitle : session.title}</div>
+                                                            {session.type === 'episode' && session.season !== undefined && session.episode !== undefined ? (
+                                                                <div className="text-[10px] md:text-xs text-muted line-clamp-2 leading-snug mt-0.5">
+                                                                    {session.title} | S{String(session.season).padStart(2, '0')}E{String(session.episode).padStart(2, '0')}
+                                                                </div>
+                                                            ) : (
+                                                                session.grandparentTitle && <div className="text-[10px] md:text-xs text-muted line-clamp-2 leading-snug mt-0.5">{session.title}</div>
+                                                            )}
                                                         </div>
-                                                    ) : (
-                                                        session.grandparentTitle && <div className="text-[10px] md:text-xs text-muted line-clamp-2 leading-snug mt-0.5">{session.title}</div>
+                                                    </div>
+                                                    {session.user && (
+                                                        <div className="flex items-center gap-1.5 bg-black/50 backdrop-blur-md rounded-full pr-2.5 p-0.5 shadow-md border border-white/5 flex-shrink-0 max-w-[42%]">
+                                                            <img src={session.userThumb ? session.userThumb : 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'} alt={session.user} className="w-5 h-5 rounded-full object-cover flex-shrink-0" onError={(e) => { e.currentTarget.src = 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'; }} />
+                                                            <span className="text-[10px] font-bold text-white/90 truncate">{session.user}</span>
+                                                        </div>
                                                     )}
                                                 </div>
-                                            </div>
 
-                                            <div className="flex flex-wrap gap-1 mb-2 mt-0.5">
+                                                <div className="flex flex-wrap gap-1">
                                                 {session.resolution && (
                                                     <span className="bg-white/10 text-white/90 text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wide border border-white/10">{session.resolution.includes('p') || session.resolution.includes('k') ? session.resolution : `${session.resolution}p`}</span>
                                                 )}
@@ -4956,8 +4958,9 @@ export const LibraryDashboard: React.FC<{ onBack: () => void, isAdmin?: boolean,
                                                     {session.sessionLocation === 'lan' ? 'Local' : 'Remote'}
                                                 </span>
                                             </div>
+                                            </div>
 
-                                            <div className="activity-details flex flex-col gap-0.5 mt-auto">
+                                            <div className="activity-details flex flex-col gap-0.5">
                                                 <div className="flex justify-between items-start text-[10px] md:text-xs border-b border-white/5 pb-0.5">
                                                     <span className="text-muted uppercase tracking-wider font-bold mt-0.5">PLAYER</span>
                                                     <span className="detail-value text-right break-words max-w-[130px] md:max-w-[180px]">{session.playerTitle}</span>
