@@ -29,5 +29,10 @@ export const activityStreamColumnCount = (wideLayout: boolean, sessionCount: num
 
 export const activityStreamGridClass = (wideLayout: boolean, sessionCount: number) => {
     const useFourCols = activityStreamColumnCount(wideLayout, sessionCount) === 4;
-    return `grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-6 ${useFourCols ? 'xl:grid-cols-4' : 'xl:grid-cols-3'}`;
+    return useFourCols
+        ? 'grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-6 xl:grid-cols-4'
+        : 'grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-6';
 };
+
+/** Discover poster rows: 3 across until extra-wide, then scale up. */
+export const discoverPosterGridClass = 'grid grid-cols-3 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-6 2xl:grid-cols-10 gap-3 w-full pb-4';

@@ -25,7 +25,7 @@ import { ShareWrapUpModal } from './shared/ShareWrapUp';
 import { WrapUpCardGrid } from './shared/WrapUpCards';
 import { SetupWizard } from './setup/SetupWizard';
 import { AuthPageBackground, themeClasses } from './shared/theme';
-import { activityStreamColumnCount, activityStreamGridClass, usePortalWideContentLayout } from './shared/portalLayout';
+import { activityStreamColumnCount, activityStreamGridClass, discoverPosterGridClass, usePortalWideContentLayout } from './shared/portalLayout';
 import { UserDashboardLayout } from './home/UserDashboardLayout';
 import { createMainGridWidgetRenderer, createRecentlyAddedWidgetRenderer } from './home/userDashboardWidgetRenderers';
 
@@ -3821,7 +3821,6 @@ const DISCOVER_LIMIT_OPTIONS = [
     { value: '200', label: '200 Items' },
     { value: '250', label: '250 Items' },
 ];
-const discoverPosterGridClass = 'grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-10 gap-3 w-full pb-4';
 
 const TrendingDiscoverSection: React.FC<{ title: string; items: any[]; limit: number; showQualityBadges?: boolean }> = ({ title, items, limit, showQualityBadges = true }) => {
     if (!items?.length) return null;

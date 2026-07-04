@@ -1,4 +1,5 @@
 import React from 'react';
+import { discoverPosterGridClass } from './portalLayout';
 
 const pulse = 'animate-pulse bg-white/10';
 
@@ -19,7 +20,7 @@ export const PosterCardSkeleton: React.FC<{
 );
 
 export const PosterGridSkeleton: React.FC<{ count?: number; aspect?: '2/3' | 'square' }> = ({ count = 20, aspect = '2/3' }) => (
-    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-10 gap-3 w-full pb-4" aria-hidden="true">
+    <div className={discoverPosterGridClass} aria-hidden="true">
         {Array.from({ length: count }, (_, i) => (
             <PosterCardSkeleton key={i} aspect={aspect} variant="discover" />
         ))}
@@ -139,7 +140,7 @@ export const ActivityCardSkeleton: React.FC = () => (
 );
 
 export const ActivityGridSkeleton: React.FC<{ count?: number; wideLayout?: boolean }> = ({ count = 3, wideLayout = false }) => (
-    <div className={`grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-6 ${wideLayout ? 'xl:grid-cols-4' : 'xl:grid-cols-3'}`} aria-hidden="true">
+    <div className={`grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-6 ${wideLayout ? 'xl:grid-cols-4' : ''}`} aria-hidden="true">
         {Array.from({ length: count }, (_, i) => (
             <ActivityCardSkeleton key={i} />
         ))}
