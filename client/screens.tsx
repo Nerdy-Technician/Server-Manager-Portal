@@ -4042,7 +4042,7 @@ export const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onL
     );
     const topWatchedPageSize = 12;
     const [recentHistoryPage, setRecentHistoryPage] = useState(0);
-    const recentHistoryPageSize = 12;
+    const recentHistoryPageSize = 14;
     const [analyticsDays, setAnalyticsDays] = useState<number | 'all'>(30);
     const [analyticsDaysOpen, setAnalyticsDaysOpen] = useState(false);
     const [wrapUpDaysOpen, setWrapUpDaysOpen] = useState(false);
