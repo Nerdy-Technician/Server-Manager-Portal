@@ -167,4 +167,26 @@
     @apply pb-3 border-border/60;
     margin-bottom: 1.5rem;
   }
+
+  /* Discover: wrap by container width — never squash fixed column counts */
+  .discover-poster-grid {
+    display: grid;
+    width: 100%;
+    padding-bottom: 1rem;
+    gap: 0.75rem;
+    grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
+  }
+
+  .discover-activity-grid {
+    display: grid;
+    width: 100%;
+    gap: 0.75rem;
+    grid-template-columns: repeat(auto-fill, minmax(17.5rem, 1fr));
+  }
+
+  @media (min-width: 768px) {
+    .discover-activity-grid {
+      gap: 1.5rem;
+    }
+  }
 }

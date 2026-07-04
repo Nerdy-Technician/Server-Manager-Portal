@@ -139,8 +139,8 @@ export const ActivityCardSkeleton: React.FC = () => (
     </div>
 );
 
-export const ActivityGridSkeleton: React.FC<{ count?: number; wideLayout?: boolean }> = ({ count = 3, wideLayout = false }) => (
-    <div className={`grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-6 ${wideLayout ? 'xl:grid-cols-4' : ''}`} aria-hidden="true">
+export const ActivityGridSkeleton: React.FC<{ count?: number; wideLayout?: boolean }> = ({ count = 3 }) => (
+    <div className="discover-activity-grid" aria-hidden="true">
         {Array.from({ length: count }, (_, i) => (
             <ActivityCardSkeleton key={i} />
         ))}

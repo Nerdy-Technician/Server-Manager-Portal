@@ -24,15 +24,7 @@ export const usePortalWideContentLayout = () => {
     return isWide;
 };
 
-export const activityStreamColumnCount = (wideLayout: boolean, sessionCount: number) =>
-    wideLayout && sessionCount >= 4 ? 4 : 3;
+export const activityStreamGridClass = 'discover-activity-grid';
 
-export const activityStreamGridClass = (wideLayout: boolean, sessionCount: number) => {
-    const useFourCols = activityStreamColumnCount(wideLayout, sessionCount) === 4;
-    return useFourCols
-        ? 'grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-6 xl:grid-cols-4'
-        : 'grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-6';
-};
-
-/** Discover poster rows: 3 across until extra-wide, then scale up. */
-export const discoverPosterGridClass = 'grid grid-cols-3 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-6 2xl:grid-cols-10 gap-3 w-full pb-4';
+/** Auto-wrapping poster grid sized to the content area, not the viewport. */
+export const discoverPosterGridClass = 'discover-poster-grid';
