@@ -5559,7 +5559,7 @@ app.get('/api/plex/analytics/user/:id', requireAdmin, async (req, res) => {
             const hour = getHourInTimezone(item.viewedAt, statsTimezone);
             hourDistribution[hour]++;
 
-            const day = getDayOfWeekInTimezone(item.viewedAt, statsTimezone);
+            const day = getWeekdayInTimezone(item.viewedAt, statsTimezone);
             if (day >= 0 && day <= 6) dayOfWeekCounts[day]++;
 
             // Recent history
