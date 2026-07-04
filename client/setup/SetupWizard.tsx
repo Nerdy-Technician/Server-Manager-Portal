@@ -47,6 +47,24 @@ const readStoredSetupPlex = () => {
             plexServerUrl?: string;
             username?: string;
             step?: StepId;
+            publicDomain?: string;
+            primaryColor?: string;
+            customLogoUrl?: string;
+            smtpHost?: string;
+            smtpPort?: number;
+            smtpUser?: string;
+            smtpPass?: string;
+            smtpFrom?: string;
+            smtpSecure?: boolean;
+            sonarrUrl?: string;
+            sonarrApiKey?: string;
+            radarrUrl?: string;
+            radarrApiKey?: string;
+            tautulliUrl?: string;
+            tautulliApiKey?: string;
+            requestAppType?: string;
+            requestAppUrl?: string;
+            requestAppApiKey?: string;
         };
     } catch {
         return null;
@@ -73,27 +91,27 @@ export const SetupWizard: React.FC<{ onComplete: () => void }> = ({ onComplete }
     const [plexUsername, setPlexUsername] = useState(storedPlex?.username || '');
     const [showManualToken, setShowManualToken] = useState(false);
 
-    const [publicDomain, setPublicDomain] = useState(typeof window !== 'undefined' ? getPublicOrigin() : '');
-    const [primaryColor, setPrimaryColor] = useState('#E5A00D');
-    const [customLogoUrl, setCustomLogoUrl] = useState('');
+    const [publicDomain, setPublicDomain] = useState(storedPlex?.publicDomain ?? (typeof window !== 'undefined' ? getPublicOrigin() : ''));
+    const [primaryColor, setPrimaryColor] = useState(storedPlex?.primaryColor ?? '#E5A00D');
+    const [customLogoUrl, setCustomLogoUrl] = useState(storedPlex?.customLogoUrl ?? '');
 
-    const [smtpHost, setSmtpHost] = useState('');
-    const [smtpPort, setSmtpPort] = useState(587);
-    const [smtpUser, setSmtpUser] = useState('');
-    const [smtpPass, setSmtpPass] = useState('');
-    const [smtpFrom, setSmtpFrom] = useState('');
-    const [smtpSecure, setSmtpSecure] = useState(false);
+    const [smtpHost, setSmtpHost] = useState(storedPlex?.smtpHost ?? '');
+    const [smtpPort, setSmtpPort] = useState(storedPlex?.smtpPort ?? 587);
+    const [smtpUser, setSmtpUser] = useState(storedPlex?.smtpUser ?? '');
+    const [smtpPass, setSmtpPass] = useState(storedPlex?.smtpPass ?? '');
+    const [smtpFrom, setSmtpFrom] = useState(storedPlex?.smtpFrom ?? '');
+    const [smtpSecure, setSmtpSecure] = useState(storedPlex?.smtpSecure ?? false);
     const [testRecipient, setTestRecipient] = useState('');
 
-    const [sonarrUrl, setSonarrUrl] = useState('');
-    const [sonarrApiKey, setSonarrApiKey] = useState('');
-    const [radarrUrl, setRadarrUrl] = useState('');
-    const [radarrApiKey, setRadarrApiKey] = useState('');
-    const [tautulliUrl, setTautulliUrl] = useState('');
-    const [tautulliApiKey, setTautulliApiKey] = useState('');
-    const [requestAppType, setRequestAppType] = useState('none');
-    const [requestAppUrl, setRequestAppUrl] = useState('');
-    const [requestAppApiKey, setRequestAppApiKey] = useState('');
+    const [sonarrUrl, setSonarrUrl] = useState(storedPlex?.sonarrUrl ?? '');
+    const [sonarrApiKey, setSonarrApiKey] = useState(storedPlex?.sonarrApiKey ?? '');
+    const [radarrUrl, setRadarrUrl] = useState(storedPlex?.radarrUrl ?? '');
+    const [radarrApiKey, setRadarrApiKey] = useState(storedPlex?.radarrApiKey ?? '');
+    const [tautulliUrl, setTautulliUrl] = useState(storedPlex?.tautulliUrl ?? '');
+    const [tautulliApiKey, setTautulliApiKey] = useState(storedPlex?.tautulliApiKey ?? '');
+    const [requestAppType, setRequestAppType] = useState(storedPlex?.requestAppType ?? 'none');
+    const [requestAppUrl, setRequestAppUrl] = useState(storedPlex?.requestAppUrl ?? '');
+    const [requestAppApiKey, setRequestAppApiKey] = useState(storedPlex?.requestAppApiKey ?? '');
 
     const stepIndex = STEPS.findIndex((s) => s.id === step);
     const canGoNext = step !== 'plex' || (token && serverIdentifier);
@@ -106,6 +124,24 @@ export const SetupWizard: React.FC<{ onComplete: () => void }> = ({ onComplete }
             plexServerUrl,
             username: plexUsername,
             step,
+            publicDomain,
+            primaryColor,
+            customLogoUrl,
+            smtpHost,
+            smtpPort,
+            smtpUser,
+            smtpPass,
+            smtpFrom,
+            smtpSecure,
+            sonarrUrl,
+            sonarrApiKey,
+            radarrUrl,
+            radarrApiKey,
+            tautulliUrl,
+            tautulliApiKey,
+            requestAppType,
+            requestAppUrl,
+            requestAppApiKey,
             ...patch,
         };
         sessionStorage.setItem(SETUP_PLEX_STORAGE_KEY, JSON.stringify(next));

@@ -363,11 +363,14 @@ The proxy must forward requests **with** the `/portal` prefix intact (do not str
 
 ### Unraid
 
-Use the Community Applications-compatible template in [`unraid/server-manager-portal.xml`](unraid/server-manager-portal.xml):
+For manual installation of the template on Unraid 6+:
 
-1. **Docker** → **Add Container** → paste the [template URL](https://raw.githubusercontent.com/jl94x4/Server-Manager-Portal/main/unraid/server-manager-portal.xml)
-2. Set **JWT Secret** and adjust appdata paths (defaults: `/mnt/user/appdata/server-manager-portal/`)
-3. Apply and open the WebUI
+1. Download the template file: [`unraid/server-manager-portal.xml`](unraid/server-manager-portal.xml)
+2. Rename the file to prefix it with `my-`, for example: `my-server-manager-portal.xml`
+3. Upload the file to your Unraid server at: `/boot/config/plugins/dockerMan/templates-user/`
+4. Go to **Docker** → **Add Container** and select the **Server-Manager-Portal** template from the **User Templates** dropdown
+5. Set **JWT Secret** and adjust appdata paths (defaults: `/mnt/user/appdata/server-manager-portal/`)
+6. Apply and open the WebUI
 
 The template uses `ghcr.io/jl94x4/server-manager-portal:latest` by default.
 
