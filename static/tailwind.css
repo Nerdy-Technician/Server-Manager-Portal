@@ -1960,10 +1960,6 @@ input[type="date"], input[type="time"], input[type="datetime-local"], input[type
   width: 1.5rem;
 }
 
-.w-64 {
-  width: 16rem;
-}
-
 .w-7 {
   width: 1.75rem;
 }
@@ -5672,6 +5668,10 @@ input[type="date"], input[type="time"], input[type="datetime-local"], input[type
 
   .sm\:w-5 {
     width: 1.25rem;
+  }
+
+  .sm\:w-64 {
+    width: 16rem;
   }
 
   .sm\:w-\[160px\] {

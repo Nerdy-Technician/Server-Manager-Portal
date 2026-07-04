@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Home, Film, Activity, Sparkles, LogOut, Settings, FileText, BarChart3, Users, PlaySquare, TrendingUp, X, Star, Layers, HardDrive, Calendar, Tv, Clock, DownloadCloud, MonitorSmartphone, Copy, ChevronUp, ChevronDown, List, Palette, Music, Play, Shield, CheckCircle, AlertCircle, RefreshCw, ChevronLeft, ChevronRight, Trophy, PlayCircle, Coffee, Compass, PieChart, Clapperboard, AlertTriangle, Check, Cpu, Monitor, LineChart as LucideLineChart, Share2, Search } from 'lucide-react';
-import { ResponsiveContainer, LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend } from 'recharts';
+import { ResponsiveContainer, LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, PieChart as RechartsPieChart, Pie, Cell } from 'recharts';
 
 import { SettingsDashboard } from './settings/SettingsDashboard';
 import { LibraryMaintenancePanel } from './maintenance/LibraryMaintenancePanel';
@@ -301,7 +301,7 @@ const UserAnalyticsModal: React.FC<{ userId: string, username: string, thumb: st
                     setHistoryTotal(res.total);
                 }
             })
-            .catch(() => {})
+            .catch(() => { })
             .finally(() => { if (!cancelled) setHistoryLoading(false); });
         return () => { cancelled = true; };
     }, [userId, activeTab, historyPage, historySearch]);
@@ -417,9 +417,9 @@ const UserAnalyticsModal: React.FC<{ userId: string, username: string, thumb: st
                         </>
                     ) : activeTab === 'history' ? (
                         <div className="flex flex-col gap-4 h-full min-h-[400px]">
-                            <div className="flex justify-between items-center">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                                 <h3 className="text-lg font-bold text-text uppercase tracking-wider flex items-center gap-2"><Activity className="text-plex w-4 h-4" /> Full Watch History</h3>
-                                <div className="relative w-64">
+                                <div className="relative w-full sm:w-64">
                                     <Search className="w-4 h-4 absolute left-3 top-2.5 text-muted" />
                                     <input
                                         type="text"
@@ -430,7 +430,7 @@ const UserAnalyticsModal: React.FC<{ userId: string, username: string, thumb: st
                                     />
                                 </div>
                             </div>
-                            
+
                             <div className="flex-1 overflow-y-auto bg-black/20 rounded-xl border border-white/5 p-2 custom-scrollbar">
                                 {historyLoading ? (
                                     <div className="flex justify-center items-center h-40"><Loader isLoading={true} /></div>
@@ -463,7 +463,7 @@ const UserAnalyticsModal: React.FC<{ userId: string, username: string, thumb: st
                                     </div>
                                 )}
                             </div>
-                            
+
                             {/* Pagination */}
                             {historyTotal > 15 && (
                                 <div className="flex justify-between items-center pt-2 border-t border-border mt-2 flex-shrink-0">
@@ -487,7 +487,7 @@ const UserAnalyticsModal: React.FC<{ userId: string, username: string, thumb: st
                                                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" vertical={false} />
                                                     <XAxis dataKey="hour" stroke="rgba(255,255,255,0.3)" fontSize={11} tickMargin={10} minTickGap={20} />
                                                     <YAxis stroke="rgba(255,255,255,0.3)" fontSize={11} allowDecimals={false} />
-                                                    <RechartsTooltip 
+                                                    <RechartsTooltip
                                                         contentStyle={{ backgroundColor: 'rgba(20,20,20,0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}
                                                         itemStyle={{ color: '#E5A00D' }}
                                                     />
@@ -507,12 +507,67 @@ const UserAnalyticsModal: React.FC<{ userId: string, username: string, thumb: st
                                                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" vertical={false} />
                                                     <XAxis dataKey="day" stroke="rgba(255,255,255,0.3)" fontSize={11} tickMargin={10} />
                                                     <YAxis stroke="rgba(255,255,255,0.3)" fontSize={11} allowDecimals={false} />
-                                                    <RechartsTooltip 
+                                                    <RechartsTooltip
                                                         contentStyle={{ backgroundColor: 'rgba(20,20,20,0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}
                                                         itemStyle={{ color: '#E5A00D' }}
                                                         cursor={{ fill: 'rgba(255,255,255,0.05)' }}
                                                     />
                                                     <Bar dataKey="plays" name="Plays" fill="#E5A00D" radius={[4, 4, 0, 0]} />
+                                                </BarChart>
+                                            </ResponsiveContainer>
+                                        ) : <p className="text-muted text-sm">No data.</p>}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+                                <div className="glass-card-sm p-4 bg-black/20">
+                                    <h3 className="text-sm font-bold text-text mb-4 uppercase tracking-wider">Plays by Library</h3>
+                                    <div className="h-64">
+                                        {data.topLibraries && data.topLibraries.length > 0 ? (
+                                            <ResponsiveContainer width="100%" height="100%">
+                                                <RechartsPieChart>
+                                                    <Pie
+                                                        data={data.topLibraries}
+                                                        dataKey="plays"
+                                                        nameKey="title"
+                                                        cx="50%"
+                                                        cy="50%"
+                                                        outerRadius={80}
+                                                        innerRadius={40}
+                                                        fill="#E5A00D"
+                                                        label={({ name, percent }: any) => `${name} ${(percent * 100).toFixed(0)}%`}
+                                                        labelLine={false}
+                                                    >
+                                                        {data.topLibraries.map((entry: any, index: number) => (
+                                                            <Cell key={`cell-${index}`} fill={['#E5A00D', '#3B82F6', '#10B981', '#EF4444', '#8B5CF6', '#EC4899'][index % 6]} />
+                                                        ))}
+                                                    </Pie>
+                                                    <RechartsTooltip
+                                                        contentStyle={{ backgroundColor: 'rgba(20,20,20,0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}
+                                                        itemStyle={{ color: '#E5A00D' }}
+                                                    />
+                                                </RechartsPieChart>
+                                            </ResponsiveContainer>
+                                        ) : <p className="text-muted text-sm">No data.</p>}
+                                    </div>
+                                </div>
+
+                                <div className="glass-card-sm p-4 bg-black/20">
+                                    <h3 className="text-sm font-bold text-text mb-4 uppercase tracking-wider">Top Watched Shows</h3>
+                                    <div className="h-64">
+                                        {data.topShows && data.topShows.length > 0 ? (
+                                            <ResponsiveContainer width="100%" height="100%">
+                                                <BarChart data={data.topShows.slice(0, 5)} layout="vertical" margin={{ left: 0, right: 20 }}>
+                                                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" horizontal={true} vertical={false} />
+                                                    <XAxis type="number" stroke="rgba(255,255,255,0.3)" fontSize={11} allowDecimals={false} />
+                                                    <YAxis dataKey="title" type="category" stroke="rgba(255,255,255,0.3)" fontSize={10} width={90} tickFormatter={(val) => val.length > 13 ? val.substring(0, 13) + '...' : val} />
+                                                    <RechartsTooltip
+                                                        contentStyle={{ backgroundColor: 'rgba(20,20,20,0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}
+                                                        itemStyle={{ color: '#E5A00D' }}
+                                                        cursor={{ fill: 'rgba(255,255,255,0.05)' }}
+                                                    />
+                                                    <Bar dataKey="plays" name="Plays" fill="#3B82F6" radius={[0, 4, 4, 0]} />
                                                 </BarChart>
                                             </ResponsiveContainer>
                                         ) : <p className="text-muted text-sm">No data.</p>}
@@ -2026,48 +2081,48 @@ export const AnalyticsDashboard: React.FC<{ isAdmin: boolean, sessionInfo: any }
                             <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
                                 <h2 className="text-xl font-bold text-text uppercase tracking-wider flex items-center gap-2 whitespace-nowrap"><Users className="text-plex w-5 h-5" /> Top Viewers</h2>
                                 {isAdmin && (
-                                <div className="relative w-full sm:w-auto flex-grow max-w-[250px] z-50">
-                                    <input
-                                        type="text"
-                                        placeholder="Search all users..."
-                                        value={searchQuery}
-                                        onChange={(e) => {
-                                            setSearchQuery(e.target.value);
-                                            setIsSearching(e.target.value.length > 0);
-                                        }}
-                                        onFocus={() => {
-                                            if (searchQuery.length > 0) setIsSearching(true);
-                                        }}
-                                        onBlur={() => setTimeout(() => setIsSearching(false), 200)}
-                                        className="w-full bg-black/40 border border-border rounded-lg px-3 py-2 text-sm text-text focus:outline-none focus:border-plex focus:ring-1 focus:ring-plex transition-all placeholder-muted/50"
-                                    />
-                                    {isSearching && searchQuery.length > 0 && (
-                                        <div className="absolute top-full left-0 right-0 mt-2 bg-[#1e2329] border border-border rounded-lg shadow-2xl z-[100] max-h-60 overflow-y-auto custom-scrollbar">
-                                            {allUsers.filter(u => u.username.toLowerCase().includes(searchQuery.toLowerCase())).length > 0 ? (
-                                                allUsers.filter(u => u.username.toLowerCase().includes(searchQuery.toLowerCase())).map(u => (
-                                                    <div
-                                                        key={u.id}
-                                                        className="px-3 py-2.5 hover:bg-white/10 cursor-pointer flex items-center gap-3 border-b border-white/5 last:border-0 transition-colors"
-                                                        onClick={() => {
-                                                            setSelectedUser({ id: u.id, username: u.username, thumb: u.thumb || null });
-                                                            setSearchQuery('');
-                                                            setIsSearching(false);
-                                                        }}
-                                                    >
-                                                        {u.thumb ? (
-                                                            <img src={u.thumb.startsWith('http') ? u.thumb : portalUrl(`/api/plex/image?path=${encodeURIComponent(u.thumb)}&width=32&height=32`)} className="w-8 h-8 rounded-full object-cover border border-border flex-shrink-0" />
-                                                        ) : (
-                                                            <div className="w-8 h-8 rounded-full bg-border flex items-center justify-center text-[10px] font-bold border border-border/50 flex-shrink-0">{u.username.substring(0, 2).toUpperCase()}</div>
-                                                        )}
-                                                        <span className="text-sm font-medium text-text truncate">{u.username}</span>
-                                                    </div>
-                                                ))
-                                            ) : (
-                                                <div className="px-4 py-4 text-sm text-muted text-center italic">No users found</div>
-                                            )}
-                                        </div>
-                                    )}
-                                </div>
+                                    <div className="relative w-full sm:w-auto flex-grow max-w-[250px] z-50">
+                                        <input
+                                            type="text"
+                                            placeholder="Search all users..."
+                                            value={searchQuery}
+                                            onChange={(e) => {
+                                                setSearchQuery(e.target.value);
+                                                setIsSearching(e.target.value.length > 0);
+                                            }}
+                                            onFocus={() => {
+                                                if (searchQuery.length > 0) setIsSearching(true);
+                                            }}
+                                            onBlur={() => setTimeout(() => setIsSearching(false), 200)}
+                                            className="w-full bg-black/40 border border-border rounded-lg px-3 py-2 text-sm text-text focus:outline-none focus:border-plex focus:ring-1 focus:ring-plex transition-all placeholder-muted/50"
+                                        />
+                                        {isSearching && searchQuery.length > 0 && (
+                                            <div className="absolute top-full left-0 right-0 mt-2 bg-[#1e2329] border border-border rounded-lg shadow-2xl z-[100] max-h-60 overflow-y-auto custom-scrollbar">
+                                                {allUsers.filter(u => u.username.toLowerCase().includes(searchQuery.toLowerCase())).length > 0 ? (
+                                                    allUsers.filter(u => u.username.toLowerCase().includes(searchQuery.toLowerCase())).map(u => (
+                                                        <div
+                                                            key={u.id}
+                                                            className="px-3 py-2.5 hover:bg-white/10 cursor-pointer flex items-center gap-3 border-b border-white/5 last:border-0 transition-colors"
+                                                            onClick={() => {
+                                                                setSelectedUser({ id: u.id, username: u.username, thumb: u.thumb || null });
+                                                                setSearchQuery('');
+                                                                setIsSearching(false);
+                                                            }}
+                                                        >
+                                                            {u.thumb ? (
+                                                                <img src={u.thumb.startsWith('http') ? u.thumb : portalUrl(`/api/plex/image?path=${encodeURIComponent(u.thumb)}&width=32&height=32`)} className="w-8 h-8 rounded-full object-cover border border-border flex-shrink-0" />
+                                                            ) : (
+                                                                <div className="w-8 h-8 rounded-full bg-border flex items-center justify-center text-[10px] font-bold border border-border/50 flex-shrink-0">{u.username.substring(0, 2).toUpperCase()}</div>
+                                                            )}
+                                                            <span className="text-sm font-medium text-text truncate">{u.username}</span>
+                                                        </div>
+                                                    ))
+                                                ) : (
+                                                    <div className="px-4 py-4 text-sm text-muted text-center italic">No users found</div>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
                                 )}
                             </div>
                             <div className="flex flex-col gap-4">
@@ -4315,39 +4370,39 @@ export const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onL
                     <>
                         {/* Personal Wrap-Up */}
                         {(sessionInfo.session.isAdmin || user) && analyticsLoading && (
-                        <WrapUpCardsSkeleton />
+                            <WrapUpCardsSkeleton />
                         )}
                         {(sessionInfo.session.isAdmin || user) && !analyticsLoading && analyticsError && (
-                        <div className="glass-card p-4 md:p-5 shadow-xl border border-red-500/30 bg-red-500/5">
-                            <p className="text-red-300 text-sm font-medium">{analyticsError}</p>
-                        </div>
+                            <div className="glass-card p-4 md:p-5 shadow-xl border border-red-500/30 bg-red-500/5">
+                                <p className="text-red-300 text-sm font-medium">{analyticsError}</p>
+                            </div>
                         )}
                         {(sessionInfo.session.isAdmin || user) && !analyticsLoading && analytics && (
-                        <div className="glass-card p-4 md:p-5 shadow-xl">
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3 md:mb-4">
-                        <h3 className="text-xl font-bold text-text">Your Personal Wrap-Up</h3>
-                        <div className="flex items-center gap-2">
-                        <button
-                        type="button"
-                        onClick={() => setShareWrapUpOpen(true)}
-                        className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium bg-plex/10 border border-plex/30 text-plex hover:bg-plex/20 transition-colors shadow-sm"
-                        >
-                        <Share2 className="w-4 h-4 flex-shrink-0" />
-                        Share
-                        </button>
-                        <PeriodDropdown
-                        value={analyticsDays}
-                        open={wrapUpDaysOpen}
-                        onToggle={() => setWrapUpDaysOpen(!wrapUpDaysOpen)}
-                        onClose={() => setWrapUpDaysOpen(false)}
-                        onChange={(value) => setAnalyticsDays(value as number | 'all')}
-                        options={wrapUpDaysOptions}
-                        buttonClassName="flex items-center gap-2 bg-background border border-border/50 rounded-lg px-3 py-1.5 text-sm font-medium text-text focus:outline-none hover:border-plex/50 transition-colors cursor-pointer shadow-sm"
-                        />
-                        </div>
-                        </div>
-                        <WrapUpCardGrid analytics={analytics} interactive onCardClick={setSelectedMetric} minCardHeight={112} />
-                        </div>
+                            <div className="glass-card p-4 md:p-5 shadow-xl">
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3 md:mb-4">
+                                    <h3 className="text-xl font-bold text-text">Your Personal Wrap-Up</h3>
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => setShareWrapUpOpen(true)}
+                                            className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium bg-plex/10 border border-plex/30 text-plex hover:bg-plex/20 transition-colors shadow-sm"
+                                        >
+                                            <Share2 className="w-4 h-4 flex-shrink-0" />
+                                            Share
+                                        </button>
+                                        <PeriodDropdown
+                                            value={analyticsDays}
+                                            open={wrapUpDaysOpen}
+                                            onToggle={() => setWrapUpDaysOpen(!wrapUpDaysOpen)}
+                                            onClose={() => setWrapUpDaysOpen(false)}
+                                            onChange={(value) => setAnalyticsDays(value as number | 'all')}
+                                            options={wrapUpDaysOptions}
+                                            buttonClassName="flex items-center gap-2 bg-background border border-border/50 rounded-lg px-3 py-1.5 text-sm font-medium text-text focus:outline-none hover:border-plex/50 transition-colors cursor-pointer shadow-sm"
+                                        />
+                                    </div>
+                                </div>
+                                <WrapUpCardGrid analytics={analytics} interactive onCardClick={setSelectedMetric} minCardHeight={112} />
+                            </div>
                         )}
                     </>
                 )}
@@ -4355,126 +4410,126 @@ export const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onL
                     <>
                         {/* Recently Watched + Most Watched */}
                         {(sessionInfo.session.isAdmin || user) && (
-                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 md:gap-4 items-stretch">
-                        {!analyticsLoading && analytics?.recentHistory && analytics.recentHistory.length > 0 && (
-                        <div className="lg:col-span-1 flex min-h-0">
-                        <div className="glass-card p-4 md:p-5 shadow-xl flex flex-col h-full w-full min-h-0">
-                        <div className="flex items-center justify-between mb-3 md:mb-4 flex-shrink-0">
-                        <h3 className="text-lg md:text-xl font-bold text-text">Recently Watched</h3>
-                        {analytics.recentHistory.length > recentHistoryPageSize && (
-                        <div className="flex items-center gap-2">
-                        <button
-                        onClick={() => setRecentHistoryPage(p => Math.max(0, p - 1))}
-                        disabled={recentHistoryPage === 0}
-                        className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-text"
-                        >
-                        <ChevronUp className="w-4 h-4 -rotate-90" />
-                        </button>
-                        <span className="text-xs text-muted font-medium w-8 text-center">
-                        {recentHistoryPage + 1} / {Math.ceil(analytics.recentHistory.length / recentHistoryPageSize)}
-                        </span>
-                        <button
-                        onClick={() => setRecentHistoryPage(p => Math.min(Math.ceil(analytics.recentHistory.length / recentHistoryPageSize) - 1, p + 1))}
-                        disabled={recentHistoryPage >= Math.ceil(analytics.recentHistory.length / recentHistoryPageSize) - 1}
-                        className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-text"
-                        >
-                        <ChevronDown className="w-4 h-4 -rotate-90" />
-                        </button>
-                        </div>
-                        )}
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 items-stretch flex-1 min-h-0 content-start">
-                        {analytics.recentHistory.slice(recentHistoryPage * recentHistoryPageSize, (recentHistoryPage + 1) * recentHistoryPageSize).map((item: any, idx: number) => (
-                        <div key={idx} className="flex items-center self-stretch gap-3 p-2 bg-black/20 rounded-xl border border-white/5 hover:border-plex/50 hover:bg-black/40 hover:shadow-[0_0_15px_rgba(229,160,13,0.15)] transition-all group relative">
-                        <a href={item.plexUrl} target="_blank" rel="noreferrer" className="flex items-center flex-1 min-w-0 gap-3">
-                        <div className="w-10 h-10 rounded-lg overflow-hidden bg-background flex-shrink-0 shadow-md">
-                        {item.thumbUrl ? (
-                        <img src={resolvePortalAssetUrl(item.thumbUrl)} alt={item.title} className="w-full h-full object-cover" />
-                        ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                        <PlaySquare className="w-5 h-5 text-muted/50" />
-                        </div>
-                        )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                        <h4 className="font-bold text-text text-sm truncate group-hover:text-plex transition-colors">{item.title}</h4>
-                        {item.episodeTitle && <p className="text-xs text-muted truncate mt-0.5">{item.episodeTitle}</p>}
-                        <div className="flex items-center gap-1 mt-1">
-                        <Clock className="w-3 h-3 text-muted" />
-                        <p className="text-[10px] text-muted">{new Date(item.viewedAt * 1000).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })}</p>
-                        </div>
-                        </div>
-                        </a>
-                        <button
-                        onClick={(e) => { e.preventDefault(); setReportItem(item); }}
-                        className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 p-2 text-muted hover:text-red-400 hover:bg-red-400/10 rounded-full transition-all focus:outline-none"
-                        title="Report a playback issue"
-                        >
-                        <AlertTriangle className="w-4 h-4" />
-                        </button>
-                        </div>
-                        ))}
-                        </div>
-                        </div>
-                        </div>
-                        )}
-                        {analyticsLoading ? (
-                        <div className="lg:col-span-2 lg:col-start-2 flex min-h-0">
-                        <TopWatchedGridSkeleton />
-                        </div>
-                        ) : analytics && analytics.totalPlays > 0 && analytics.topWatched && analytics.topWatched.length > 0 ? (
-                        <div className={`flex min-h-0 ${analytics.recentHistory?.length ? 'lg:col-span-2' : 'lg:col-span-2 lg:col-start-2'}`}>
-                        <div className="glass-card p-4 md:p-5 shadow-xl flex flex-col h-full w-full min-h-0">
-                        <div className="flex items-center justify-between mb-3 md:mb-4 flex-shrink-0">
-                        <div>
-                        <h3 className="text-lg md:text-xl font-bold text-text mb-0.5">Your Most Watched</h3>
-                        <p className="text-muted text-sm">Based on your {analytics.totalPlays} total plays</p>
-                        </div>
-                        {analytics.topWatched.length > topWatchedPageSize && (
-                        <div className="flex items-center gap-2">
-                        <button
-                        onClick={() => setTopContentPage(p => Math.max(0, p - 1))}
-                        disabled={topContentPage === 0}
-                        className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-text"
-                        >
-                        <ChevronUp className="w-4 h-4 -rotate-90" />
-                        </button>
-                        <span className="text-xs text-muted font-medium w-8 text-center">
-                        {topContentPage + 1} / {Math.ceil(analytics.topWatched.length / topWatchedPageSize)}
-                        </span>
-                        <button
-                        onClick={() => setTopContentPage(p => Math.min(Math.ceil(analytics.topWatched.length / topWatchedPageSize) - 1, p + 1))}
-                        disabled={topContentPage >= Math.ceil(analytics.topWatched.length / topWatchedPageSize) - 1}
-                        className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-text"
-                        >
-                        <ChevronDown className="w-4 h-4 -rotate-90" />
-                        </button>
-                        </div>
-                        )}
-                        </div>
-                        <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-2.5 md:gap-3.5 flex-1 min-h-0 content-start">
-                        {analytics.topWatched.slice(topContentPage * topWatchedPageSize, (topContentPage + 1) * topWatchedPageSize).map((item: any) => (
-                        <a key={item.key} href={item.plexUrl} target="_blank" rel="noreferrer" className="group flex flex-col gap-1.5">
-                        <div className="relative rounded-lg overflow-hidden aspect-[2/3] bg-background border border-white/5 transition-[box-shadow,border-color] duration-300 group-hover:shadow-xl group-hover:border-plex/50">
-                        {item.thumbUrl ? (
-                        <img src={resolvePortalAssetUrl(item.thumbUrl)} alt={item.title} className="w-full h-full object-cover transition-[transform,opacity] duration-300 group-hover:scale-105 group-hover:opacity-80" />
-                        ) : (
-                        <div className="w-full h-full flex items-center justify-center p-4 text-center bg-white/5">
-                        <span className="text-xs font-bold text-muted line-clamp-3">{item.title}</span>
-                        </div>
-                        )}
-                        </div>
-                        <div className="flex flex-col px-0.5">
-                        <p className="text-xs sm:text-sm font-bold text-text truncate group-hover:text-plex transition-colors">{item.title}</p>
-                        <p className="text-[10px] sm:text-xs text-plex font-black mt-0.5 uppercase tracking-wider">{item.plays} plays</p>
-                        </div>
-                        </a>
-                        ))}
-                        </div>
-                        </div>
-                        </div>
-                        ) : null}
-                        </div>
+                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 md:gap-4 items-stretch">
+                                {!analyticsLoading && analytics?.recentHistory && analytics.recentHistory.length > 0 && (
+                                    <div className="lg:col-span-1 flex min-h-0">
+                                        <div className="glass-card p-4 md:p-5 shadow-xl flex flex-col h-full w-full min-h-0">
+                                            <div className="flex items-center justify-between mb-3 md:mb-4 flex-shrink-0">
+                                                <h3 className="text-lg md:text-xl font-bold text-text">Recently Watched</h3>
+                                                {analytics.recentHistory.length > recentHistoryPageSize && (
+                                                    <div className="flex items-center gap-2">
+                                                        <button
+                                                            onClick={() => setRecentHistoryPage(p => Math.max(0, p - 1))}
+                                                            disabled={recentHistoryPage === 0}
+                                                            className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-text"
+                                                        >
+                                                            <ChevronUp className="w-4 h-4 -rotate-90" />
+                                                        </button>
+                                                        <span className="text-xs text-muted font-medium w-8 text-center">
+                                                            {recentHistoryPage + 1} / {Math.ceil(analytics.recentHistory.length / recentHistoryPageSize)}
+                                                        </span>
+                                                        <button
+                                                            onClick={() => setRecentHistoryPage(p => Math.min(Math.ceil(analytics.recentHistory.length / recentHistoryPageSize) - 1, p + 1))}
+                                                            disabled={recentHistoryPage >= Math.ceil(analytics.recentHistory.length / recentHistoryPageSize) - 1}
+                                                            className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-text"
+                                                        >
+                                                            <ChevronDown className="w-4 h-4 -rotate-90" />
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 items-stretch flex-1 min-h-0 content-start">
+                                                {analytics.recentHistory.slice(recentHistoryPage * recentHistoryPageSize, (recentHistoryPage + 1) * recentHistoryPageSize).map((item: any, idx: number) => (
+                                                    <div key={idx} className="flex items-center self-stretch gap-3 p-2 bg-black/20 rounded-xl border border-white/5 hover:border-plex/50 hover:bg-black/40 hover:shadow-[0_0_15px_rgba(229,160,13,0.15)] transition-all group relative">
+                                                        <a href={item.plexUrl} target="_blank" rel="noreferrer" className="flex items-center flex-1 min-w-0 gap-3">
+                                                            <div className="w-10 h-10 rounded-lg overflow-hidden bg-background flex-shrink-0 shadow-md">
+                                                                {item.thumbUrl ? (
+                                                                    <img src={resolvePortalAssetUrl(item.thumbUrl)} alt={item.title} className="w-full h-full object-cover" />
+                                                                ) : (
+                                                                    <div className="w-full h-full flex items-center justify-center">
+                                                                        <PlaySquare className="w-5 h-5 text-muted/50" />
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                            <div className="flex-1 min-w-0">
+                                                                <h4 className="font-bold text-text text-sm truncate group-hover:text-plex transition-colors">{item.title}</h4>
+                                                                {item.episodeTitle && <p className="text-xs text-muted truncate mt-0.5">{item.episodeTitle}</p>}
+                                                                <div className="flex items-center gap-1 mt-1">
+                                                                    <Clock className="w-3 h-3 text-muted" />
+                                                                    <p className="text-[10px] text-muted">{new Date(item.viewedAt * 1000).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })}</p>
+                                                                </div>
+                                                            </div>
+                                                        </a>
+                                                        <button
+                                                            onClick={(e) => { e.preventDefault(); setReportItem(item); }}
+                                                            className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 p-2 text-muted hover:text-red-400 hover:bg-red-400/10 rounded-full transition-all focus:outline-none"
+                                                            title="Report a playback issue"
+                                                        >
+                                                            <AlertTriangle className="w-4 h-4" />
+                                                        </button>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                                {analyticsLoading ? (
+                                    <div className="lg:col-span-2 lg:col-start-2 flex min-h-0">
+                                        <TopWatchedGridSkeleton />
+                                    </div>
+                                ) : analytics && analytics.totalPlays > 0 && analytics.topWatched && analytics.topWatched.length > 0 ? (
+                                    <div className={`flex min-h-0 ${analytics.recentHistory?.length ? 'lg:col-span-2' : 'lg:col-span-2 lg:col-start-2'}`}>
+                                        <div className="glass-card p-4 md:p-5 shadow-xl flex flex-col h-full w-full min-h-0">
+                                            <div className="flex items-center justify-between mb-3 md:mb-4 flex-shrink-0">
+                                                <div>
+                                                    <h3 className="text-lg md:text-xl font-bold text-text mb-0.5">Your Most Watched</h3>
+                                                    <p className="text-muted text-sm">Based on your {analytics.totalPlays} total plays</p>
+                                                </div>
+                                                {analytics.topWatched.length > topWatchedPageSize && (
+                                                    <div className="flex items-center gap-2">
+                                                        <button
+                                                            onClick={() => setTopContentPage(p => Math.max(0, p - 1))}
+                                                            disabled={topContentPage === 0}
+                                                            className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-text"
+                                                        >
+                                                            <ChevronUp className="w-4 h-4 -rotate-90" />
+                                                        </button>
+                                                        <span className="text-xs text-muted font-medium w-8 text-center">
+                                                            {topContentPage + 1} / {Math.ceil(analytics.topWatched.length / topWatchedPageSize)}
+                                                        </span>
+                                                        <button
+                                                            onClick={() => setTopContentPage(p => Math.min(Math.ceil(analytics.topWatched.length / topWatchedPageSize) - 1, p + 1))}
+                                                            disabled={topContentPage >= Math.ceil(analytics.topWatched.length / topWatchedPageSize) - 1}
+                                                            className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-text"
+                                                        >
+                                                            <ChevronDown className="w-4 h-4 -rotate-90" />
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-2.5 md:gap-3.5 flex-1 min-h-0 content-start">
+                                                {analytics.topWatched.slice(topContentPage * topWatchedPageSize, (topContentPage + 1) * topWatchedPageSize).map((item: any) => (
+                                                    <a key={item.key} href={item.plexUrl} target="_blank" rel="noreferrer" className="group flex flex-col gap-1.5">
+                                                        <div className="relative rounded-lg overflow-hidden aspect-[2/3] bg-background border border-white/5 transition-[box-shadow,border-color] duration-300 group-hover:shadow-xl group-hover:border-plex/50">
+                                                            {item.thumbUrl ? (
+                                                                <img src={resolvePortalAssetUrl(item.thumbUrl)} alt={item.title} className="w-full h-full object-cover transition-[transform,opacity] duration-300 group-hover:scale-105 group-hover:opacity-80" />
+                                                            ) : (
+                                                                <div className="w-full h-full flex items-center justify-center p-4 text-center bg-white/5">
+                                                                    <span className="text-xs font-bold text-muted line-clamp-3">{item.title}</span>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                        <div className="flex flex-col px-0.5">
+                                                            <p className="text-xs sm:text-sm font-bold text-text truncate group-hover:text-plex transition-colors">{item.title}</p>
+                                                            <p className="text-[10px] sm:text-xs text-plex font-black mt-0.5 uppercase tracking-wider">{item.plays} plays</p>
+                                                        </div>
+                                                    </a>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
+                                ) : null}
+                            </div>
                         )}
                     </>
                 )}
@@ -5052,103 +5107,103 @@ export const LibraryDashboard: React.FC<{ onBack: () => void, isAdmin?: boolean,
                     {dashboardData && dashboardData.activeSessions && dashboardData.activeSessions.length > 0 ? (
                         <div className="w-full">
                             <div className={activityStreamGridClass(isWidePortalLayout, dashboardData.activeSessions.length)}>
-                            {dashboardData.activeSessions.map((session, i) => {
-                                const activityCols = activityStreamColumnCount(isWidePortalLayout, dashboardData.activeSessions.length);
-                                return (
-                                <div key={session.sessionId ?? i} onClick={() => setSelectedSession(session)} className="bg-card rounded-xl border border-border flex flex-col overflow-hidden shadow-lg hover:border-plex/50 hover:shadow-plex/20 transition-all cursor-pointer select-none h-full min-h-[11.5rem] md:min-h-[14.5rem]">
-                                    <div className="flex flex-row flex-1 items-stretch min-h-0">
-                                        <div className={`${activityCols === 4 ? 'w-28 md:w-32' : 'w-32 md:w-40'} flex-shrink-0 relative overflow-hidden bg-card self-stretch`}>
-                                            <img src={portalUrl(`/api/plex/image?path=${encodeURIComponent(session.thumb)}&width=300&height=500`)} alt={session.title} loading="lazy" className="absolute inset-0 w-full h-full object-cover object-top drop-shadow-2xl" />
-                                        </div>
-                                        <div className="p-2 md:p-3 flex flex-col flex-1 min-w-0 relative">
-                                            {session.user && (
-                                                <div className="absolute top-2 right-2 flex items-center gap-1.5 bg-black/50 backdrop-blur-md rounded-full pr-2.5 p-0.5 shadow-md border border-white/5">
-                                                    <img src={session.userThumb ? session.userThumb : 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'} alt={session.user} className="w-5 h-5 rounded-full object-cover" onError={(e) => { e.currentTarget.src = 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'; }} />
-                                                    <span className="text-[10px] font-bold text-white/90 truncate max-w-[80px] md:max-w-[100px]">{session.user}</span>
+                                {dashboardData.activeSessions.map((session, i) => {
+                                    const activityCols = activityStreamColumnCount(isWidePortalLayout, dashboardData.activeSessions.length);
+                                    return (
+                                        <div key={session.sessionId ?? i} onClick={() => setSelectedSession(session)} className="bg-card rounded-xl border border-border flex flex-col overflow-hidden shadow-lg hover:border-plex/50 hover:shadow-plex/20 transition-all cursor-pointer select-none h-full min-h-[11.5rem] md:min-h-[14.5rem]">
+                                            <div className="flex flex-row flex-1 items-stretch min-h-0">
+                                                <div className={`${activityCols === 4 ? 'w-28 md:w-32' : 'w-32 md:w-40'} flex-shrink-0 relative overflow-hidden bg-card self-stretch`}>
+                                                    <img src={portalUrl(`/api/plex/image?path=${encodeURIComponent(session.thumb)}&width=300&height=500`)} alt={session.title} loading="lazy" className="absolute inset-0 w-full h-full object-cover object-top drop-shadow-2xl" />
                                                 </div>
-                                            )}
-
-                                            <div className="activity-header mb-0.5 pr-20 md:pr-28">
-                                                <div className="activity-title-group">
-                                                    <div className="text-sm md:text-base font-bold text-text line-clamp-2 leading-tight">{session.grandparentTitle ? session.grandparentTitle : session.title}</div>
-                                                    {session.type === 'episode' && session.season !== undefined && session.episode !== undefined ? (
-                                                        <div className="text-[10px] md:text-xs text-muted line-clamp-2 leading-snug mt-0.5">
-                                                            {session.title} | S{String(session.season).padStart(2, '0')}E{String(session.episode).padStart(2, '0')}
+                                                <div className="p-2 md:p-3 flex flex-col flex-1 min-w-0 relative">
+                                                    {session.user && (
+                                                        <div className="absolute top-2 right-2 flex items-center gap-1.5 bg-black/50 backdrop-blur-md rounded-full pr-2.5 p-0.5 shadow-md border border-white/5">
+                                                            <img src={session.userThumb ? session.userThumb : 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'} alt={session.user} className="w-5 h-5 rounded-full object-cover" onError={(e) => { e.currentTarget.src = 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'; }} />
+                                                            <span className="text-[10px] font-bold text-white/90 truncate max-w-[80px] md:max-w-[100px]">{session.user}</span>
                                                         </div>
-                                                    ) : (
-                                                        session.grandparentTitle && <div className="text-[10px] md:text-xs text-muted line-clamp-2 leading-snug mt-0.5">{session.title}</div>
                                                     )}
-                                                </div>
-                                            </div>
 
-                                            <div className="flex flex-wrap gap-1 mb-2 mt-0.5">
-                                                {session.resolution && (
-                                                    <span className="bg-white/10 text-white/90 text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wide border border-white/10">{session.resolution.includes('p') || session.resolution.includes('k') ? session.resolution : `${session.resolution}p`}</span>
-                                                )}
-                                                <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wide border ${session.sessionLocation === 'lan' ? 'bg-status-active/20 text-status-active border-status-active/30' : 'bg-plex/20 text-plex border-plex/30'}`}>
-                                                    {session.sessionLocation === 'lan' ? 'Local' : 'Remote'}
-                                                </span>
-                                            </div>
+                                                    <div className="activity-header mb-0.5 pr-20 md:pr-28">
+                                                        <div className="activity-title-group">
+                                                            <div className="text-sm md:text-base font-bold text-text line-clamp-2 leading-tight">{session.grandparentTitle ? session.grandparentTitle : session.title}</div>
+                                                            {session.type === 'episode' && session.season !== undefined && session.episode !== undefined ? (
+                                                                <div className="text-[10px] md:text-xs text-muted line-clamp-2 leading-snug mt-0.5">
+                                                                    {session.title} | S{String(session.season).padStart(2, '0')}E{String(session.episode).padStart(2, '0')}
+                                                                </div>
+                                                            ) : (
+                                                                session.grandparentTitle && <div className="text-[10px] md:text-xs text-muted line-clamp-2 leading-snug mt-0.5">{session.title}</div>
+                                                            )}
+                                                        </div>
+                                                    </div>
 
-                                            <div className="activity-details flex flex-col gap-0.5 mt-auto">
-                                                <div className="flex justify-between items-start text-[10px] md:text-xs border-b border-white/5 pb-0.5">
-                                                    <span className="text-muted uppercase tracking-wider font-bold mt-0.5">PLAYER</span>
-                                                    <span className="detail-value text-right break-words max-w-[130px] md:max-w-[180px]">{session.playerTitle}</span>
-                                                </div>
-                                                <div className="flex justify-between items-center text-[10px] md:text-xs border-b border-white/5 pb-0.5">
-                                                    <span className="text-muted uppercase tracking-wider font-bold">STREAM</span>
-                                                    <span className={`font-bold ${session.isTranscoding ? 'text-status-expiring' : 'text-status-active'}`}>
-                                                        {session.isTranscoding ? 'Transcode' : 'Direct Play'}
-                                                    </span>
-                                                </div>
-                                                <div className="flex justify-between items-center text-[10px] md:text-xs border-b border-white/5 pb-0.5">
-                                                    <span className="text-muted uppercase tracking-wider font-bold">STATE</span>
-                                                    <div className="flex items-center gap-1.5 min-w-0">
-                                                        <span className="detail-value font-bold truncate">{session.state.charAt(0).toUpperCase() + session.state.slice(1)}</span>
-                                                        {session.timeRemaining > 0 && session.state === 'playing' && (
-                                                            <span className="text-[9px] text-muted/80 whitespace-nowrap">
-                                                                ({Math.floor(session.timeRemaining / 3600000) > 0 ? `${Math.floor(session.timeRemaining / 3600000)}h ` : ''}
-                                                                {Math.floor((session.timeRemaining % 3600000) / 60000)}m left)
-                                                            </span>
+                                                    <div className="flex flex-wrap gap-1 mb-2 mt-0.5">
+                                                        {session.resolution && (
+                                                            <span className="bg-white/10 text-white/90 text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wide border border-white/10">{session.resolution.includes('p') || session.resolution.includes('k') ? session.resolution : `${session.resolution}p`}</span>
                                                         )}
+                                                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wide border ${session.sessionLocation === 'lan' ? 'bg-status-active/20 text-status-active border-status-active/30' : 'bg-plex/20 text-plex border-plex/30'}`}>
+                                                            {session.sessionLocation === 'lan' ? 'Local' : 'Remote'}
+                                                        </span>
+                                                    </div>
+
+                                                    <div className="activity-details flex flex-col gap-0.5 mt-auto">
+                                                        <div className="flex justify-between items-start text-[10px] md:text-xs border-b border-white/5 pb-0.5">
+                                                            <span className="text-muted uppercase tracking-wider font-bold mt-0.5">PLAYER</span>
+                                                            <span className="detail-value text-right break-words max-w-[130px] md:max-w-[180px]">{session.playerTitle}</span>
+                                                        </div>
+                                                        <div className="flex justify-between items-center text-[10px] md:text-xs border-b border-white/5 pb-0.5">
+                                                            <span className="text-muted uppercase tracking-wider font-bold">STREAM</span>
+                                                            <span className={`font-bold ${session.isTranscoding ? 'text-status-expiring' : 'text-status-active'}`}>
+                                                                {session.isTranscoding ? 'Transcode' : 'Direct Play'}
+                                                            </span>
+                                                        </div>
+                                                        <div className="flex justify-between items-center text-[10px] md:text-xs border-b border-white/5 pb-0.5">
+                                                            <span className="text-muted uppercase tracking-wider font-bold">STATE</span>
+                                                            <div className="flex items-center gap-1.5 min-w-0">
+                                                                <span className="detail-value font-bold truncate">{session.state.charAt(0).toUpperCase() + session.state.slice(1)}</span>
+                                                                {session.timeRemaining > 0 && session.state === 'playing' && (
+                                                                    <span className="text-[9px] text-muted/80 whitespace-nowrap">
+                                                                        ({Math.floor(session.timeRemaining / 3600000) > 0 ? `${Math.floor(session.timeRemaining / 3600000)}h ` : ''}
+                                                                        {Math.floor((session.timeRemaining % 3600000) / 60000)}m left)
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex justify-between items-center text-[10px] md:text-xs pb-0.5">
+                                                            <span className="text-muted uppercase tracking-wider font-bold">BANDWIDTH</span>
+                                                            <span className="detail-value">{(session.bandwidth / 1000).toFixed(1)} Mbps</span>
+                                                        </div>
                                                     </div>
                                                 </div>
-                                                <div className="flex justify-between items-center text-[10px] md:text-xs pb-0.5">
-                                                    <span className="text-muted uppercase tracking-wider font-bold">BANDWIDTH</span>
-                                                    <span className="detail-value">{(session.bandwidth / 1000).toFixed(1)} Mbps</span>
-                                                </div>
                                             </div>
+                                            {/* Progress Bar with embedded text */}
+                                            {(() => {
+                                                const progressBarText = `${Math.round(session.progress)}%${session.timeRemaining > 0 && session.state === 'playing' ? ` • ETA ${formatTime(new Date(Date.now() + session.timeRemaining))}` : ''}`;
+                                                return (
+                                                    <div className="w-full h-4 bg-background/80 relative mt-auto z-10 overflow-hidden rounded-b-lg">
+                                                        {/* Progress fill */}
+                                                        <div className="h-full bg-plex absolute top-0 left-0 transition-all duration-1000 z-10" style={{ width: `${session.progress}%` }}></div>
+
+                                                        {/* Text visible on black background (white text) */}
+                                                        <div
+                                                            className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-white z-20 pointer-events-none whitespace-nowrap"
+                                                            style={{ clipPath: `inset(0 0 0 ${session.progress}%)` }}
+                                                        >
+                                                            {progressBarText}
+                                                        </div>
+
+                                                        {/* Text visible on yellow progress bar (black text) */}
+                                                        <div
+                                                            className="absolute inset-0 flex items-center justify-center text-[11px] font-bold text-black z-30 pointer-events-none whitespace-nowrap"
+                                                            style={{ clipPath: `inset(0 ${100 - session.progress}% 0 0)` }}
+                                                        >
+                                                            {progressBarText}
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })()}
                                         </div>
-                                    </div>
-                                    {/* Progress Bar with embedded text */}
-                                    {(() => {
-                                        const progressBarText = `${Math.round(session.progress)}%${session.timeRemaining > 0 && session.state === 'playing' ? ` • ETA ${formatTime(new Date(Date.now() + session.timeRemaining))}` : ''}`;
-                                        return (
-                                            <div className="w-full h-4 bg-background/80 relative mt-auto z-10 overflow-hidden rounded-b-lg">
-                                                {/* Progress fill */}
-                                                <div className="h-full bg-plex absolute top-0 left-0 transition-all duration-1000 z-10" style={{ width: `${session.progress}%` }}></div>
-
-                                                {/* Text visible on black background (white text) */}
-                                                <div
-                                                    className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-white z-20 pointer-events-none whitespace-nowrap"
-                                                    style={{ clipPath: `inset(0 0 0 ${session.progress}%)` }}
-                                                >
-                                                    {progressBarText}
-                                                </div>
-
-                                                {/* Text visible on yellow progress bar (black text) */}
-                                                <div
-                                                    className="absolute inset-0 flex items-center justify-center text-[11px] font-bold text-black z-30 pointer-events-none whitespace-nowrap"
-                                                    style={{ clipPath: `inset(0 ${100 - session.progress}% 0 0)` }}
-                                                >
-                                                    {progressBarText}
-                                                </div>
-                                            </div>
-                                        );
-                                    })()}
-                                </div>
-                                );
-                            })}
+                                    );
+                                })}
                             </div>
                         </div>
                     ) : (
@@ -5710,761 +5765,761 @@ export const MaintenanceDashboard: React.FC = () => {
                             </div>
                         )}
                         {maintenanceFeatureEnabled && (
-                        <>
-                        {activeSection === 'overview' && (
-                            <div className="space-y-4">
-                                <div className="glass-card-sm p-5">
-                                    <h3 className="text-xl font-bold text-plex mb-2">Maintenance Control Center</h3>
-                                    <p className="text-sm text-muted mb-4">Dedicated module for library maintenance automation: rules, collections, candidates, execution timeline, calendar, storage, and governance.</p>
-                                    <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                                        <div className="bg-background/30 rounded-lg p-3 border border-white/5">
-                                            <p className="text-xs text-muted">Indexed Media</p>
-                                            <p className="text-2xl font-bold text-text">{overview?.itemCount || 0}</p>
-                                        </div>
-                                        <div className="bg-background/30 rounded-lg p-3 border border-white/5">
-                                            <p className="text-xs text-muted">Request Records</p>
-                                            <p className="text-2xl font-bold text-text">{overview?.requestItemCount || 0}</p>
-                                        </div>
-                                        <div className="bg-background/30 rounded-lg p-3 border border-white/5">
-                                            <p className="text-xs text-muted">Rules with Matches</p>
-                                            <p className="text-2xl font-bold text-text">{previewGroups.filter((p: any) => (p.totalMatches || 0) > 0).length}</p>
-                                        </div>
-                                        <div className="bg-background/30 rounded-lg p-3 border border-white/5">
-                                            <p className="text-xs text-muted">Total Runs</p>
-                                            <p className="text-2xl font-bold text-text">{runs.length}</p>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="glass-card-sm p-5 space-y-4">
-                                    <h4 className="font-bold text-text">Reclaim & Impact Overview</h4>
-                                    <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                                        <div className="bg-background/30 rounded-lg p-3 border border-white/5">
-                                            <p className="text-xs text-muted">Total Matched (Rules Combined)</p>
-                                            <p className="text-2xl font-bold text-text">{overviewInsights.totalMatches}</p>
-                                        </div>
-                                        <div className="bg-background/30 rounded-lg p-3 border border-white/5">
-                                            <p className="text-xs text-muted">Unique Candidate Titles</p>
-                                            <p className="text-2xl font-bold text-text">{overviewInsights.uniqueMatches}</p>
-                                        </div>
-                                        <div className="bg-background/30 rounded-lg p-3 border border-white/5">
-                                            <p className="text-xs text-muted">Estimated Reclaim</p>
-                                            <p className="text-2xl font-bold text-text">{formatReclaimSizeFromGB(overviewInsights.estimatedReclaimGB)}</p>
-                                        </div>
-                                        <div className="bg-background/30 rounded-lg p-3 border border-white/5">
-                                            <p className="text-xs text-muted">Top Impact Library</p>
-                                            <p className="text-sm font-bold text-text line-clamp-2">{overviewInsights.libraries[0]?.libraryTitle || '—'}</p>
-                                            <p className="text-xs text-muted mt-1">{overviewInsights.libraries[0] ? formatReclaimSizeFromGB(overviewInsights.libraries[0].reclaimGB) : 'No data'}</p>
-                                        </div>
-                                    </div>
-                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                                        <div className="bg-background/30 rounded-lg p-3 border border-white/5">
-                                            <p className="text-xs text-muted font-bold uppercase tracking-wider mb-2">Top Libraries by Reclaim</p>
-                                            <div className="space-y-1.5 max-h-52 overflow-y-auto custom-scrollbar pr-1">
-                                                {overviewInsights.libraries.slice(0, 8).map((lib) => (
-                                                    <div key={`overview-lib-${lib.libraryTitle}`} className="flex items-center justify-between text-xs bg-background/30 border border-white/5 rounded px-2 py-1.5">
-                                                        <span className="text-text line-clamp-1">{lib.libraryTitle}</span>
-                                                        <span className="text-muted ml-2 whitespace-nowrap">{formatReclaimSizeFromGB(lib.reclaimGB)} · {lib.count}</span>
-                                                    </div>
-                                                ))}
-                                                {!overviewInsights.libraries.length && <p className="text-xs text-muted">No matching candidates yet.</p>}
+                            <>
+                                {activeSection === 'overview' && (
+                                    <div className="space-y-4">
+                                        <div className="glass-card-sm p-5">
+                                            <h3 className="text-xl font-bold text-plex mb-2">Maintenance Control Center</h3>
+                                            <p className="text-sm text-muted mb-4">Dedicated module for library maintenance automation: rules, collections, candidates, execution timeline, calendar, storage, and governance.</p>
+                                            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                                                <div className="bg-background/30 rounded-lg p-3 border border-white/5">
+                                                    <p className="text-xs text-muted">Indexed Media</p>
+                                                    <p className="text-2xl font-bold text-text">{overview?.itemCount || 0}</p>
+                                                </div>
+                                                <div className="bg-background/30 rounded-lg p-3 border border-white/5">
+                                                    <p className="text-xs text-muted">Request Records</p>
+                                                    <p className="text-2xl font-bold text-text">{overview?.requestItemCount || 0}</p>
+                                                </div>
+                                                <div className="bg-background/30 rounded-lg p-3 border border-white/5">
+                                                    <p className="text-xs text-muted">Rules with Matches</p>
+                                                    <p className="text-2xl font-bold text-text">{previewGroups.filter((p: any) => (p.totalMatches || 0) > 0).length}</p>
+                                                </div>
+                                                <div className="bg-background/30 rounded-lg p-3 border border-white/5">
+                                                    <p className="text-xs text-muted">Total Runs</p>
+                                                    <p className="text-2xl font-bold text-text">{runs.length}</p>
+                                                </div>
                                             </div>
                                         </div>
-                                        <div className="bg-background/30 rounded-lg p-3 border border-white/5">
-                                            <p className="text-xs text-muted font-bold uppercase tracking-wider mb-2">Top Rules by Reclaim</p>
-                                            <div className="space-y-1.5 max-h-52 overflow-y-auto custom-scrollbar pr-1">
-                                                {overviewInsights.rules.slice(0, 8).map((rule) => (
-                                                    <div key={`overview-rule-${rule.ruleId}`} className="flex items-center justify-between text-xs bg-background/30 border border-white/5 rounded px-2 py-1.5">
-                                                        <span className="text-text line-clamp-1">{rule.ruleName}</span>
-                                                        <span className="text-muted ml-2 whitespace-nowrap">{formatReclaimSizeFromGB(rule.reclaimGB)} · {rule.totalMatches}</span>
+                                        <div className="glass-card-sm p-5 space-y-4">
+                                            <h4 className="font-bold text-text">Reclaim & Impact Overview</h4>
+                                            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                                                <div className="bg-background/30 rounded-lg p-3 border border-white/5">
+                                                    <p className="text-xs text-muted">Total Matched (Rules Combined)</p>
+                                                    <p className="text-2xl font-bold text-text">{overviewInsights.totalMatches}</p>
+                                                </div>
+                                                <div className="bg-background/30 rounded-lg p-3 border border-white/5">
+                                                    <p className="text-xs text-muted">Unique Candidate Titles</p>
+                                                    <p className="text-2xl font-bold text-text">{overviewInsights.uniqueMatches}</p>
+                                                </div>
+                                                <div className="bg-background/30 rounded-lg p-3 border border-white/5">
+                                                    <p className="text-xs text-muted">Estimated Reclaim</p>
+                                                    <p className="text-2xl font-bold text-text">{formatReclaimSizeFromGB(overviewInsights.estimatedReclaimGB)}</p>
+                                                </div>
+                                                <div className="bg-background/30 rounded-lg p-3 border border-white/5">
+                                                    <p className="text-xs text-muted">Top Impact Library</p>
+                                                    <p className="text-sm font-bold text-text line-clamp-2">{overviewInsights.libraries[0]?.libraryTitle || '—'}</p>
+                                                    <p className="text-xs text-muted mt-1">{overviewInsights.libraries[0] ? formatReclaimSizeFromGB(overviewInsights.libraries[0].reclaimGB) : 'No data'}</p>
+                                                </div>
+                                            </div>
+                                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                                                <div className="bg-background/30 rounded-lg p-3 border border-white/5">
+                                                    <p className="text-xs text-muted font-bold uppercase tracking-wider mb-2">Top Libraries by Reclaim</p>
+                                                    <div className="space-y-1.5 max-h-52 overflow-y-auto custom-scrollbar pr-1">
+                                                        {overviewInsights.libraries.slice(0, 8).map((lib) => (
+                                                            <div key={`overview-lib-${lib.libraryTitle}`} className="flex items-center justify-between text-xs bg-background/30 border border-white/5 rounded px-2 py-1.5">
+                                                                <span className="text-text line-clamp-1">{lib.libraryTitle}</span>
+                                                                <span className="text-muted ml-2 whitespace-nowrap">{formatReclaimSizeFromGB(lib.reclaimGB)} · {lib.count}</span>
+                                                            </div>
+                                                        ))}
+                                                        {!overviewInsights.libraries.length && <p className="text-xs text-muted">No matching candidates yet.</p>}
                                                     </div>
-                                                ))}
-                                                {!overviewInsights.rules.length && <p className="text-xs text-muted">No rules with match data yet.</p>}
+                                                </div>
+                                                <div className="bg-background/30 rounded-lg p-3 border border-white/5">
+                                                    <p className="text-xs text-muted font-bold uppercase tracking-wider mb-2">Top Rules by Reclaim</p>
+                                                    <div className="space-y-1.5 max-h-52 overflow-y-auto custom-scrollbar pr-1">
+                                                        {overviewInsights.rules.slice(0, 8).map((rule) => (
+                                                            <div key={`overview-rule-${rule.ruleId}`} className="flex items-center justify-between text-xs bg-background/30 border border-white/5 rounded px-2 py-1.5">
+                                                                <span className="text-text line-clamp-1">{rule.ruleName}</span>
+                                                                <span className="text-muted ml-2 whitespace-nowrap">{formatReclaimSizeFromGB(rule.reclaimGB)} · {rule.totalMatches}</span>
+                                                            </div>
+                                                        ))}
+                                                        {!overviewInsights.rules.length && <p className="text-xs text-muted">No rules with match data yet.</p>}
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
-                                </div>
-                            </div>
-                        )}
-                        {activeSection === 'rules' && <LibraryMaintenancePanel addToast={addToast} onRulesUpdated={() => loadOverview(true)} />}
-                        {activeSection === 'collections' && (
-                            <div className="glass-card-sm p-5 space-y-3">
-                                <h3 className="text-xl font-bold text-plex">Collections</h3>
-                                <p className="text-sm text-muted">Manage collection behavior per rule. Changes save directly to each ruleset.</p>
-                                <div className="space-y-2">
-                                    {rules.map((rule: any) => (
-                                        <div key={`collection-${rule.id}`} className="bg-background/30 border border-white/5 rounded-lg p-3">
-                                            <div className="flex items-center justify-between gap-3">
-                                                <p className="font-semibold text-text text-sm">{rule.name || 'Unnamed Rule'}</p>
-                                                <label className="text-xs text-muted flex items-center gap-2">
+                                )}
+                                {activeSection === 'rules' && <LibraryMaintenancePanel addToast={addToast} onRulesUpdated={() => loadOverview(true)} />}
+                                {activeSection === 'collections' && (
+                                    <div className="glass-card-sm p-5 space-y-3">
+                                        <h3 className="text-xl font-bold text-plex">Collections</h3>
+                                        <p className="text-sm text-muted">Manage collection behavior per rule. Changes save directly to each ruleset.</p>
+                                        <div className="space-y-2">
+                                            {rules.map((rule: any) => (
+                                                <div key={`collection-${rule.id}`} className="bg-background/30 border border-white/5 rounded-lg p-3">
+                                                    <div className="flex items-center justify-between gap-3">
+                                                        <p className="font-semibold text-text text-sm">{rule.name || 'Unnamed Rule'}</p>
+                                                        <label className="text-xs text-muted flex items-center gap-2">
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={rule?.collection?.enabled !== false}
+                                                                onChange={async (e) => {
+                                                                    const next = rules.map((r: any) => r.id === rule.id ? { ...r, collection: { ...(r.collection || {}), enabled: e.target.checked } } : r);
+                                                                    setRules(next);
+                                                                    await saveAllRules(next);
+                                                                    addToast('Collection settings updated.');
+                                                                }}
+                                                            />
+                                                            Enabled
+                                                        </label>
+                                                    </div>
                                                     <input
-                                                        type="checkbox"
-                                                        checked={rule?.collection?.enabled !== false}
-                                                        onChange={async (e) => {
-                                                            const next = rules.map((r: any) => r.id === rule.id ? { ...r, collection: { ...(r.collection || {}), enabled: e.target.checked } } : r);
+                                                        className="mt-2 w-full p-2 rounded border border-border bg-card text-text text-sm"
+                                                        value={rule?.collection?.nameTemplate || 'Leaving Soon - {{ruleName}}'}
+                                                        onChange={(e) => {
+                                                            const next = rules.map((r: any) => r.id === rule.id ? { ...r, collection: { ...(r.collection || {}), nameTemplate: e.target.value } } : r);
+                                                            setRules(next);
+                                                        }}
+                                                        onBlur={async (e) => {
+                                                            const next = rules.map((r: any) => r.id === rule.id
+                                                                ? { ...r, collection: { ...(r.collection || {}), nameTemplate: e.target.value } }
+                                                                : r);
                                                             setRules(next);
                                                             await saveAllRules(next);
-                                                            addToast('Collection settings updated.');
+                                                            addToast('Collection template saved.');
                                                         }}
                                                     />
-                                                    Enabled
-                                                </label>
-                                            </div>
-                                            <input
-                                                className="mt-2 w-full p-2 rounded border border-border bg-card text-text text-sm"
-                                                value={rule?.collection?.nameTemplate || 'Leaving Soon - {{ruleName}}'}
-                                                onChange={(e) => {
-                                                    const next = rules.map((r: any) => r.id === rule.id ? { ...r, collection: { ...(r.collection || {}), nameTemplate: e.target.value } } : r);
-                                                    setRules(next);
-                                                }}
-                                                onBlur={async (e) => {
-                                                    const next = rules.map((r: any) => r.id === rule.id
-                                                        ? { ...r, collection: { ...(r.collection || {}), nameTemplate: e.target.value } }
-                                                        : r);
-                                                    setRules(next);
-                                                    await saveAllRules(next);
-                                                    addToast('Collection template saved.');
-                                                }}
-                                            />
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-                        {activeSection === 'candidates' && (
-                            <div className="glass-card-sm p-3 md:p-5 space-y-3">
-                                <div className="flex flex-wrap items-center justify-between gap-3">
-                                    <h3 className="text-xl font-bold text-plex">Candidates</h3>
-                                    <div className="flex items-center gap-2">
-                                        <input
-                                            className="p-2 rounded border border-border bg-card text-text text-sm"
-                                            placeholder="Search titles..."
-                                            value={candidateSearch}
-                                            onChange={(e) => setCandidateSearch(e.target.value)}
-                                        />
-                                    </div>
-                                </div>
-                                <div className="flex flex-wrap gap-2">
-                                    {rules.map((rule: any) => (
-                                        <button
-                                            key={`candidate-rule-tab-${rule.id}`}
-                                            type="button"
-                                            onClick={() => setCandidateRuleId(rule.id)}
-                                        className={`px-3 py-1.5 text-xs font-semibold rounded-md border transition-colors ${candidateRuleId === rule.id ? 'bg-plex text-background border-plex' : 'bg-background/30 text-text border-white/5 hover:border-plex/40'}`}
-                                        >
-                                            {rule.name || 'Unnamed Rule'}
-                                        </button>
-                                    ))}
-                                    {!rules.length && <p className="text-sm text-muted">No saved rules found. Create a rule in `Rules` first.</p>}
-                                </div>
-                                {selectedCandidateRule && (
-                                    <p className="text-xs text-muted">
-                                        Showing candidates for <span className="text-text font-semibold">{selectedCandidateRule.name || 'Unnamed Rule'}</span> only.
-                                    </p>
-                                )}
-                                {isLoadingCandidates ? <p className="text-sm text-muted">Loading candidates...</p> : (
-                                    <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-7 gap-2 md:gap-3 max-h-[620px] overflow-y-auto custom-scrollbar pr-1">
-                                        {filteredCandidates.map((item: any) => (
-                                            <div key={`candidate-${item._ruleId || candidateRuleId}-${item.ratingKey}`} className="bg-background/30 border border-white/5 rounded-lg overflow-hidden">
-                                                <div className="aspect-[2/3] bg-black/40">
-                                                    {item.thumb ? (
-                                                        <img src={portalUrl(`/api/plex/image?path=${encodeURIComponent(item.thumb)}&width=220&height=330`)} alt={item.title} loading="lazy" className="w-full h-full object-cover" />
-                                                    ) : (
-                                                        <div className="w-full h-full flex items-center justify-center text-xs text-muted">No Poster</div>
-                                                    )}
                                                 </div>
-                                                <div className="p-2">
-                                                    <p className="text-xs text-text line-clamp-2">{item.title}</p>
-                                                    <p className="text-[11px] text-muted mt-1">{item.libraryTitle || 'Unknown Library'}</p>
-                                                </div>
-                                            </div>
-                                        ))}
-                                        {!filteredCandidates.length && <p className="text-sm text-muted col-span-full">No matching candidates found for this ruleset.</p>}
-                                    </div>
-                                )}
-                            </div>
-                        )}
-                        {activeSection === 'runs' && (
-                            <div className="glass-card-sm p-5 space-y-3">
-                                <h3 className="text-xl font-bold text-plex">Logs</h3>
-                                <div className="space-y-2 max-h-[620px] overflow-y-auto custom-scrollbar pr-1">
-                                    {runs.map((run: any) => (
-                                        <details key={`run-${run.id}`} className="bg-background/30 border border-white/5 rounded-lg p-3">
-                                            <summary className="cursor-pointer list-none">
-                                                <div className="flex items-center justify-between gap-3">
-                                                    <div>
-                                                        <p className="text-sm font-semibold text-text">{run.ruleName}</p>
-                                                        <p className="text-xs text-muted">{new Date(run.startedAt).toLocaleString()} · {run.dryRun ? 'Dry-run' : 'Destructive'}</p>
-                                                    </div>
-                                                    <span className="text-[11px] px-2 py-1 rounded bg-border text-muted">{run.status}</span>
-                                                </div>
-                                            </summary>
-                                            <div className="mt-3 text-xs text-muted">
-                                                Matched {run.totals?.matched || 0} · Processed {run.totals?.processed || 0} · Deleted {run.totals?.deleted || 0} · Skipped {run.totals?.skipped || 0} · Failed {run.totals?.failed || 0}
-                                            </div>
-                                            {Array.isArray(run.preflight?.warnings) && run.preflight.warnings.length > 0 && (
-                                                <div className="mt-2 text-xs text-amber-300 bg-amber-500/10 border border-amber-500/20 rounded px-2 py-1">
-                                                    {run.preflight.warnings.join(' ')}
-                                                </div>
-                                            )}
-                                            <div className="mt-2 max-h-52 overflow-y-auto custom-scrollbar pr-1 space-y-1">
-                                                {(run.outcomes || []).slice(0, 120).map((outcome: any, idx: number) => (
-                                                    <div key={`outcome-${run.id}-${idx}`} className="text-xs bg-background/30 border border-white/5 rounded px-2 py-1">
-                                                        {(outcome.title || outcome.type || 'Item')} · {outcome.status || (outcome.success ? 'success' : 'info')}
-                                                        {outcome.reason ? ` · ${outcome.reason}` : ''}
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </details>
-                                    ))}
-                                    {!runs.length && <p className="text-sm text-muted">No runs recorded yet.</p>}
-                                </div>
-                            </div>
-                        )}
-                        {activeSection === 'calendar' && (
-                            <div className="glass-card-sm p-5 space-y-3">
-                                <h3 className="text-xl font-bold text-plex">Calendar</h3>
-                                <p className="text-sm text-muted">Rule-based eligibility schedule. Grace days are applied from this rule's creation date.</p>
-                                <div className="flex flex-wrap gap-2">
-                                    {rules.map((rule: any) => (
-                                        <button
-                                            key={`calendar-rule-tab-${rule.id}`}
-                                            type="button"
-                                            onClick={() => setCandidateRuleId(rule.id)}
-                                        className={`px-3 py-1.5 text-xs font-semibold rounded-md border transition-colors ${candidateRuleId === rule.id ? 'bg-plex text-background border-plex' : 'bg-background/30 text-text border-white/5 hover:border-plex/40'}`}
-                                        >
-                                            {rule.name || 'Unnamed Rule'}
-                                        </button>
-                                    ))}
-                                </div>
-                                {selectedCandidateRule && (
-                                    <p className="text-xs text-muted">
-                                        Current rule: <span className="text-text font-semibold">{selectedCandidateRule.name || 'Unnamed Rule'}</span> · Grace Days: <span className="text-text font-semibold">{calendarEligibility.graceDays}</span> · Rule Age: <span className="text-text font-semibold">{calendarEligibility.daysSinceRuleCreated}</span> day(s)
-                                    </p>
-                                )}
-                                <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                                    <button
-                                        type="button"
-                                        onClick={() => setSelectedCalendarDate(ELIGIBLE_NOW_KEY)}
-                                        className="text-left bg-background/30 border border-white/5 rounded-lg p-3 hover:border-plex/50 transition-colors"
-                                        title="Titles that match this rule and whose grace window has elapsed."
-                                    >
-                                        <p className="text-xs text-muted">Eligible Now</p>
-                                        <p className="text-2xl font-bold text-text mt-1">{calendarEligibility.eligibleNow.length}</p>
-                                        <p className="text-[11px] text-muted mt-1">{formatReclaimSizeFromGB(calendarEligibility.eligibleNow.reduce((sum: number, item: any) => sum + Number(item.sizeGB || 0), 0))} reclaim now</p>
-                                    </button>
-                                    <div className="bg-background/30 border border-white/5 rounded-lg p-3" title="Number of future dates with delayed eligibility while this rule's grace period is active.">
-                                        <p className="text-xs text-muted">Eligible Later Days</p>
-                                        <p className="text-2xl font-bold text-text mt-1">{calendarEligibility.eligibleLaterByDay.length}</p>
-                                    </div>
-                                    <div className="bg-background/30 border border-white/5 rounded-lg p-3" title="Titles currently matching this rule but still waiting for grace to expire.">
-                                        <p className="text-xs text-muted">Later Titles</p>
-                                        <p className="text-2xl font-bold text-text mt-1">{calendarEligibility.eligibleLaterByDay.reduce((sum: number, day: any) => sum + Number(day.count || 0), 0)}</p>
-                                    </div>
-                                    <div className="bg-background/30 border border-white/5 rounded-lg p-3" title="Reclaim estimate from matches that are delayed by active grace days.">
-                                        <p className="text-xs text-muted">Later Reclaim</p>
-                                        <p className="text-2xl font-bold text-text mt-1">{formatReclaimSizeFromGB(calendarEligibility.eligibleLaterByDay.reduce((sum: number, day: any) => sum + Number(day.reclaimGB || 0), 0))}</p>
-                                    </div>
-                                </div>
-                                <div className="space-y-2">
-                                    <p className="text-xs uppercase tracking-wider text-muted font-bold" title="Dates when currently matched titles become eligible once this rule's grace period expires.">Eligible Later by Date</p>
-                                </div>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 max-h-[700px] overflow-y-auto custom-scrollbar pr-1">
-                                    {calendarEligibility.eligibleLaterByDay.slice(0, 120).map((day) => {
-                                        const dateLabel = new Date(`${day.date}T00:00:00`).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
-                                        return (
-                                            <button
-                                                key={`calendar-day-${day.date}`}
-                                                type="button"
-                                                onClick={() => setSelectedCalendarDate(day.date)}
-                                                className="text-left bg-background/30 border border-white/5 rounded-lg p-3 hover:border-plex/50 hover:bg-black/30 transition-colors"
-                                            >
-                                                <div className="flex items-center justify-between gap-2">
-                                                    <p className="text-sm font-semibold text-text">{dateLabel}</p>
-                                                    <span className="text-[11px] px-2 py-0.5 rounded bg-plex/20 text-plex font-semibold" title="Number of titles becoming eligible on this date.">{day.count}</span>
-                                                </div>
-                                                <p className="text-[11px] text-muted mt-1">{day.minDaysUntil} day(s) until eligible · {formatReclaimSizeFromGB(day.reclaimGB)} reclaim</p>
-                                                <div className="mt-2 flex -space-x-2">
-                                                    {day.preview.map((item: any, idx: number) => (
-                                                        <div key={`calendar-preview-${day.date}-${item.ratingKey}-${idx}`} className="w-8 h-8 rounded-full overflow-hidden border border-white/5 bg-black/50" title={`${item.title || 'Unknown Title'} • ${getEligibilityTooltip(item)}`}>
-                                                            {item.thumb ? (
-                                                                <img
-                                                                    src={portalUrl(`/api/plex/image?path=${encodeURIComponent(item.thumb)}&width=64&height=64`)}
-                                                                    alt={item.title}
-                                                                    className="w-full h-full object-cover"
-                                                                    loading="lazy"
-                                                                />
-                                                            ) : (
-                                                                <div className="w-full h-full" />
-                                                            )}
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </button>
-                                        );
-                                    })}
-                                    {!calendarEligibility.eligibleLaterByDay.length && <p className="text-sm text-muted col-span-full">No delayed dates. Current matches are eligible now.</p>}
-                                </div>
-                            </div>
-                        )}
-                        {activeSection === 'calendar' && selectedCalendarGroup && (
-                            <div className="fixed inset-0 z-[1500] bg-black/70 backdrop-blur-[1px] flex items-center justify-center p-3 md:p-6" onClick={() => setSelectedCalendarDate(null)}>
-                                <div className="w-full max-w-6xl max-h-[86vh] bg-card/80 backdrop-blur-md border border-white/5 rounded-xl shadow-2xl p-4 md:p-5 overflow-y-auto custom-scrollbar" onClick={(e) => e.stopPropagation()}>
-                                    <div className="flex items-start justify-between gap-3 mb-3">
-                                        <div>
-                                            <h4 className="text-xl font-bold text-plex">
-                                                {selectedCalendarGroup.title || new Date(`${selectedCalendarGroup.date}T00:00:00`).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
-                                            </h4>
-                                            <p className="text-sm text-muted mt-1" title={selectedCalendarGroup.date === ELIGIBLE_NOW_KEY ? 'These titles currently match this rule and are eligible now.' : 'These titles match this rule but are waiting for the grace period to elapse.'}>
-                                                {selectedCalendarGroup.count} title(s) · {formatReclaimSizeFromGB(selectedCalendarGroup.reclaimGB)} reclaim
-                                            </p>
-                                        </div>
-                                        <button
-                                            type="button"
-                                            className="px-3 py-1.5 bg-border text-text rounded-md text-sm font-semibold hover:bg-opacity-80"
-                                            onClick={() => setSelectedCalendarDate(null)}
-                                        >
-                                            Close
-                                        </button>
-                                    </div>
-                                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-7 gap-3">
-                                        {selectedCalendarGroup.items.map((item: any, idx: number) => (
-                                            <div key={`calendar-modal-item-${selectedCalendarGroup.date}-${item.ratingKey}-${idx}`} className="bg-background/30 border border-white/5 rounded-lg overflow-hidden" title={getEligibilityTooltip(item)}>
-                                                <div className="aspect-[2/3] bg-black/40">
-                                                    {item.thumb ? (
-                                                        <img
-                                                            src={portalUrl(`/api/plex/image?path=${encodeURIComponent(item.thumb)}&width=240&height=360`)}
-                                                            alt={item.title}
-                                                            loading="lazy"
-                                                            className="w-full h-full object-cover"
-                                                        />
-                                                    ) : (
-                                                        <div className="w-full h-full flex items-center justify-center text-xs text-muted">No Poster</div>
-                                                    )}
-                                                </div>
-                                                <div className="p-2">
-                                                    <p className="text-xs text-text line-clamp-2">{item.title}</p>
-                                                    <p className="text-[11px] text-muted mt-1">{item.libraryTitle || 'Unknown Library'}</p>
-                                                    <p className="text-[11px] text-muted mt-1" title="Eligibility detail used by the backend.">
-                                                        Last watch: {Number.isFinite(Number(item.daysSinceLastWatch)) ? `${Number(item.daysSinceLastWatch)}d ago` : 'n/a'} · Added: {Number.isFinite(Number(item.daysSinceAdded)) ? `${Number(item.daysSinceAdded)}d ago` : 'n/a'}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-                        {activeSection === 'storage' && (
-                            <div className="glass-card-sm p-5 space-y-4">
-                                <h3 className="text-xl font-bold text-plex">Storage Metrics</h3>
-                                <p className="text-sm text-muted">Deep storage projection per library based on indexed size and current rule matches.</p>
-                                <div className="flex items-center gap-2">
-                                    <button
-                                        type="button"
-                                        className="px-3 py-1.5 bg-border text-text rounded-md text-xs font-semibold hover:bg-opacity-80"
-                                        onClick={() => loadStorageSummary(candidateRuleId || undefined)}
-                                    >
-                                        {storageSummaryLoading ? 'Refreshing...' : 'Refresh Summary'}
-                                    </button>
-                                    {selectedCandidateRule && (
-                                        <p className="text-xs text-muted">Rule scope: <span className="text-text font-semibold">{selectedCandidateRule.name || 'Unnamed Rule'}</span></p>
-                                    )}
-                                </div>
-                                <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                                    <div className="bg-background/30 border border-white/5 rounded-lg p-3">
-                                        <p className="text-xs text-muted">Library Size Before</p>
-                                        <p className="text-2xl font-bold text-text">{formatReclaimSizeFromGB(Number(storageSummary?.totals?.beforeGB || 0))}</p>
-                                    </div>
-                                    <div className="bg-background/30 border border-white/5 rounded-lg p-3">
-                                        <p className="text-xs text-muted">Projected Reclaim</p>
-                                        <p className="text-2xl font-bold text-text">{formatReclaimSizeFromGB(Number(storageSummary?.totals?.reclaimGB || 0))}</p>
-                                    </div>
-                                    <div className="bg-background/30 border border-white/5 rounded-lg p-3">
-                                        <p className="text-xs text-muted">Projected Size After</p>
-                                        <p className="text-2xl font-bold text-text">{formatReclaimSizeFromGB(Number(storageSummary?.totals?.afterGB || 0))}</p>
-                                    </div>
-                                    <div className="bg-background/30 border border-white/5 rounded-lg p-3">
-                                        <p className="text-xs text-muted">Reclaim Percent</p>
-                                        <p className="text-2xl font-bold text-text">{Number(storageSummary?.totals?.reclaimPercent || 0).toFixed(1)}%</p>
-                                    </div>
-                                </div>
-                                <div className="bg-background/30 border border-white/5 rounded-lg p-3">
-                                    <div className="grid grid-cols-[minmax(0,2fr)_1fr_1fr_1fr_1fr] gap-2 px-2 py-1 text-[11px] uppercase tracking-wider text-muted font-bold border-b border-border">
-                                        <span>Library</span>
-                                        <span className="text-right">Before</span>
-                                        <span className="text-right">Reclaim</span>
-                                        <span className="text-right">After</span>
-                                        <span className="text-right">Matched</span>
-                                    </div>
-                                    <div className="max-h-[420px] overflow-y-auto custom-scrollbar pr-1 space-y-1 mt-2">
-                                        {(storageSummary?.libraries || []).map((row: any) => (
-                                            <div key={`storage-row-${row.libraryTitle}`} className="grid grid-cols-[minmax(0,2fr)_1fr_1fr_1fr_1fr] gap-2 px-2 py-2 text-sm bg-background/30 border border-white/5 rounded-lg items-center">
-                                                <span className="text-text line-clamp-1">{row.libraryTitle}</span>
-                                                <span className="text-muted text-right">{formatReclaimSizeFromGB(Number(row.totalSizeGB || 0))}</span>
-                                                <span className="text-right text-plex font-semibold">{formatReclaimSizeFromGB(Number(row.reclaimGB || 0))}</span>
-                                                <span className="text-muted text-right">{formatReclaimSizeFromGB(Number(row.afterSizeGB || 0))}</span>
-                                                <span className="text-muted text-right">{row.matchedItems || 0}</span>
-                                            </div>
-                                        ))}
-                                        {!storageSummaryLoading && !(storageSummary?.libraries || []).length && (
-                                            <p className="text-sm text-muted px-2 py-2">No storage summary yet. Refresh or load candidates/rules first.</p>
-                                        )}
-                                        {storageSummaryLoading && <p className="text-sm text-muted px-2 py-2">Loading storage summary...</p>}
-                                    </div>
-                                </div>
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                                    <div className="bg-background/30 border border-white/5 rounded-lg p-3">
-                                        <p className="text-xs text-muted">Total Indexed Items</p>
-                                        <p className="text-xl font-bold text-text">{Number(storageSummary?.totals?.items || 0)}</p>
-                                    </div>
-                                    <div className="bg-background/30 border border-white/5 rounded-lg p-3">
-                                        <p className="text-xs text-muted">Matched Candidate Items</p>
-                                        <p className="text-xl font-bold text-text">{Number(storageSummary?.totals?.matchedItems || 0)}</p>
-                                    </div>
-                                    <div className="bg-background/30 border border-white/5 rounded-lg p-3">
-                                        <p className="text-xs text-muted">Libraries Covered</p>
-                                        <p className="text-xl font-bold text-text">{Number(storageSummary?.totals?.libraries || 0)}</p>
-                                    </div>
-                                </div>
-                                {storageSummary?.rulesConsidered?.length > 0 && (
-                                    <div className="bg-background/30 border border-white/5 rounded-lg p-3">
-                                        <p className="text-xs text-muted font-bold uppercase tracking-wider mb-2">Rules Included</p>
-                                        <div className="flex flex-wrap gap-1.5">
-                                            {storageSummary.rulesConsidered.map((rule: any) => (
-                                                <span key={`storage-rule-${rule.id}`} className="px-2 py-1 rounded bg-border text-xs text-text">{rule.name || 'Unnamed Rule'}</span>
                                             ))}
                                         </div>
                                     </div>
                                 )}
-                            </div>
-                        )}
-                        {activeSection === 'library' && (
-                            <div className="glass-card-sm p-5 space-y-3">
-                                <h3 className="text-xl font-bold text-plex">Rule Library</h3>
-                                <div className="flex flex-wrap gap-2">
-                                    <button
-                                        type="button"
-                                        className="px-3 py-2 bg-border text-text rounded-md text-sm font-semibold"
-                                        onClick={() => {
-                                            const blob = new Blob([JSON.stringify(rules, null, 2)], { type: 'application/json' });
-                                            const url = URL.createObjectURL(blob);
-                                            const a = document.createElement('a');
-                                            a.href = url;
-                                            a.download = `maintenance-rules-${Date.now()}.json`;
-                                            a.click();
-                                            URL.revokeObjectURL(url);
-                                            addToast('Rule export downloaded.');
-                                        }}
-                                    >
-                                        Export Rules JSON
-                                    </button>
-                                    <button
-                                        type="button"
-                                        className="px-3 py-2 bg-plex text-background rounded-md text-sm font-semibold"
-                                        onClick={async () => {
-                                            try {
-                                                const parsed = JSON.parse(libraryJsonInput || '[]');
-                                                if (!Array.isArray(parsed)) throw new Error('JSON must be an array of rules.');
-                                                await saveAllRules(parsed);
-                                                addToast('Imported rules saved.');
-                                            } catch (e: any) {
-                                                addToast(e.message || 'Invalid JSON import.', 'error');
-                                            }
-                                        }}
-                                    >
-                                        Import Rules JSON
-                                    </button>
-                                </div>
-                                <textarea
-                                    className="w-full min-h-[240px] p-3 rounded-lg border border-border bg-card text-text text-xs font-mono"
-                                    placeholder="Paste exported rules JSON here to import."
-                                    value={libraryJsonInput}
-                                    onChange={(e) => setLibraryJsonInput(e.target.value)}
-                                />
-                            </div>
-                        )}
-                        {activeSection === 'exclusions' && (
-                            <div className="glass-card-sm p-4 md:p-5 space-y-3">
-                                <h3 className="text-xl font-bold text-plex">Exclusions</h3>
-                                <p className="text-sm text-muted">Click posters to select them for bulk actions. Selected items show a checkmark overlay. Use the Exclude link under each title for one-off changes.</p>
-                                <div className="bg-background/30 border border-white/5 rounded-lg p-3 md:p-4 space-y-2.5">
-                                    <div className="min-w-0 md:w-[220px] h-9">
-                                            <CustomSelect
-                                                value={libraryBrowseId}
-                                                onChange={(value) => {
-                                                    setLibraryBrowseId(value);
-                                                    setLibraryBrowsePage(1);
-                                                }}
-                                                options={[
-                                                    { label: 'All Libraries', value: 'all' },
-                                                    ...libraryOptions.map((library) => ({
-                                                        label: `${library.title} (${library.count})`,
-                                                        value: library.id
-                                                    }))
-                                                ]}
-                                            />
-                                    </div>
-                                    <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 items-center mt-1">
-                                        <input
-                                            className="h-9 px-2.5 rounded border border-border bg-card text-text text-xs md:text-sm min-w-0"
-                                            placeholder="Search title..."
-                                            value={libraryBrowseSearch}
-                                            onChange={(e) => {
-                                                setLibraryBrowseSearch(e.target.value);
-                                                setLibraryBrowsePage(1);
-                                            }}
-                                        />
-                                        <button type="button" className="h-9 px-3 bg-border text-text rounded-md text-xs md:text-sm font-semibold whitespace-nowrap" onClick={loadLibraryBrowse}>Refresh</button>
-                                    </div>
-                                    <div className="grid grid-cols-[minmax(0,1fr)_auto] md:flex md:flex-wrap items-center gap-2">
-                                        <button
-                                            type="button"
-                                            className="h-9 px-3 bg-border text-text rounded-md text-xs md:text-sm font-semibold whitespace-nowrap"
-                                            onClick={() => setSelectedExcludeKeys(libraryItems.map((item: any) => String(item.ratingKey || '')).filter(Boolean))}
-                                            disabled={!libraryItems.length}
-                                        >
-                                            Select Page
-                                        </button>
-                                        <button
-                                            type="button"
-                                            className="h-9 px-3 bg-plex text-background rounded-md text-xs md:text-sm font-semibold whitespace-nowrap"
-                                            onClick={async () => {
-                                                if (!selectedExcludeKeys.length) {
-                                                    addToast('Select posters to exclude first.', 'error');
-                                                    return;
-                                                }
-                                                const merged = Array.from(new Set([...(preferences?.exclusions?.ratingKeys || []).map((v: string) => String(v)), ...selectedExcludeKeys]));
-                                                await updateRatingKeyExclusions(merged);
-                                                setSelectedExcludeKeys([]);
-                                                addToast(`Excluded ${selectedExcludeKeys.length} selected title(s).`);
-                                            }}
-                                        >
-                                            Exclude Selected ({selectedExcludeKeys.length})
-                                        </button>
-                                        <button
-                                            type="button"
-                                            className="h-9 w-9 flex items-center justify-center bg-red-500/15 border border-red-500/40 text-red-300 rounded-md hover:bg-red-500/25 transition-colors"
-                                            onClick={() => setSelectedExcludeKeys([])}
-                                            title="Clear Selection"
-                                            aria-label="Clear Selection"
-                                        >
-                                            <X className="w-3.5 h-3.5 md:w-4 md:h-4" />
-                                        </button>
-                                        <button
-                                            type="button"
-                                            className="col-span-2 md:col-auto h-9 px-3 bg-border text-text rounded-md text-xs md:text-sm font-semibold whitespace-nowrap"
-                                            onClick={async () => {
-                                                if (!selectedExcludeKeys.length) {
-                                                    addToast('Select posters to unexclude first.', 'error');
-                                                    return;
-                                                }
-                                                const removedCount = selectedExcludeKeys.length;
-                                                const remaining = (preferences?.exclusions?.ratingKeys || []).map((v: string) => String(v)).filter((key: string) => !selectedExcludeKeys.includes(key));
-                                                await updateRatingKeyExclusions(remaining);
-                                                setSelectedExcludeKeys([]);
-                                                addToast(`Removed ${removedCount} selected exclusion(s).`);
-                                            }}
-                                        >
-                                            Remove Selected Exclusions
-                                        </button>
-                                        <p className="col-span-2 text-[11px] md:text-xs text-muted w-full md:w-auto md:ml-auto md:text-right">Showing {libraryItems.length} of {libraryBrowseTotal} titles · page {libraryBrowsePage}</p>
-                                    </div>
-                                    {libraryBrowseLoading ? (
-                                        <p className="text-sm text-muted">Loading posters...</p>
-                                    ) : (
-                                        <div className="grid grid-cols-3 md:grid-cols-5 lg:grid-cols-8 gap-2 md:gap-3 max-h-[1240px] overflow-y-auto custom-scrollbar pr-1">
-                                            {libraryItems.map((item: any) => {
-                                                const key = String(item.ratingKey || '');
-                                                const selected = selectedExcludeKeys.includes(key);
-                                                const excluded = item.excluded || excludedRatingKeySet.has(key);
-                                                const toggleQuickExclude = async (event: React.MouseEvent) => {
-                                                    event.preventDefault();
-                                                    event.stopPropagation();
-                                                    const currentKeys = (preferences?.exclusions?.ratingKeys || []).map((v: string) => String(v));
-                                                    const nextKeys = excluded ? currentKeys.filter((v: string) => v !== key) : Array.from(new Set([...currentKeys, key]));
-                                                    await updateRatingKeyExclusions(nextKeys);
-                                                    addToast(excluded ? `Removed exclusion for ${item.title}.` : `Excluded ${item.title}.`);
-                                                };
-                                                return (
-                                                    <div
-                                                        key={`exclude-item-${key}`}
-                                                        className={`relative w-full border rounded-lg overflow-hidden transition-all ${selected ? 'border-plex bg-plex/5 shadow-[0_0_0_1px_rgba(229,160,13,0.35)]' : 'border-white/5'} ${excluded ? 'ring-1 ring-red-500/60' : ''}`}
-                                                    >
-                                                        <button
-                                                            type="button"
-                                                            className="w-full text-left"
-                                                            aria-pressed={selected}
-                                                            onClick={() => {
-                                                                setSelectedExcludeKeys((prev) => prev.includes(key) ? prev.filter((v) => v !== key) : [...prev, key]);
-                                                            }}
-                                                        >
-                                                            <div className="aspect-[2/3] bg-black/40 relative">
-                                                                {item.thumb ? (
-                                                                    <img src={portalUrl(`/api/plex/image?path=${encodeURIComponent(item.thumb)}&width=220&height=330`)} alt={item.title} loading="lazy" className="w-full h-full object-cover" />
-                                                                ) : (
-                                                                    <div className="w-full h-full flex items-center justify-center text-xs text-muted">No Poster</div>
-                                                                )}
-                                                                {selected && (
-                                                                    <>
-                                                                        <div className="absolute inset-0 bg-plex/20 pointer-events-none" />
-                                                                        <div className="absolute top-2 left-2 w-6 h-6 rounded-full bg-plex text-background flex items-center justify-center shadow-md pointer-events-none">
-                                                                            <Check className="w-3.5 h-3.5" strokeWidth={3} />
-                                                                        </div>
-                                                                    </>
-                                                                )}
-                                                                {excluded && (
-                                                                    <span className="absolute top-2 right-2 text-[10px] px-1.5 py-0.5 rounded bg-red-600/95 text-white font-bold pointer-events-none">
-                                                                        Excluded
-                                                                    </span>
-                                                                )}
-                                                            </div>
-                                                            <p className="px-2 pt-2 text-xs text-text line-clamp-2">{item.title}</p>
-                                                        </button>
-                                                        <div className="px-2 pb-2 pt-1 flex items-center justify-between gap-2 min-h-[2rem]">
-                                                            <p className="text-[11px] text-muted truncate">{item.libraryTitle}</p>
-                                                            <button
-                                                                type="button"
-                                                                className={`text-[10px] font-semibold shrink-0 whitespace-nowrap transition-colors ${excluded ? 'text-muted hover:text-text' : 'text-plex hover:text-plex-hover'}`}
-                                                                onClick={toggleQuickExclude}
-                                                            >
-                                                                {excluded ? 'Unexclude' : 'Exclude'}
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                );
-                                            })}
-                                            {!libraryItems.length && <p className="text-sm text-muted col-span-full">No titles found for the current library/search.</p>}
+                                {activeSection === 'candidates' && (
+                                    <div className="glass-card-sm p-3 md:p-5 space-y-3">
+                                        <div className="flex flex-wrap items-center justify-between gap-3">
+                                            <h3 className="text-xl font-bold text-plex">Candidates</h3>
+                                            <div className="flex items-center gap-2">
+                                                <input
+                                                    className="p-2 rounded border border-border bg-card text-text text-sm"
+                                                    placeholder="Search titles..."
+                                                    value={candidateSearch}
+                                                    onChange={(e) => setCandidateSearch(e.target.value)}
+                                                />
+                                            </div>
                                         </div>
-                                    )}
-                                    <div className="flex items-center justify-between">
-                                        <button
-                                            type="button"
-                                            className="px-3 py-1.5 bg-border text-text rounded-md text-sm font-semibold disabled:opacity-50"
-                                            disabled={libraryBrowsePage <= 1}
-                                            onClick={() => setLibraryBrowsePage((p) => Math.max(1, p - 1))}
-                                        >
-                                            Previous
-                                        </button>
-                                        <button
-                                            type="button"
-                                            className="px-3 py-1.5 bg-border text-text rounded-md text-sm font-semibold disabled:opacity-50"
-                                            disabled={(libraryBrowsePage * libraryBrowseLimit) >= libraryBrowseTotal}
-                                            onClick={() => setLibraryBrowsePage((p) => p + 1)}
-                                        >
-                                            Next
-                                        </button>
-                                    </div>
-                                </div>
-                                <div className="bg-background/30 border border-white/5 rounded-lg p-3 space-y-3">
-                                    <h4 className="text-sm font-bold text-text">Current Exclusions (Resolved)</h4>
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                                        <div className="bg-background/30 border border-white/5 rounded-lg p-3 space-y-2">
-                                            <p className="text-xs font-bold text-muted uppercase tracking-wider">Excluded Titles by RatingKey</p>
-                                            <div className="space-y-2 max-h-52 overflow-y-auto custom-scrollbar pr-1">
-                                                {exclusionsSummary.ratingKeys.map((entry: any) => (
-                                                    <div key={`resolved-key-${entry.ratingKey}`} className="flex items-center gap-2 bg-background/30 border border-white/5 rounded-md p-2">
-                                                        <div className="w-10 h-14 rounded overflow-hidden bg-black/40 flex-shrink-0">
-                                                            {entry.thumb ? (
-                                                                <img src={portalUrl(`/api/plex/image?path=${encodeURIComponent(entry.thumb)}&width=80&height=120`)} alt={entry.title} className="w-full h-full object-cover" />
+                                        <div className="flex flex-wrap gap-2">
+                                            {rules.map((rule: any) => (
+                                                <button
+                                                    key={`candidate-rule-tab-${rule.id}`}
+                                                    type="button"
+                                                    onClick={() => setCandidateRuleId(rule.id)}
+                                                    className={`px-3 py-1.5 text-xs font-semibold rounded-md border transition-colors ${candidateRuleId === rule.id ? 'bg-plex text-background border-plex' : 'bg-background/30 text-text border-white/5 hover:border-plex/40'}`}
+                                                >
+                                                    {rule.name || 'Unnamed Rule'}
+                                                </button>
+                                            ))}
+                                            {!rules.length && <p className="text-sm text-muted">No saved rules found. Create a rule in `Rules` first.</p>}
+                                        </div>
+                                        {selectedCandidateRule && (
+                                            <p className="text-xs text-muted">
+                                                Showing candidates for <span className="text-text font-semibold">{selectedCandidateRule.name || 'Unnamed Rule'}</span> only.
+                                            </p>
+                                        )}
+                                        {isLoadingCandidates ? <p className="text-sm text-muted">Loading candidates...</p> : (
+                                            <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-7 gap-2 md:gap-3 max-h-[620px] overflow-y-auto custom-scrollbar pr-1">
+                                                {filteredCandidates.map((item: any) => (
+                                                    <div key={`candidate-${item._ruleId || candidateRuleId}-${item.ratingKey}`} className="bg-background/30 border border-white/5 rounded-lg overflow-hidden">
+                                                        <div className="aspect-[2/3] bg-black/40">
+                                                            {item.thumb ? (
+                                                                <img src={portalUrl(`/api/plex/image?path=${encodeURIComponent(item.thumb)}&width=220&height=330`)} alt={item.title} loading="lazy" className="w-full h-full object-cover" />
                                                             ) : (
-                                                                <div className="w-full h-full flex items-center justify-center text-[9px] text-muted">No Poster</div>
+                                                                <div className="w-full h-full flex items-center justify-center text-xs text-muted">No Poster</div>
                                                             )}
                                                         </div>
-                                                        <div className="min-w-0">
-                                                            <p className="text-xs text-text line-clamp-2">{entry.title}</p>
-                                                            <p className="text-[10px] text-muted line-clamp-1">{entry.libraryTitle || entry.ratingKey}</p>
+                                                        <div className="p-2">
+                                                            <p className="text-xs text-text line-clamp-2">{item.title}</p>
+                                                            <p className="text-[11px] text-muted mt-1">{item.libraryTitle || 'Unknown Library'}</p>
                                                         </div>
                                                     </div>
                                                 ))}
-                                                {!exclusionsSummary.ratingKeys.length && <p className="text-xs text-muted">No ratingKey exclusions set.</p>}
+                                                {!filteredCandidates.length && <p className="text-sm text-muted col-span-full">No matching candidates found for this ruleset.</p>}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                                {activeSection === 'runs' && (
+                                    <div className="glass-card-sm p-5 space-y-3">
+                                        <h3 className="text-xl font-bold text-plex">Logs</h3>
+                                        <div className="space-y-2 max-h-[620px] overflow-y-auto custom-scrollbar pr-1">
+                                            {runs.map((run: any) => (
+                                                <details key={`run-${run.id}`} className="bg-background/30 border border-white/5 rounded-lg p-3">
+                                                    <summary className="cursor-pointer list-none">
+                                                        <div className="flex items-center justify-between gap-3">
+                                                            <div>
+                                                                <p className="text-sm font-semibold text-text">{run.ruleName}</p>
+                                                                <p className="text-xs text-muted">{new Date(run.startedAt).toLocaleString()} · {run.dryRun ? 'Dry-run' : 'Destructive'}</p>
+                                                            </div>
+                                                            <span className="text-[11px] px-2 py-1 rounded bg-border text-muted">{run.status}</span>
+                                                        </div>
+                                                    </summary>
+                                                    <div className="mt-3 text-xs text-muted">
+                                                        Matched {run.totals?.matched || 0} · Processed {run.totals?.processed || 0} · Deleted {run.totals?.deleted || 0} · Skipped {run.totals?.skipped || 0} · Failed {run.totals?.failed || 0}
+                                                    </div>
+                                                    {Array.isArray(run.preflight?.warnings) && run.preflight.warnings.length > 0 && (
+                                                        <div className="mt-2 text-xs text-amber-300 bg-amber-500/10 border border-amber-500/20 rounded px-2 py-1">
+                                                            {run.preflight.warnings.join(' ')}
+                                                        </div>
+                                                    )}
+                                                    <div className="mt-2 max-h-52 overflow-y-auto custom-scrollbar pr-1 space-y-1">
+                                                        {(run.outcomes || []).slice(0, 120).map((outcome: any, idx: number) => (
+                                                            <div key={`outcome-${run.id}-${idx}`} className="text-xs bg-background/30 border border-white/5 rounded px-2 py-1">
+                                                                {(outcome.title || outcome.type || 'Item')} · {outcome.status || (outcome.success ? 'success' : 'info')}
+                                                                {outcome.reason ? ` · ${outcome.reason}` : ''}
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </details>
+                                            ))}
+                                            {!runs.length && <p className="text-sm text-muted">No runs recorded yet.</p>}
+                                        </div>
+                                    </div>
+                                )}
+                                {activeSection === 'calendar' && (
+                                    <div className="glass-card-sm p-5 space-y-3">
+                                        <h3 className="text-xl font-bold text-plex">Calendar</h3>
+                                        <p className="text-sm text-muted">Rule-based eligibility schedule. Grace days are applied from this rule's creation date.</p>
+                                        <div className="flex flex-wrap gap-2">
+                                            {rules.map((rule: any) => (
+                                                <button
+                                                    key={`calendar-rule-tab-${rule.id}`}
+                                                    type="button"
+                                                    onClick={() => setCandidateRuleId(rule.id)}
+                                                    className={`px-3 py-1.5 text-xs font-semibold rounded-md border transition-colors ${candidateRuleId === rule.id ? 'bg-plex text-background border-plex' : 'bg-background/30 text-text border-white/5 hover:border-plex/40'}`}
+                                                >
+                                                    {rule.name || 'Unnamed Rule'}
+                                                </button>
+                                            ))}
+                                        </div>
+                                        {selectedCandidateRule && (
+                                            <p className="text-xs text-muted">
+                                                Current rule: <span className="text-text font-semibold">{selectedCandidateRule.name || 'Unnamed Rule'}</span> · Grace Days: <span className="text-text font-semibold">{calendarEligibility.graceDays}</span> · Rule Age: <span className="text-text font-semibold">{calendarEligibility.daysSinceRuleCreated}</span> day(s)
+                                            </p>
+                                        )}
+                                        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                                            <button
+                                                type="button"
+                                                onClick={() => setSelectedCalendarDate(ELIGIBLE_NOW_KEY)}
+                                                className="text-left bg-background/30 border border-white/5 rounded-lg p-3 hover:border-plex/50 transition-colors"
+                                                title="Titles that match this rule and whose grace window has elapsed."
+                                            >
+                                                <p className="text-xs text-muted">Eligible Now</p>
+                                                <p className="text-2xl font-bold text-text mt-1">{calendarEligibility.eligibleNow.length}</p>
+                                                <p className="text-[11px] text-muted mt-1">{formatReclaimSizeFromGB(calendarEligibility.eligibleNow.reduce((sum: number, item: any) => sum + Number(item.sizeGB || 0), 0))} reclaim now</p>
+                                            </button>
+                                            <div className="bg-background/30 border border-white/5 rounded-lg p-3" title="Number of future dates with delayed eligibility while this rule's grace period is active.">
+                                                <p className="text-xs text-muted">Eligible Later Days</p>
+                                                <p className="text-2xl font-bold text-text mt-1">{calendarEligibility.eligibleLaterByDay.length}</p>
+                                            </div>
+                                            <div className="bg-background/30 border border-white/5 rounded-lg p-3" title="Titles currently matching this rule but still waiting for grace to expire.">
+                                                <p className="text-xs text-muted">Later Titles</p>
+                                                <p className="text-2xl font-bold text-text mt-1">{calendarEligibility.eligibleLaterByDay.reduce((sum: number, day: any) => sum + Number(day.count || 0), 0)}</p>
+                                            </div>
+                                            <div className="bg-background/30 border border-white/5 rounded-lg p-3" title="Reclaim estimate from matches that are delayed by active grace days.">
+                                                <p className="text-xs text-muted">Later Reclaim</p>
+                                                <p className="text-2xl font-bold text-text mt-1">{formatReclaimSizeFromGB(calendarEligibility.eligibleLaterByDay.reduce((sum: number, day: any) => sum + Number(day.reclaimGB || 0), 0))}</p>
                                             </div>
                                         </div>
-                                        <div className="bg-background/30 border border-white/5 rounded-lg p-3 space-y-2">
-                                            <p className="text-xs font-bold text-muted uppercase tracking-wider">Excluded Title Terms</p>
-                                            <div className="space-y-1.5 max-h-52 overflow-y-auto custom-scrollbar pr-1">
-                                                {exclusionsSummary.titles.map((entry: any) => (
-                                                    <div key={`resolved-title-${entry.title}`} className="bg-background/30 border border-white/5 rounded-md px-2 py-1.5">
-                                                        <p className="text-xs text-text line-clamp-1">{entry.title}</p>
-                                                        <p className="text-[10px] text-muted">{entry.matchCount} indexed match(es)</p>
+                                        <div className="space-y-2">
+                                            <p className="text-xs uppercase tracking-wider text-muted font-bold" title="Dates when currently matched titles become eligible once this rule's grace period expires.">Eligible Later by Date</p>
+                                        </div>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 max-h-[700px] overflow-y-auto custom-scrollbar pr-1">
+                                            {calendarEligibility.eligibleLaterByDay.slice(0, 120).map((day) => {
+                                                const dateLabel = new Date(`${day.date}T00:00:00`).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+                                                return (
+                                                    <button
+                                                        key={`calendar-day-${day.date}`}
+                                                        type="button"
+                                                        onClick={() => setSelectedCalendarDate(day.date)}
+                                                        className="text-left bg-background/30 border border-white/5 rounded-lg p-3 hover:border-plex/50 hover:bg-black/30 transition-colors"
+                                                    >
+                                                        <div className="flex items-center justify-between gap-2">
+                                                            <p className="text-sm font-semibold text-text">{dateLabel}</p>
+                                                            <span className="text-[11px] px-2 py-0.5 rounded bg-plex/20 text-plex font-semibold" title="Number of titles becoming eligible on this date.">{day.count}</span>
+                                                        </div>
+                                                        <p className="text-[11px] text-muted mt-1">{day.minDaysUntil} day(s) until eligible · {formatReclaimSizeFromGB(day.reclaimGB)} reclaim</p>
+                                                        <div className="mt-2 flex -space-x-2">
+                                                            {day.preview.map((item: any, idx: number) => (
+                                                                <div key={`calendar-preview-${day.date}-${item.ratingKey}-${idx}`} className="w-8 h-8 rounded-full overflow-hidden border border-white/5 bg-black/50" title={`${item.title || 'Unknown Title'} • ${getEligibilityTooltip(item)}`}>
+                                                                    {item.thumb ? (
+                                                                        <img
+                                                                            src={portalUrl(`/api/plex/image?path=${encodeURIComponent(item.thumb)}&width=64&height=64`)}
+                                                                            alt={item.title}
+                                                                            className="w-full h-full object-cover"
+                                                                            loading="lazy"
+                                                                        />
+                                                                    ) : (
+                                                                        <div className="w-full h-full" />
+                                                                    )}
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </button>
+                                                );
+                                            })}
+                                            {!calendarEligibility.eligibleLaterByDay.length && <p className="text-sm text-muted col-span-full">No delayed dates. Current matches are eligible now.</p>}
+                                        </div>
+                                    </div>
+                                )}
+                                {activeSection === 'calendar' && selectedCalendarGroup && (
+                                    <div className="fixed inset-0 z-[1500] bg-black/70 backdrop-blur-[1px] flex items-center justify-center p-3 md:p-6" onClick={() => setSelectedCalendarDate(null)}>
+                                        <div className="w-full max-w-6xl max-h-[86vh] bg-card/80 backdrop-blur-md border border-white/5 rounded-xl shadow-2xl p-4 md:p-5 overflow-y-auto custom-scrollbar" onClick={(e) => e.stopPropagation()}>
+                                            <div className="flex items-start justify-between gap-3 mb-3">
+                                                <div>
+                                                    <h4 className="text-xl font-bold text-plex">
+                                                        {selectedCalendarGroup.title || new Date(`${selectedCalendarGroup.date}T00:00:00`).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+                                                    </h4>
+                                                    <p className="text-sm text-muted mt-1" title={selectedCalendarGroup.date === ELIGIBLE_NOW_KEY ? 'These titles currently match this rule and are eligible now.' : 'These titles match this rule but are waiting for the grace period to elapse.'}>
+                                                        {selectedCalendarGroup.count} title(s) · {formatReclaimSizeFromGB(selectedCalendarGroup.reclaimGB)} reclaim
+                                                    </p>
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    className="px-3 py-1.5 bg-border text-text rounded-md text-sm font-semibold hover:bg-opacity-80"
+                                                    onClick={() => setSelectedCalendarDate(null)}
+                                                >
+                                                    Close
+                                                </button>
+                                            </div>
+                                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-7 gap-3">
+                                                {selectedCalendarGroup.items.map((item: any, idx: number) => (
+                                                    <div key={`calendar-modal-item-${selectedCalendarGroup.date}-${item.ratingKey}-${idx}`} className="bg-background/30 border border-white/5 rounded-lg overflow-hidden" title={getEligibilityTooltip(item)}>
+                                                        <div className="aspect-[2/3] bg-black/40">
+                                                            {item.thumb ? (
+                                                                <img
+                                                                    src={portalUrl(`/api/plex/image?path=${encodeURIComponent(item.thumb)}&width=240&height=360`)}
+                                                                    alt={item.title}
+                                                                    loading="lazy"
+                                                                    className="w-full h-full object-cover"
+                                                                />
+                                                            ) : (
+                                                                <div className="w-full h-full flex items-center justify-center text-xs text-muted">No Poster</div>
+                                                            )}
+                                                        </div>
+                                                        <div className="p-2">
+                                                            <p className="text-xs text-text line-clamp-2">{item.title}</p>
+                                                            <p className="text-[11px] text-muted mt-1">{item.libraryTitle || 'Unknown Library'}</p>
+                                                            <p className="text-[11px] text-muted mt-1" title="Eligibility detail used by the backend.">
+                                                                Last watch: {Number.isFinite(Number(item.daysSinceLastWatch)) ? `${Number(item.daysSinceLastWatch)}d ago` : 'n/a'} · Added: {Number.isFinite(Number(item.daysSinceAdded)) ? `${Number(item.daysSinceAdded)}d ago` : 'n/a'}
+                                                            </p>
+                                                        </div>
                                                     </div>
                                                 ))}
-                                                {!exclusionsSummary.titles.length && <p className="text-xs text-muted">No title exclusions set.</p>}
                                             </div>
                                         </div>
-                                        <div className="bg-background/30 border border-white/5 rounded-lg p-3 space-y-2">
-                                            <p className="text-xs font-bold text-muted uppercase tracking-wider">Excluded Libraries</p>
-                                            <div className="space-y-1.5 max-h-52 overflow-y-auto custom-scrollbar pr-1">
-                                                {exclusionsSummary.libraries.map((entry: any) => (
-                                                    <div key={`resolved-library-${entry.libraryTitle}`} className="bg-background/30 border border-white/5 rounded-md px-2 py-1.5">
-                                                        <p className="text-xs text-text line-clamp-1">{entry.libraryTitle}</p>
-                                                        <p className="text-[10px] text-muted">{entry.matchCount} indexed item(s)</p>
+                                    </div>
+                                )}
+                                {activeSection === 'storage' && (
+                                    <div className="glass-card-sm p-5 space-y-4">
+                                        <h3 className="text-xl font-bold text-plex">Storage Metrics</h3>
+                                        <p className="text-sm text-muted">Deep storage projection per library based on indexed size and current rule matches.</p>
+                                        <div className="flex items-center gap-2">
+                                            <button
+                                                type="button"
+                                                className="px-3 py-1.5 bg-border text-text rounded-md text-xs font-semibold hover:bg-opacity-80"
+                                                onClick={() => loadStorageSummary(candidateRuleId || undefined)}
+                                            >
+                                                {storageSummaryLoading ? 'Refreshing...' : 'Refresh Summary'}
+                                            </button>
+                                            {selectedCandidateRule && (
+                                                <p className="text-xs text-muted">Rule scope: <span className="text-text font-semibold">{selectedCandidateRule.name || 'Unnamed Rule'}</span></p>
+                                            )}
+                                        </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                                            <div className="bg-background/30 border border-white/5 rounded-lg p-3">
+                                                <p className="text-xs text-muted">Library Size Before</p>
+                                                <p className="text-2xl font-bold text-text">{formatReclaimSizeFromGB(Number(storageSummary?.totals?.beforeGB || 0))}</p>
+                                            </div>
+                                            <div className="bg-background/30 border border-white/5 rounded-lg p-3">
+                                                <p className="text-xs text-muted">Projected Reclaim</p>
+                                                <p className="text-2xl font-bold text-text">{formatReclaimSizeFromGB(Number(storageSummary?.totals?.reclaimGB || 0))}</p>
+                                            </div>
+                                            <div className="bg-background/30 border border-white/5 rounded-lg p-3">
+                                                <p className="text-xs text-muted">Projected Size After</p>
+                                                <p className="text-2xl font-bold text-text">{formatReclaimSizeFromGB(Number(storageSummary?.totals?.afterGB || 0))}</p>
+                                            </div>
+                                            <div className="bg-background/30 border border-white/5 rounded-lg p-3">
+                                                <p className="text-xs text-muted">Reclaim Percent</p>
+                                                <p className="text-2xl font-bold text-text">{Number(storageSummary?.totals?.reclaimPercent || 0).toFixed(1)}%</p>
+                                            </div>
+                                        </div>
+                                        <div className="bg-background/30 border border-white/5 rounded-lg p-3">
+                                            <div className="grid grid-cols-[minmax(0,2fr)_1fr_1fr_1fr_1fr] gap-2 px-2 py-1 text-[11px] uppercase tracking-wider text-muted font-bold border-b border-border">
+                                                <span>Library</span>
+                                                <span className="text-right">Before</span>
+                                                <span className="text-right">Reclaim</span>
+                                                <span className="text-right">After</span>
+                                                <span className="text-right">Matched</span>
+                                            </div>
+                                            <div className="max-h-[420px] overflow-y-auto custom-scrollbar pr-1 space-y-1 mt-2">
+                                                {(storageSummary?.libraries || []).map((row: any) => (
+                                                    <div key={`storage-row-${row.libraryTitle}`} className="grid grid-cols-[minmax(0,2fr)_1fr_1fr_1fr_1fr] gap-2 px-2 py-2 text-sm bg-background/30 border border-white/5 rounded-lg items-center">
+                                                        <span className="text-text line-clamp-1">{row.libraryTitle}</span>
+                                                        <span className="text-muted text-right">{formatReclaimSizeFromGB(Number(row.totalSizeGB || 0))}</span>
+                                                        <span className="text-right text-plex font-semibold">{formatReclaimSizeFromGB(Number(row.reclaimGB || 0))}</span>
+                                                        <span className="text-muted text-right">{formatReclaimSizeFromGB(Number(row.afterSizeGB || 0))}</span>
+                                                        <span className="text-muted text-right">{row.matchedItems || 0}</span>
                                                     </div>
                                                 ))}
-                                                {!exclusionsSummary.libraries.length && <p className="text-xs text-muted">No library exclusions set.</p>}
+                                                {!storageSummaryLoading && !(storageSummary?.libraries || []).length && (
+                                                    <p className="text-sm text-muted px-2 py-2">No storage summary yet. Refresh or load candidates/rules first.</p>
+                                                )}
+                                                {storageSummaryLoading && <p className="text-sm text-muted px-2 py-2">Loading storage summary...</p>}
                                             </div>
                                         </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                            <div className="bg-background/30 border border-white/5 rounded-lg p-3">
+                                                <p className="text-xs text-muted">Total Indexed Items</p>
+                                                <p className="text-xl font-bold text-text">{Number(storageSummary?.totals?.items || 0)}</p>
+                                            </div>
+                                            <div className="bg-background/30 border border-white/5 rounded-lg p-3">
+                                                <p className="text-xs text-muted">Matched Candidate Items</p>
+                                                <p className="text-xl font-bold text-text">{Number(storageSummary?.totals?.matchedItems || 0)}</p>
+                                            </div>
+                                            <div className="bg-background/30 border border-white/5 rounded-lg p-3">
+                                                <p className="text-xs text-muted">Libraries Covered</p>
+                                                <p className="text-xl font-bold text-text">{Number(storageSummary?.totals?.libraries || 0)}</p>
+                                            </div>
+                                        </div>
+                                        {storageSummary?.rulesConsidered?.length > 0 && (
+                                            <div className="bg-background/30 border border-white/5 rounded-lg p-3">
+                                                <p className="text-xs text-muted font-bold uppercase tracking-wider mb-2">Rules Included</p>
+                                                <div className="flex flex-wrap gap-1.5">
+                                                    {storageSummary.rulesConsidered.map((rule: any) => (
+                                                        <span key={`storage-rule-${rule.id}`} className="px-2 py-1 rounded bg-border text-xs text-text">{rule.name || 'Unnamed Rule'}</span>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
-                                </div>
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                                    <div>
-                                        <label className="text-xs text-muted font-bold uppercase">Title Exclusions (advanced, one per line)</label>
+                                )}
+                                {activeSection === 'library' && (
+                                    <div className="glass-card-sm p-5 space-y-3">
+                                        <h3 className="text-xl font-bold text-plex">Rule Library</h3>
+                                        <div className="flex flex-wrap gap-2">
+                                            <button
+                                                type="button"
+                                                className="px-3 py-2 bg-border text-text rounded-md text-sm font-semibold"
+                                                onClick={() => {
+                                                    const blob = new Blob([JSON.stringify(rules, null, 2)], { type: 'application/json' });
+                                                    const url = URL.createObjectURL(blob);
+                                                    const a = document.createElement('a');
+                                                    a.href = url;
+                                                    a.download = `maintenance-rules-${Date.now()}.json`;
+                                                    a.click();
+                                                    URL.revokeObjectURL(url);
+                                                    addToast('Rule export downloaded.');
+                                                }}
+                                            >
+                                                Export Rules JSON
+                                            </button>
+                                            <button
+                                                type="button"
+                                                className="px-3 py-2 bg-plex text-background rounded-md text-sm font-semibold"
+                                                onClick={async () => {
+                                                    try {
+                                                        const parsed = JSON.parse(libraryJsonInput || '[]');
+                                                        if (!Array.isArray(parsed)) throw new Error('JSON must be an array of rules.');
+                                                        await saveAllRules(parsed);
+                                                        addToast('Imported rules saved.');
+                                                    } catch (e: any) {
+                                                        addToast(e.message || 'Invalid JSON import.', 'error');
+                                                    }
+                                                }}
+                                            >
+                                                Import Rules JSON
+                                            </button>
+                                        </div>
                                         <textarea
-                                            className="w-full min-h-[180px] p-3 rounded-lg border border-border bg-card text-text text-xs"
-                                            value={(preferences?.exclusions?.titles || []).join('\n')}
-                                            onChange={(e) => setPreferences((prev: any) => ({ ...prev, exclusions: { ...(prev.exclusions || {}), titles: e.target.value.split('\n').map(v => v.trim()).filter(Boolean) } }))}
+                                            className="w-full min-h-[240px] p-3 rounded-lg border border-border bg-card text-text text-xs font-mono"
+                                            placeholder="Paste exported rules JSON here to import."
+                                            value={libraryJsonInput}
+                                            onChange={(e) => setLibraryJsonInput(e.target.value)}
                                         />
                                     </div>
-                                    <div>
-                                        <label className="text-xs text-muted font-bold uppercase">Library Exclusions (advanced, one per line)</label>
-                                        <textarea
-                                            className="w-full min-h-[180px] p-3 rounded-lg border border-border bg-card text-text text-xs"
-                                            value={(preferences?.exclusions?.libraries || []).join('\n')}
-                                            onChange={(e) => setPreferences((prev: any) => ({ ...prev, exclusions: { ...(prev.exclusions || {}), libraries: e.target.value.split('\n').map(v => v.trim()).filter(Boolean) } }))}
-                                        />
+                                )}
+                                {activeSection === 'exclusions' && (
+                                    <div className="glass-card-sm p-4 md:p-5 space-y-3">
+                                        <h3 className="text-xl font-bold text-plex">Exclusions</h3>
+                                        <p className="text-sm text-muted">Click posters to select them for bulk actions. Selected items show a checkmark overlay. Use the Exclude link under each title for one-off changes.</p>
+                                        <div className="bg-background/30 border border-white/5 rounded-lg p-3 md:p-4 space-y-2.5">
+                                            <div className="min-w-0 md:w-[220px] h-9">
+                                                <CustomSelect
+                                                    value={libraryBrowseId}
+                                                    onChange={(value) => {
+                                                        setLibraryBrowseId(value);
+                                                        setLibraryBrowsePage(1);
+                                                    }}
+                                                    options={[
+                                                        { label: 'All Libraries', value: 'all' },
+                                                        ...libraryOptions.map((library) => ({
+                                                            label: `${library.title} (${library.count})`,
+                                                            value: library.id
+                                                        }))
+                                                    ]}
+                                                />
+                                            </div>
+                                            <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 items-center mt-1">
+                                                <input
+                                                    className="h-9 px-2.5 rounded border border-border bg-card text-text text-xs md:text-sm min-w-0"
+                                                    placeholder="Search title..."
+                                                    value={libraryBrowseSearch}
+                                                    onChange={(e) => {
+                                                        setLibraryBrowseSearch(e.target.value);
+                                                        setLibraryBrowsePage(1);
+                                                    }}
+                                                />
+                                                <button type="button" className="h-9 px-3 bg-border text-text rounded-md text-xs md:text-sm font-semibold whitespace-nowrap" onClick={loadLibraryBrowse}>Refresh</button>
+                                            </div>
+                                            <div className="grid grid-cols-[minmax(0,1fr)_auto] md:flex md:flex-wrap items-center gap-2">
+                                                <button
+                                                    type="button"
+                                                    className="h-9 px-3 bg-border text-text rounded-md text-xs md:text-sm font-semibold whitespace-nowrap"
+                                                    onClick={() => setSelectedExcludeKeys(libraryItems.map((item: any) => String(item.ratingKey || '')).filter(Boolean))}
+                                                    disabled={!libraryItems.length}
+                                                >
+                                                    Select Page
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    className="h-9 px-3 bg-plex text-background rounded-md text-xs md:text-sm font-semibold whitespace-nowrap"
+                                                    onClick={async () => {
+                                                        if (!selectedExcludeKeys.length) {
+                                                            addToast('Select posters to exclude first.', 'error');
+                                                            return;
+                                                        }
+                                                        const merged = Array.from(new Set([...(preferences?.exclusions?.ratingKeys || []).map((v: string) => String(v)), ...selectedExcludeKeys]));
+                                                        await updateRatingKeyExclusions(merged);
+                                                        setSelectedExcludeKeys([]);
+                                                        addToast(`Excluded ${selectedExcludeKeys.length} selected title(s).`);
+                                                    }}
+                                                >
+                                                    Exclude Selected ({selectedExcludeKeys.length})
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    className="h-9 w-9 flex items-center justify-center bg-red-500/15 border border-red-500/40 text-red-300 rounded-md hover:bg-red-500/25 transition-colors"
+                                                    onClick={() => setSelectedExcludeKeys([])}
+                                                    title="Clear Selection"
+                                                    aria-label="Clear Selection"
+                                                >
+                                                    <X className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    className="col-span-2 md:col-auto h-9 px-3 bg-border text-text rounded-md text-xs md:text-sm font-semibold whitespace-nowrap"
+                                                    onClick={async () => {
+                                                        if (!selectedExcludeKeys.length) {
+                                                            addToast('Select posters to unexclude first.', 'error');
+                                                            return;
+                                                        }
+                                                        const removedCount = selectedExcludeKeys.length;
+                                                        const remaining = (preferences?.exclusions?.ratingKeys || []).map((v: string) => String(v)).filter((key: string) => !selectedExcludeKeys.includes(key));
+                                                        await updateRatingKeyExclusions(remaining);
+                                                        setSelectedExcludeKeys([]);
+                                                        addToast(`Removed ${removedCount} selected exclusion(s).`);
+                                                    }}
+                                                >
+                                                    Remove Selected Exclusions
+                                                </button>
+                                                <p className="col-span-2 text-[11px] md:text-xs text-muted w-full md:w-auto md:ml-auto md:text-right">Showing {libraryItems.length} of {libraryBrowseTotal} titles · page {libraryBrowsePage}</p>
+                                            </div>
+                                            {libraryBrowseLoading ? (
+                                                <p className="text-sm text-muted">Loading posters...</p>
+                                            ) : (
+                                                <div className="grid grid-cols-3 md:grid-cols-5 lg:grid-cols-8 gap-2 md:gap-3 max-h-[1240px] overflow-y-auto custom-scrollbar pr-1">
+                                                    {libraryItems.map((item: any) => {
+                                                        const key = String(item.ratingKey || '');
+                                                        const selected = selectedExcludeKeys.includes(key);
+                                                        const excluded = item.excluded || excludedRatingKeySet.has(key);
+                                                        const toggleQuickExclude = async (event: React.MouseEvent) => {
+                                                            event.preventDefault();
+                                                            event.stopPropagation();
+                                                            const currentKeys = (preferences?.exclusions?.ratingKeys || []).map((v: string) => String(v));
+                                                            const nextKeys = excluded ? currentKeys.filter((v: string) => v !== key) : Array.from(new Set([...currentKeys, key]));
+                                                            await updateRatingKeyExclusions(nextKeys);
+                                                            addToast(excluded ? `Removed exclusion for ${item.title}.` : `Excluded ${item.title}.`);
+                                                        };
+                                                        return (
+                                                            <div
+                                                                key={`exclude-item-${key}`}
+                                                                className={`relative w-full border rounded-lg overflow-hidden transition-all ${selected ? 'border-plex bg-plex/5 shadow-[0_0_0_1px_rgba(229,160,13,0.35)]' : 'border-white/5'} ${excluded ? 'ring-1 ring-red-500/60' : ''}`}
+                                                            >
+                                                                <button
+                                                                    type="button"
+                                                                    className="w-full text-left"
+                                                                    aria-pressed={selected}
+                                                                    onClick={() => {
+                                                                        setSelectedExcludeKeys((prev) => prev.includes(key) ? prev.filter((v) => v !== key) : [...prev, key]);
+                                                                    }}
+                                                                >
+                                                                    <div className="aspect-[2/3] bg-black/40 relative">
+                                                                        {item.thumb ? (
+                                                                            <img src={portalUrl(`/api/plex/image?path=${encodeURIComponent(item.thumb)}&width=220&height=330`)} alt={item.title} loading="lazy" className="w-full h-full object-cover" />
+                                                                        ) : (
+                                                                            <div className="w-full h-full flex items-center justify-center text-xs text-muted">No Poster</div>
+                                                                        )}
+                                                                        {selected && (
+                                                                            <>
+                                                                                <div className="absolute inset-0 bg-plex/20 pointer-events-none" />
+                                                                                <div className="absolute top-2 left-2 w-6 h-6 rounded-full bg-plex text-background flex items-center justify-center shadow-md pointer-events-none">
+                                                                                    <Check className="w-3.5 h-3.5" strokeWidth={3} />
+                                                                                </div>
+                                                                            </>
+                                                                        )}
+                                                                        {excluded && (
+                                                                            <span className="absolute top-2 right-2 text-[10px] px-1.5 py-0.5 rounded bg-red-600/95 text-white font-bold pointer-events-none">
+                                                                                Excluded
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+                                                                    <p className="px-2 pt-2 text-xs text-text line-clamp-2">{item.title}</p>
+                                                                </button>
+                                                                <div className="px-2 pb-2 pt-1 flex items-center justify-between gap-2 min-h-[2rem]">
+                                                                    <p className="text-[11px] text-muted truncate">{item.libraryTitle}</p>
+                                                                    <button
+                                                                        type="button"
+                                                                        className={`text-[10px] font-semibold shrink-0 whitespace-nowrap transition-colors ${excluded ? 'text-muted hover:text-text' : 'text-plex hover:text-plex-hover'}`}
+                                                                        onClick={toggleQuickExclude}
+                                                                    >
+                                                                        {excluded ? 'Unexclude' : 'Exclude'}
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                    {!libraryItems.length && <p className="text-sm text-muted col-span-full">No titles found for the current library/search.</p>}
+                                                </div>
+                                            )}
+                                            <div className="flex items-center justify-between">
+                                                <button
+                                                    type="button"
+                                                    className="px-3 py-1.5 bg-border text-text rounded-md text-sm font-semibold disabled:opacity-50"
+                                                    disabled={libraryBrowsePage <= 1}
+                                                    onClick={() => setLibraryBrowsePage((p) => Math.max(1, p - 1))}
+                                                >
+                                                    Previous
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    className="px-3 py-1.5 bg-border text-text rounded-md text-sm font-semibold disabled:opacity-50"
+                                                    disabled={(libraryBrowsePage * libraryBrowseLimit) >= libraryBrowseTotal}
+                                                    onClick={() => setLibraryBrowsePage((p) => p + 1)}
+                                                >
+                                                    Next
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div className="bg-background/30 border border-white/5 rounded-lg p-3 space-y-3">
+                                            <h4 className="text-sm font-bold text-text">Current Exclusions (Resolved)</h4>
+                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                                <div className="bg-background/30 border border-white/5 rounded-lg p-3 space-y-2">
+                                                    <p className="text-xs font-bold text-muted uppercase tracking-wider">Excluded Titles by RatingKey</p>
+                                                    <div className="space-y-2 max-h-52 overflow-y-auto custom-scrollbar pr-1">
+                                                        {exclusionsSummary.ratingKeys.map((entry: any) => (
+                                                            <div key={`resolved-key-${entry.ratingKey}`} className="flex items-center gap-2 bg-background/30 border border-white/5 rounded-md p-2">
+                                                                <div className="w-10 h-14 rounded overflow-hidden bg-black/40 flex-shrink-0">
+                                                                    {entry.thumb ? (
+                                                                        <img src={portalUrl(`/api/plex/image?path=${encodeURIComponent(entry.thumb)}&width=80&height=120`)} alt={entry.title} className="w-full h-full object-cover" />
+                                                                    ) : (
+                                                                        <div className="w-full h-full flex items-center justify-center text-[9px] text-muted">No Poster</div>
+                                                                    )}
+                                                                </div>
+                                                                <div className="min-w-0">
+                                                                    <p className="text-xs text-text line-clamp-2">{entry.title}</p>
+                                                                    <p className="text-[10px] text-muted line-clamp-1">{entry.libraryTitle || entry.ratingKey}</p>
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                        {!exclusionsSummary.ratingKeys.length && <p className="text-xs text-muted">No ratingKey exclusions set.</p>}
+                                                    </div>
+                                                </div>
+                                                <div className="bg-background/30 border border-white/5 rounded-lg p-3 space-y-2">
+                                                    <p className="text-xs font-bold text-muted uppercase tracking-wider">Excluded Title Terms</p>
+                                                    <div className="space-y-1.5 max-h-52 overflow-y-auto custom-scrollbar pr-1">
+                                                        {exclusionsSummary.titles.map((entry: any) => (
+                                                            <div key={`resolved-title-${entry.title}`} className="bg-background/30 border border-white/5 rounded-md px-2 py-1.5">
+                                                                <p className="text-xs text-text line-clamp-1">{entry.title}</p>
+                                                                <p className="text-[10px] text-muted">{entry.matchCount} indexed match(es)</p>
+                                                            </div>
+                                                        ))}
+                                                        {!exclusionsSummary.titles.length && <p className="text-xs text-muted">No title exclusions set.</p>}
+                                                    </div>
+                                                </div>
+                                                <div className="bg-background/30 border border-white/5 rounded-lg p-3 space-y-2">
+                                                    <p className="text-xs font-bold text-muted uppercase tracking-wider">Excluded Libraries</p>
+                                                    <div className="space-y-1.5 max-h-52 overflow-y-auto custom-scrollbar pr-1">
+                                                        {exclusionsSummary.libraries.map((entry: any) => (
+                                                            <div key={`resolved-library-${entry.libraryTitle}`} className="bg-background/30 border border-white/5 rounded-md px-2 py-1.5">
+                                                                <p className="text-xs text-text line-clamp-1">{entry.libraryTitle}</p>
+                                                                <p className="text-[10px] text-muted">{entry.matchCount} indexed item(s)</p>
+                                                            </div>
+                                                        ))}
+                                                        {!exclusionsSummary.libraries.length && <p className="text-xs text-muted">No library exclusions set.</p>}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                            <div>
+                                                <label className="text-xs text-muted font-bold uppercase">Title Exclusions (advanced, one per line)</label>
+                                                <textarea
+                                                    className="w-full min-h-[180px] p-3 rounded-lg border border-border bg-card text-text text-xs"
+                                                    value={(preferences?.exclusions?.titles || []).join('\n')}
+                                                    onChange={(e) => setPreferences((prev: any) => ({ ...prev, exclusions: { ...(prev.exclusions || {}), titles: e.target.value.split('\n').map(v => v.trim()).filter(Boolean) } }))}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="text-xs text-muted font-bold uppercase">Library Exclusions (advanced, one per line)</label>
+                                                <textarea
+                                                    className="w-full min-h-[180px] p-3 rounded-lg border border-border bg-card text-text text-xs"
+                                                    value={(preferences?.exclusions?.libraries || []).join('\n')}
+                                                    onChange={(e) => setPreferences((prev: any) => ({ ...prev, exclusions: { ...(prev.exclusions || {}), libraries: e.target.value.split('\n').map(v => v.trim()).filter(Boolean) } }))}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="text-xs text-muted font-bold uppercase">RatingKey Exclusions (advanced, one per line)</label>
+                                                <textarea
+                                                    className="w-full min-h-[180px] p-3 rounded-lg border border-border bg-card text-text text-xs"
+                                                    value={(preferences?.exclusions?.ratingKeys || []).join('\n')}
+                                                    onChange={(e) => setPreferences((prev: any) => ({ ...prev, exclusions: { ...(prev.exclusions || {}), ratingKeys: e.target.value.split('\n').map(v => v.trim()).filter(Boolean) } }))}
+                                                />
+                                            </div>
+                                        </div>
+                                        <button type="button" className="px-3 py-2 bg-plex text-background rounded-md text-sm font-semibold" onClick={async () => { await savePreferences(preferences); await loadExclusionsSummary(); addToast('Exclusions saved.'); }}>
+                                            Save Exclusions
+                                        </button>
                                     </div>
-                                    <div>
-                                        <label className="text-xs text-muted font-bold uppercase">RatingKey Exclusions (advanced, one per line)</label>
-                                        <textarea
-                                            className="w-full min-h-[180px] p-3 rounded-lg border border-border bg-card text-text text-xs"
-                                            value={(preferences?.exclusions?.ratingKeys || []).join('\n')}
-                                            onChange={(e) => setPreferences((prev: any) => ({ ...prev, exclusions: { ...(prev.exclusions || {}), ratingKeys: e.target.value.split('\n').map(v => v.trim()).filter(Boolean) } }))}
-                                        />
+                                )}
+                                {activeSection === 'settings' && (
+                                    <div className="glass-card-sm p-5 space-y-4">
+                                        <h3 className="text-xl font-bold text-plex">Maintenance Settings</h3>
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                            <div className="bg-background/30 border border-white/5 rounded-lg p-3">
+                                                <label className="text-xs text-muted font-bold uppercase block mb-2">Default Dry-run</label>
+                                                <label className="text-sm text-muted flex items-center gap-2">
+                                                    <input type="checkbox" checked={!!preferences?.global?.dryRunByDefault} onChange={(e) => setPreferences((prev: any) => ({ ...prev, global: { ...(prev.global || {}), dryRunByDefault: e.target.checked } }))} />
+                                                    Enable by default
+                                                </label>
+                                            </div>
+                                            <div className="bg-background/30 border border-white/5 rounded-lg p-3">
+                                                <label className="text-xs text-muted font-bold uppercase block mb-2">Max Actions Per Run</label>
+                                                <input type="number" min={1} className="w-full p-2 rounded border border-border bg-card text-text text-sm" value={preferences?.global?.maxActionsPerRun || 25} onChange={(e) => setPreferences((prev: any) => ({ ...prev, global: { ...(prev.global || {}), maxActionsPerRun: Math.max(1, Number(e.target.value) || 1) } }))} />
+                                            </div>
+                                            <div className="bg-background/30 border border-white/5 rounded-lg p-3">
+                                                <label className="text-xs text-muted font-bold uppercase block mb-2">Require Confirm Token</label>
+                                                <label className="text-sm text-muted flex items-center gap-2">
+                                                    <input type="checkbox" checked={!!preferences?.global?.requireConfirmForDestructive} onChange={(e) => setPreferences((prev: any) => ({ ...prev, global: { ...(prev.global || {}), requireConfirmForDestructive: e.target.checked } }))} />
+                                                    Required for destructive runs
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <button type="button" className="px-3 py-2 bg-plex text-background rounded-md text-sm font-semibold" onClick={async () => { await savePreferences(preferences); addToast('Maintenance settings saved.'); }}>
+                                            Save Maintenance Settings
+                                        </button>
                                     </div>
-                                </div>
-                                <button type="button" className="px-3 py-2 bg-plex text-background rounded-md text-sm font-semibold" onClick={async () => { await savePreferences(preferences); await loadExclusionsSummary(); addToast('Exclusions saved.'); }}>
-                                    Save Exclusions
-                                </button>
-                            </div>
-                        )}
-                        {activeSection === 'settings' && (
-                            <div className="glass-card-sm p-5 space-y-4">
-                                <h3 className="text-xl font-bold text-plex">Maintenance Settings</h3>
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                                    <div className="bg-background/30 border border-white/5 rounded-lg p-3">
-                                        <label className="text-xs text-muted font-bold uppercase block mb-2">Default Dry-run</label>
-                                        <label className="text-sm text-muted flex items-center gap-2">
-                                            <input type="checkbox" checked={!!preferences?.global?.dryRunByDefault} onChange={(e) => setPreferences((prev: any) => ({ ...prev, global: { ...(prev.global || {}), dryRunByDefault: e.target.checked } }))} />
-                                            Enable by default
-                                        </label>
-                                    </div>
-                                    <div className="bg-background/30 border border-white/5 rounded-lg p-3">
-                                        <label className="text-xs text-muted font-bold uppercase block mb-2">Max Actions Per Run</label>
-                                        <input type="number" min={1} className="w-full p-2 rounded border border-border bg-card text-text text-sm" value={preferences?.global?.maxActionsPerRun || 25} onChange={(e) => setPreferences((prev: any) => ({ ...prev, global: { ...(prev.global || {}), maxActionsPerRun: Math.max(1, Number(e.target.value) || 1) } }))} />
-                                    </div>
-                                    <div className="bg-background/30 border border-white/5 rounded-lg p-3">
-                                        <label className="text-xs text-muted font-bold uppercase block mb-2">Require Confirm Token</label>
-                                        <label className="text-sm text-muted flex items-center gap-2">
-                                            <input type="checkbox" checked={!!preferences?.global?.requireConfirmForDestructive} onChange={(e) => setPreferences((prev: any) => ({ ...prev, global: { ...(prev.global || {}), requireConfirmForDestructive: e.target.checked } }))} />
-                                            Required for destructive runs
-                                        </label>
-                                    </div>
-                                </div>
-                                <button type="button" className="px-3 py-2 bg-plex text-background rounded-md text-sm font-semibold" onClick={async () => { await savePreferences(preferences); addToast('Maintenance settings saved.'); }}>
-                                    Save Maintenance Settings
-                                </button>
-                            </div>
-                        )}
-                        </>
+                                )}
+                            </>
                         )}
                     </div>
                 </div>
@@ -6498,7 +6553,7 @@ export const Navigation: React.FC<NavigationProps> = ({ currentRoute, onNavigate
         'status': { label: 'Status', icon: Activity, route: 'status', adminOnly: false },
         'logs': { label: 'Logs', icon: FileText, route: 'logs', adminOnly: true },
         'analytics': { label: 'Analytics', icon: BarChart3, route: 'analytics', adminOnly: false },
-        'mediastack': { label: 'Media Stack', icon: Layers, route: 'mediastack', adminOnly: false },
+        'mediastack': { label: 'Calendar', icon: Layers, route: 'mediastack', adminOnly: false },
         'maintenance': { label: 'Maintenance', icon: Shield, route: 'maintenance', adminOnly: true },
         'request': { label: 'Request Content', icon: Sparkles, route: '', adminOnly: false, href: requestUrl },
         'settings': { label: 'Settings', icon: Settings, route: 'settings', adminOnly: true },
