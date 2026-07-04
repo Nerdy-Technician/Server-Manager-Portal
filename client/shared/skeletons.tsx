@@ -121,14 +121,9 @@ export const WrapUpCardsSkeleton: React.FC = () => (
 );
 
 export const ActivityCardSkeleton: React.FC = () => (
-    <div className="bg-card rounded-xl border border-border flex flex-col overflow-hidden shadow-lg" aria-hidden="true">
-        <div className="discover-activity-card-body">
-            <div className="discover-activity-card-poster">
-                <div className="discover-activity-card-poster-inner">
-                    <SkeletonBlock className="absolute inset-0 rounded-none" />
-                </div>
-            </div>
-            <div className="discover-activity-card-content">
+    <div className="bg-card rounded-xl border border-border flex flex-row overflow-hidden shadow-lg h-full" aria-hidden="true">
+        <SkeletonBlock className="w-32 md:w-40 flex-shrink-0 self-start aspect-[2/3] rounded-none" />
+        <div className="p-4 flex flex-col flex-grow gap-3 justify-center min-w-0">
             <SkeletonBlock className="h-4 w-3/4 rounded" />
             <SkeletonBlock className="h-3 w-1/2 rounded" />
             <div className="flex gap-2 mt-1">
@@ -140,13 +135,12 @@ export const ActivityCardSkeleton: React.FC = () => (
                 <SkeletonBlock className="h-3 w-4/5 rounded" />
                 <SkeletonBlock className="h-3 w-3/5 rounded" />
             </div>
-            </div>
         </div>
     </div>
 );
 
-export const ActivityGridSkeleton: React.FC<{ count?: number; wideLayout?: boolean }> = ({ count = 3 }) => (
-    <div className="discover-activity-grid" aria-hidden="true">
+export const ActivityGridSkeleton: React.FC<{ count?: number; wideLayout?: boolean }> = ({ count = 3, wideLayout = false }) => (
+    <div className={wideLayout && count >= 4 ? 'discover-activity-grid discover-activity-grid--quad' : 'discover-activity-grid'} aria-hidden="true">
         {Array.from({ length: count }, (_, i) => (
             <ActivityCardSkeleton key={i} />
         ))}

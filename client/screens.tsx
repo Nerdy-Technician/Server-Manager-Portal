@@ -25,7 +25,7 @@ import { ShareWrapUpModal } from './shared/ShareWrapUp';
 import { WrapUpCardGrid } from './shared/WrapUpCards';
 import { SetupWizard } from './setup/SetupWizard';
 import { AuthPageBackground, themeClasses } from './shared/theme';
-import { activityStreamGridClass, discoverPosterGridClass, usePortalWideContentLayout } from './shared/portalLayout';
+import { activityStreamColumnCount, activityStreamGridClass, discoverPosterGridClass, usePortalWideContentLayout } from './shared/portalLayout';
 import { UserDashboardLayout } from './home/UserDashboardLayout';
 import { createMainGridWidgetRenderer, createRecentlyAddedWidgetRenderer } from './home/userDashboardWidgetRenderers';
 
@@ -4919,37 +4919,38 @@ export const LibraryDashboard: React.FC<{ onBack: () => void, isAdmin?: boolean,
                     <h2 className="text-plex text-sm uppercase tracking-[2px] mb-6 font-bold border-b border-white/10 pb-2">ACTIVITY</h2>
                     {dashboardData && dashboardData.activeSessions && dashboardData.activeSessions.length > 0 ? (
                         <div className="w-full">
-                            <div className={activityStreamGridClass}>
-                            {dashboardData.activeSessions.map((session, i) => (
-                                <div key={session.sessionId ?? i} onClick={() => setSelectedSession(session)} className="bg-card rounded-xl border border-border flex flex-col overflow-hidden shadow-lg hover:border-plex/50 hover:shadow-plex/20 transition-all cursor-pointer select-none min-w-0">
-                                    <div className="discover-activity-card-body">
-                                        <div className="discover-activity-card-poster bg-card">
-                                            <div className="discover-activity-card-poster-inner">
-                                                <img src={portalUrl(`/api/plex/image?path=${encodeURIComponent(session.thumb)}&width=300&height=500`)} alt={session.title} loading="lazy" className="absolute inset-0 w-full h-full object-cover drop-shadow-2xl" />
-                                            </div>
+                            <div className={activityStreamGridClass(isWidePortalLayout, dashboardData.activeSessions.length)}>
+                            {dashboardData.activeSessions.map((session, i) => {
+                                const activityCols = activityStreamColumnCount(isWidePortalLayout, dashboardData.activeSessions.length);
+                                return (
+                                <div key={session.sessionId ?? i} onClick={() => setSelectedSession(session)} className="bg-card rounded-xl border border-border flex flex-col overflow-hidden shadow-lg hover:border-plex/50 hover:shadow-plex/20 transition-all cursor-pointer select-none h-full">
+                                    <div className="flex flex-row flex-grow relative items-start">
+                                        <div className={`${activityCols === 4 ? 'w-28 md:w-32' : 'w-32 md:w-40'} flex-shrink-0 relative overflow-hidden bg-card`}>
+                                            <div className="w-full pb-[127%]"></div>
+                                            <img src={portalUrl(`/api/plex/image?path=${encodeURIComponent(session.thumb)}&width=300&height=500`)} alt={session.title} loading="lazy" className="absolute inset-0 w-full h-full object-cover drop-shadow-2xl" />
                                         </div>
-                                        <div className="discover-activity-card-content">
-                                            <div className="min-w-0">
-                                                <div className="flex items-start justify-between gap-2 mb-1">
-                                                    <div className="activity-header min-w-0 flex-1">
-                                                        <div className="activity-title-group">
-                                                            <div className="text-sm font-bold text-text line-clamp-2 leading-tight min-h-[2.5rem]">{session.grandparentTitle ? session.grandparentTitle : session.title}</div>
-                                                            <div className="discover-activity-card-subtitle text-[10px] md:text-xs text-muted line-clamp-2 leading-snug mt-0.5">
-                                                                {session.type === 'episode' && session.season !== undefined && session.episode !== undefined
-                                                                    ? `${session.title} | S${String(session.season).padStart(2, '0')}E${String(session.episode).padStart(2, '0')}`
-                                                                    : (session.grandparentTitle ? session.title : '\u00A0')}
-                                                            </div>
+                                        <div className="p-2 md:p-3 flex flex-col flex-grow min-w-0 justify-center relative">
+                                            {session.user && (
+                                                <div className="absolute top-2 right-2 flex items-center gap-1.5 bg-black/50 backdrop-blur-md rounded-full pr-2.5 p-0.5 shadow-md border border-white/5">
+                                                    <img src={session.userThumb ? session.userThumb : 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'} alt={session.user} className="w-5 h-5 rounded-full object-cover" onError={(e) => { e.currentTarget.src = 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'; }} />
+                                                    <span className="text-[10px] font-bold text-white/90 truncate max-w-[80px] md:max-w-[100px]">{session.user}</span>
+                                                </div>
+                                            )}
+
+                                            <div className="activity-header mb-0.5 pr-20 md:pr-28">
+                                                <div className="activity-title-group">
+                                                    <div className="text-sm md:text-base font-bold text-text line-clamp-2 leading-tight">{session.grandparentTitle ? session.grandparentTitle : session.title}</div>
+                                                    {session.type === 'episode' && session.season !== undefined && session.episode !== undefined ? (
+                                                        <div className="text-[10px] md:text-xs text-muted line-clamp-2 leading-snug mt-0.5">
+                                                            {session.title} | S{String(session.season).padStart(2, '0')}E{String(session.episode).padStart(2, '0')}
                                                         </div>
-                                                    </div>
-                                                    {session.user && (
-                                                        <div className="flex items-center gap-1.5 bg-black/50 backdrop-blur-md rounded-full pr-2.5 p-0.5 shadow-md border border-white/5 flex-shrink-0 max-w-[42%]">
-                                                            <img src={session.userThumb ? session.userThumb : 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'} alt={session.user} className="w-5 h-5 rounded-full object-cover flex-shrink-0" onError={(e) => { e.currentTarget.src = 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'; }} />
-                                                            <span className="text-[10px] font-bold text-white/90 truncate">{session.user}</span>
-                                                        </div>
+                                                    ) : (
+                                                        session.grandparentTitle && <div className="text-[10px] md:text-xs text-muted line-clamp-2 leading-snug mt-0.5">{session.title}</div>
                                                     )}
                                                 </div>
+                                            </div>
 
-                                                <div className="flex flex-wrap gap-1">
+                                            <div className="flex flex-wrap gap-1 mb-2 mt-0.5">
                                                 {session.resolution && (
                                                     <span className="bg-white/10 text-white/90 text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wide border border-white/10">{session.resolution.includes('p') || session.resolution.includes('k') ? session.resolution : `${session.resolution}p`}</span>
                                                 )}
@@ -4957,9 +4958,8 @@ export const LibraryDashboard: React.FC<{ onBack: () => void, isAdmin?: boolean,
                                                     {session.sessionLocation === 'lan' ? 'Local' : 'Remote'}
                                                 </span>
                                             </div>
-                                            </div>
 
-                                            <div className="activity-details flex flex-col gap-0.5">
+                                            <div className="activity-details flex flex-col gap-0.5 mt-auto">
                                                 <div className="flex justify-between items-start text-[10px] md:text-xs border-b border-white/5 pb-0.5">
                                                     <span className="text-muted uppercase tracking-wider font-bold mt-0.5">PLAYER</span>
                                                     <span className="detail-value text-right break-words max-w-[130px] md:max-w-[180px]">{session.playerTitle}</span>
@@ -4972,10 +4972,10 @@ export const LibraryDashboard: React.FC<{ onBack: () => void, isAdmin?: boolean,
                                                 </div>
                                                 <div className="flex justify-between items-center text-[10px] md:text-xs border-b border-white/5 pb-0.5">
                                                     <span className="text-muted uppercase tracking-wider font-bold">STATE</span>
-                                                    <div className="flex items-center gap-1.5">
-                                                        <span className="detail-value font-bold">{session.state.charAt(0).toUpperCase() + session.state.slice(1)}</span>
+                                                    <div className="flex items-center gap-1.5 min-w-0">
+                                                        <span className="detail-value font-bold truncate">{session.state.charAt(0).toUpperCase() + session.state.slice(1)}</span>
                                                         {session.timeRemaining > 0 && session.state === 'playing' && (
-                                                            <span className="text-[9px] text-muted/80">
+                                                            <span className="text-[9px] text-muted/80 whitespace-nowrap">
                                                                 ({Math.floor(session.timeRemaining / 3600000) > 0 ? `${Math.floor(session.timeRemaining / 3600000)}h ` : ''}
                                                                 {Math.floor((session.timeRemaining % 3600000) / 60000)}m left)
                                                             </span>
@@ -5016,7 +5016,8 @@ export const LibraryDashboard: React.FC<{ onBack: () => void, isAdmin?: boolean,
                                         );
                                     })()}
                                 </div>
-                            ))}
+                                );
+                            })}
                             </div>
                         </div>
                     ) : (

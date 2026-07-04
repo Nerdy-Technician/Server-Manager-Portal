@@ -24,7 +24,13 @@ export const usePortalWideContentLayout = () => {
     return isWide;
 };
 
-export const activityStreamGridClass = 'discover-activity-grid';
+export const activityStreamColumnCount = (wideLayout: boolean, sessionCount: number) =>
+    wideLayout && sessionCount >= 4 ? 4 : 3;
+
+export const activityStreamGridClass = (wideLayout: boolean, sessionCount: number) => {
+    const useFourCols = activityStreamColumnCount(wideLayout, sessionCount) === 4;
+    return useFourCols ? 'discover-activity-grid discover-activity-grid--quad' : 'discover-activity-grid';
+};
 
 /** Auto-wrapping poster grid sized to the content area, not the viewport. */
 export const discoverPosterGridClass = 'discover-poster-grid';
