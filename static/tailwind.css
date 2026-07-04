@@ -1031,6 +1031,40 @@ input[type="date"], input[type="time"], input[type="datetime-local"], input[type
   grid-template-columns: minmax(0, 1fr);
 }
 
+.discover-activity-card-body {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+}
+
+.discover-activity-card-poster {
+  width: 7rem;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.discover-activity-card-poster-inner {
+  aspect-ratio: 2 / 3;
+  width: 100%;
+  position: relative;
+}
+
+.discover-activity-card-content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  height: 10.5rem;
+  padding: 0.75rem;
+  overflow: hidden;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.discover-activity-card-subtitle {
+  min-height: 2rem;
+}
+
 @container (min-width: 34rem) {
   .discover-activity-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1790,10 +1824,6 @@ input[type="date"], input[type="time"], input[type="datetime-local"], input[type
   min-height: 112px;
 }
 
-.min-h-\[11rem\] {
-  min-height: 11rem;
-}
-
 .min-h-\[140px\] {
   min-height: 140px;
 }
@@ -1802,8 +1832,8 @@ input[type="date"], input[type="time"], input[type="datetime-local"], input[type
   min-height: 180px;
 }
 
-.min-h-\[184px\] {
-  min-height: 184px;
+.min-h-\[2\.5rem\] {
+  min-height: 2.5rem;
 }
 
 .min-h-\[240px\] {
@@ -1996,10 +2026,6 @@ input[type="date"], input[type="time"], input[type="datetime-local"], input[type
 
 .w-\[520px\] {
   width: 520px;
-}
-
-.w-\[7\.5rem\] {
-  width: 7.5rem;
 }
 
 .w-\[90\%\] {
@@ -3804,10 +3830,6 @@ input[type="date"], input[type="time"], input[type="datetime-local"], input[type
 
 .pb-8 {
   padding-bottom: 2rem;
-}
-
-.pb-\[127\%\] {
-  padding-bottom: 127%;
 }
 
 .pb-\[150\%\] {
@@ -5943,10 +5965,6 @@ input[type="date"], input[type="time"], input[type="datetime-local"], input[type
 
   .md\:w-32 {
     width: 8rem;
-  }
-
-  .md\:w-36 {
-    width: 9rem;
   }
 
   .md\:w-4 {

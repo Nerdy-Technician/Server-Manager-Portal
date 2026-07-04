@@ -4921,25 +4921,24 @@ export const LibraryDashboard: React.FC<{ onBack: () => void, isAdmin?: boolean,
                         <div className="w-full">
                             <div className={activityStreamGridClass}>
                             {dashboardData.activeSessions.map((session, i) => (
-                                <div key={session.sessionId ?? i} onClick={() => setSelectedSession(session)} className="bg-card rounded-xl border border-border flex flex-col overflow-hidden shadow-lg hover:border-plex/50 hover:shadow-plex/20 transition-all cursor-pointer select-none min-w-0 h-full">
-                                    <div className="flex flex-row flex-grow relative min-h-[11rem]">
-                                        <div className="w-[7.5rem] sm:w-32 md:w-36 flex-shrink-0 relative overflow-hidden bg-card">
-                                            <div className="w-full pb-[127%]"></div>
-                                            <img src={portalUrl(`/api/plex/image?path=${encodeURIComponent(session.thumb)}&width=300&height=500`)} alt={session.title} loading="lazy" className="absolute inset-0 w-full h-full object-cover drop-shadow-2xl" />
+                                <div key={session.sessionId ?? i} onClick={() => setSelectedSession(session)} className="bg-card rounded-xl border border-border flex flex-col overflow-hidden shadow-lg hover:border-plex/50 hover:shadow-plex/20 transition-all cursor-pointer select-none min-w-0">
+                                    <div className="discover-activity-card-body">
+                                        <div className="discover-activity-card-poster bg-card">
+                                            <div className="discover-activity-card-poster-inner">
+                                                <img src={portalUrl(`/api/plex/image?path=${encodeURIComponent(session.thumb)}&width=300&height=500`)} alt={session.title} loading="lazy" className="absolute inset-0 w-full h-full object-cover drop-shadow-2xl" />
+                                            </div>
                                         </div>
-                                        <div className="p-3 flex flex-col flex-grow min-w-0 justify-between relative gap-2">
+                                        <div className="discover-activity-card-content">
                                             <div className="min-w-0">
                                                 <div className="flex items-start justify-between gap-2 mb-1">
                                                     <div className="activity-header min-w-0 flex-1">
                                                         <div className="activity-title-group">
-                                                            <div className="text-sm md:text-base font-bold text-text line-clamp-2 leading-tight">{session.grandparentTitle ? session.grandparentTitle : session.title}</div>
-                                                            {session.type === 'episode' && session.season !== undefined && session.episode !== undefined ? (
-                                                                <div className="text-[10px] md:text-xs text-muted line-clamp-2 leading-snug mt-0.5">
-                                                                    {session.title} | S{String(session.season).padStart(2, '0')}E{String(session.episode).padStart(2, '0')}
-                                                                </div>
-                                                            ) : (
-                                                                session.grandparentTitle && <div className="text-[10px] md:text-xs text-muted line-clamp-2 leading-snug mt-0.5">{session.title}</div>
-                                                            )}
+                                                            <div className="text-sm font-bold text-text line-clamp-2 leading-tight min-h-[2.5rem]">{session.grandparentTitle ? session.grandparentTitle : session.title}</div>
+                                                            <div className="discover-activity-card-subtitle text-[10px] md:text-xs text-muted line-clamp-2 leading-snug mt-0.5">
+                                                                {session.type === 'episode' && session.season !== undefined && session.episode !== undefined
+                                                                    ? `${session.title} | S${String(session.season).padStart(2, '0')}E${String(session.episode).padStart(2, '0')}`
+                                                                    : (session.grandparentTitle ? session.title : '\u00A0')}
+                                                            </div>
                                                         </div>
                                                     </div>
                                                     {session.user && (
