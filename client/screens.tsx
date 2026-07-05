@@ -29,6 +29,29 @@ import { activityStreamColumnCount, activityStreamGridClass, discoverPosterGridC
 import { UserDashboardLayout } from './home/UserDashboardLayout';
 import { createMainGridWidgetRenderer, createRecentlyAddedWidgetRenderer } from './home/userDashboardWidgetRenderers';
 
+const JELLYFIN_ICON_URL = 'https://cdn.jsdelivr.net/gh/selfhst/icons/svg/jellyfin.svg';
+
+const jellyfinQuickConnectUrl = (baseUrl: string) => {
+    const base = String(baseUrl || '').replace(/\/+$/, '');
+    return base ? `${base}/web/#/quickconnect` : '';
+};
+
+const copyTextToClipboard = async (value: string) => {
+    if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(value);
+        return;
+    }
+    const textarea = document.createElement('textarea');
+    textarea.value = value;
+    textarea.setAttribute('readonly', 'true');
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = '0';
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand('copy');
+    document.body.removeChild(textarea);
+};
+
 declare global {
     interface Window {
         __USE_24_HOUR_CLOCK__?: boolean;
@@ -73,7 +96,8 @@ const UserCard: React.FC<{
     isConfigured: boolean;
     isSelected: boolean;
     onSelect: (id: string) => void;
-}> = ({ user, onEdit, onDelete, onRevoke, isConfigured, isSelected, onSelect }) => {
+    providerLabel?: string;
+}> = ({ user, onEdit, onDelete, onRevoke, isConfigured, isSelected, onSelect, providerLabel = 'Plex' }) => {
     const { status, statusText, daysRemainingText, pillClass, borderClass } = useMemo(() => {
         const days = getDaysUntilExpiry(user.expiryDate);
         let status: UserStatus = 'active';
@@ -120,7 +144,7 @@ const UserCard: React.FC<{
                         style={{ borderRadius: '50%' }}
                     />
                     {user.thumb ? (
-                        <img src={user.thumb} alt={user.username} className="w-10 h-10 rounded-full object-cover border border-border flex-shrink-0" />
+                        <img src={resolvePortalAssetUrl(user.thumb)} alt={user.username} className="w-10 h-10 rounded-full object-cover border border-border flex-shrink-0" />
                     ) : (
                         <div className="w-10 h-10 rounded-full bg-border flex items-center justify-center text-text font-bold text-sm uppercase flex-shrink-0">
                             {user.username.substring(0, 2)}
@@ -143,7 +167,7 @@ const UserCard: React.FC<{
                     <span className="text-text font-medium flex flex-wrap justify-end md:items-center gap-1"><span className="whitespace-nowrap">{formatDate(user.expiryDate)}</span> <span className="text-[0.7rem] text-muted whitespace-nowrap">({daysRemainingText})</span></span>
                 </div>
                 <div className="flex justify-between items-center text-sm pb-2 border-b border-white/5 last:border-0 last:pb-0">
-                    <span className="text-muted text-xs uppercase tracking-wider font-bold">Plex</span>
+                    <span className="text-muted text-xs uppercase tracking-wider font-bold">{providerLabel}</span>
                     <span className="info-value plex-status">
                         <span className={`plex-status-dot ${user.plexAccessStatus || 'unknown'}`}></span>
                         {(user.plexAccessStatus || 'unknown').charAt(0).toUpperCase() + (user.plexAccessStatus || 'unknown').slice(1)}
@@ -1835,6 +1859,16 @@ export const AnalyticsDashboard: React.FC<{ isAdmin: boolean, sessionInfo: any }
     const [viewerPage, setViewerPage] = useState(1);
     const viewersPerPage = 10;
     const [viewTab, setViewTab] = useState<'overview' | 'graphs'>('overview');
+    const mediaServerType = String(sessionInfo?.mediaServerType || 'plex').toLowerCase();
+    const isJellyfinPortal = mediaServerType === 'jellyfin';
+    const analyticsSourceLabel = isJellyfinPortal ? 'Jellystat' : 'Tautulli';
+    const resolveUserAvatar = (thumb: string | null | undefined, width = 80, height = 80) => {
+        if (!thumb) return logoUrl();
+        if (thumb.startsWith('http://') || thumb.startsWith('https://') || thumb.startsWith('/api/')) {
+            return resolvePortalAssetUrl(thumb);
+        }
+        return portalUrl(`/api/plex/image?path=${encodeURIComponent(thumb)}&width=${width}&height=${height}`);
+    };
 
     useEffect(() => {
         if (!isAdmin) return;
@@ -1853,18 +1887,19 @@ export const AnalyticsDashboard: React.FC<{ isAdmin: boolean, sessionInfo: any }
         let cancelled = false;
         const fetchAnalytics = async () => {
             setLoading(true);
+            setError(null);
             try {
-                const data = await apiFetch(`/api/plex/analytics?days=${days}`);
+                const data = await apiFetch(`${isJellyfinPortal ? '/api/jellystat/analytics' : '/api/plex/analytics'}?days=${days}`);
                 if (cancelled) return;
                 setAnalyticsData(data);
 
                 if (isAdmin) {
                     try {
-                        const tData = await apiFetch('/api/tautulli/stats');
+                        const tData = isJellyfinPortal ? data.jellystatInsights : await apiFetch('/api/tautulli/stats');
                         if (cancelled) return;
                         setTautulliData(tData);
                     } catch (e) {
-                        // Tautulli might not be configured, ignore error
+                        // Tautulli/Jellystat might not be configured, ignore the extra panel.
                         if (!cancelled) setTautulliData(null);
                     }
                 } else {
@@ -1878,7 +1913,11 @@ export const AnalyticsDashboard: React.FC<{ isAdmin: boolean, sessionInfo: any }
         };
         fetchAnalytics();
         return () => { cancelled = true; };
-    }, [days, isAdmin]);
+    }, [days, isAdmin, isJellyfinPortal]);
+
+    useEffect(() => {
+        if (isJellyfinPortal && viewTab === 'graphs') setViewTab('overview');
+    }, [isJellyfinPortal, viewTab]);
 
     const topUsersLength = analyticsData?.topUsers?.length || 0;
     const totalViewerPages = Math.max(1, Math.ceil(topUsersLength / viewersPerPage));
@@ -1958,9 +1997,11 @@ export const AnalyticsDashboard: React.FC<{ isAdmin: boolean, sessionInfo: any }
                         <button onClick={() => setViewTab('overview')} className={`px-4 py-2 rounded-md text-sm font-bold uppercase tracking-wider transition-colors flex items-center gap-2 ${viewTab === 'overview' ? 'bg-plex text-white shadow-lg' : 'text-muted hover:text-white'}`}>
                             <Activity className="w-4 h-4" /> Overview
                         </button>
-                        <button onClick={() => setViewTab('graphs')} className={`px-4 py-2 rounded-md text-sm font-bold uppercase tracking-wider transition-colors flex items-center gap-2 ${viewTab === 'graphs' ? 'bg-plex text-white shadow-lg' : 'text-muted hover:text-white'}`}>
-                            <LucideLineChart className="w-4 h-4" /> Graphs
-                        </button>
+                        {!isJellyfinPortal && (
+                            <button onClick={() => setViewTab('graphs')} className={`px-4 py-2 rounded-md text-sm font-bold uppercase tracking-wider transition-colors flex items-center gap-2 ${viewTab === 'graphs' ? 'bg-plex text-white shadow-lg' : 'text-muted hover:text-white'}`}>
+                                <LucideLineChart className="w-4 h-4" /> Graphs
+                            </button>
+                        )}
                     </div>
                 </div>
                 {viewTab === 'overview' && (
@@ -2110,7 +2151,7 @@ export const AnalyticsDashboard: React.FC<{ isAdmin: boolean, sessionInfo: any }
                                                             }}
                                                         >
                                                             {u.thumb ? (
-                                                                <img src={u.thumb.startsWith('http') ? u.thumb : portalUrl(`/api/plex/image?path=${encodeURIComponent(u.thumb)}&width=32&height=32`)} className="w-8 h-8 rounded-full object-cover border border-border flex-shrink-0" />
+                                                                <img src={resolveUserAvatar(u.thumb, 32, 32)} className="w-8 h-8 rounded-full object-cover border border-border flex-shrink-0" />
                                                             ) : (
                                                                 <div className="w-8 h-8 rounded-full bg-border flex items-center justify-center text-[10px] font-bold border border-border/50 flex-shrink-0">{u.username.substring(0, 2).toUpperCase()}</div>
                                                             )}
@@ -2131,7 +2172,7 @@ export const AnalyticsDashboard: React.FC<{ isAdmin: boolean, sessionInfo: any }
                                         <div className="flex items-center gap-4">
                                             <div className="relative">
                                                 <div className="w-10 h-10 rounded-full p-[2px] bg-gradient-to-r from-plex to-[#e5a00d]">
-                                                    <img src={user.thumb ? (user.thumb.startsWith('http') ? user.thumb : portalUrl(`/api/plex/image?path=${encodeURIComponent(user.thumb)}&width=80&height=80`)) : logoUrl()} alt={user.username} className="w-full h-full rounded-full object-cover bg-card" onError={(e) => { (e.target as HTMLImageElement).src = logoUrl(); }} />
+                                                    <img src={resolveUserAvatar(user.thumb, 80, 80)} alt={user.username} className="w-full h-full rounded-full object-cover bg-card" onError={(e) => { (e.target as HTMLImageElement).src = logoUrl(); }} />
                                                 </div>
                                                 <div className="absolute -top-2 -right-2 bg-plex text-black font-bold text-[10px] w-5 h-5 rounded-full flex items-center justify-center">#{((viewerPageSafe - 1) * viewersPerPage) + idx + 1}</div>
                                             </div>
@@ -2207,13 +2248,13 @@ export const AnalyticsDashboard: React.FC<{ isAdmin: boolean, sessionInfo: any }
                             )}
                         </div>
 
-                        {/* Tautulli Insights Card */}
+                        {/* Media Analytics Insights Card */}
                         {tautulliData && (
                             <div className="glass-card-sm p-4 md:p-6 col-span-full relative overflow-hidden">
                                 <div className="absolute top-0 right-0 p-3 opacity-10 pointer-events-none">
                                     <Activity className="w-32 h-32 text-[#3b82f6]" />
                                 </div>
-                                <h2 className="text-xl font-bold text-text mb-6 uppercase tracking-wider flex items-center gap-2 relative z-10"><Activity className="text-[#3b82f6] w-5 h-5" /> Tautulli All-Time Insights</h2>
+                                <h2 className="text-xl font-bold text-text mb-6 uppercase tracking-wider flex items-center gap-2 relative z-10"><Activity className="text-[#3b82f6] w-5 h-5" /> {analyticsSourceLabel} Insights</h2>
                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 relative z-10">
                                     <div className="flex flex-col p-4 bg-black/20 rounded-lg border border-white/5 shadow-inner">
                                         <span className="font-bold text-muted text-xs uppercase tracking-wider mb-2 flex items-center gap-2"><Users className="w-4 h-4 text-[#3b82f6]" /> Peak Streams</span>
@@ -2557,6 +2598,8 @@ export const AdminDashboard: React.FC<{ onLogout: () => void, onViewUserPortal: 
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'trial' | 'expiring' | 'expired' | 'revoked'>('all');
     const [sortBy, setSortBy] = useState<'username-asc' | 'username-desc' | 'expiry-asc' | 'expiry-desc' | 'joined-desc'>('username-asc');
+    const mediaServerType = String(configSettings.mediaServerType || 'plex').toLowerCase();
+    const mediaServerLabel = mediaServerType === 'jellyfin' ? 'Jellyfin' : 'Plex';
 
     const addToast = useCallback((message: string, type: 'success' | 'error' = 'success') => {
         setToasts(t => pushToast(t, message, type));
@@ -2596,7 +2639,7 @@ export const AdminDashboard: React.FC<{ onLogout: () => void, onViewUserPortal: 
                     await fetchUsers();
                     await fetchSecurityData();
                 } else {
-                    addToast('Welcome! Please configure your Plex settings to begin.', 'success');
+                    addToast('Welcome! Please configure your media server settings to begin.', 'success');
                     setSettingsModalOpen(true);
                 }
             } catch (error) {
@@ -2644,13 +2687,13 @@ export const AdminDashboard: React.FC<{ onLogout: () => void, onViewUserPortal: 
 
     const handleImportUsers = async () => {
         if (!isConfigured) {
-            addToast('Please configure Plex settings first.', 'error');
+            addToast(`Please configure ${mediaServerLabel} settings first.`, 'error');
             return;
         }
         setLoading(true);
         try {
             const result = await apiFetch('/api/sync', { method: 'POST' });
-            addToast(result.message || `Synced ${result.count} users from Plex.`);
+            addToast(result.message || `Synced ${result.count} users from ${mediaServerLabel}.`);
             await fetchUsers(); // Refresh user list
             await fetchSecurityData();
         } catch (error) {
@@ -2703,7 +2746,7 @@ export const AdminDashboard: React.FC<{ onLogout: () => void, onViewUserPortal: 
     };
 
     const handleDeleteUser = async (userId: string) => {
-        appConfirm('Are you sure you want to delete this user? This will revoke Plex access first.', async () => {
+        appConfirm(`Are you sure you want to delete this user? This will revoke ${mediaServerLabel} access first where supported.`, async () => {
             setLoading(true);
             try {
                 await apiFetch(`/api/users/${userId}`, { method: 'DELETE' });
@@ -2834,7 +2877,7 @@ export const AdminDashboard: React.FC<{ onLogout: () => void, onViewUserPortal: 
                         <span className="font-bold text-muted uppercase tracking-wider text-sm hidden md:inline-block mr-2">Quick Actions:</span>
                         <div className="grid grid-cols-2 md:flex md:flex-row gap-3 w-full md:w-auto flex-1">
                             <button className="col-span-2 md:col-span-1 px-3 py-2 bg-plex text-background rounded-md font-bold hover:bg-plex-hover transition-colors flex items-center justify-center gap-2 text-sm md:text-base" onClick={handleImportUsers} disabled={isLoading}>
-                                Sync Plex Users
+                                Sync {mediaServerLabel} Users
                             </button>
                         </div>
                     </div>
@@ -2940,6 +2983,7 @@ export const AdminDashboard: React.FC<{ onLogout: () => void, onViewUserPortal: 
                             isConfigured={isConfigured}
                             isSelected={selectedUserIds.includes(user.id)}
                             onSelect={handleToggleSelection}
+                            providerLabel={mediaServerLabel}
                         />
                     ))}
                 </div>
@@ -3096,7 +3140,12 @@ const LivePlexStats: React.FC = () => {
 export const Login: React.FC<{ onLoginSuccess: () => void, publicConfig?: any, initialError?: string }> = ({ onLoginSuccess, publicConfig, initialError }) => {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState(initialError || '');
-    const [publicInfo, setPublicInfo] = useState<{ thumb: string | null, serverName: string, isConfigured: boolean | null }>({ thumb: null, serverName: 'Server Portal', isConfigured: null });
+    const [jellyfinUsername, setJellyfinUsername] = useState('');
+    const [jellyfinPassword, setJellyfinPassword] = useState('');
+    const [showJellyfinPassword, setShowJellyfinPassword] = useState(false);
+    const [quickConnect, setQuickConnect] = useState<{ sessionId: string, code: string, jellyfinUrl: string } | null>(null);
+    const quickConnectPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    const [publicInfo, setPublicInfo] = useState<{ thumb: string | null, serverName: string, isConfigured: boolean | null, mediaServerType?: string }>({ thumb: null, serverName: 'Server Portal', isConfigured: null, mediaServerType: 'plex' });
 
     const fetchPublicInfo = () => {
         apiFetch('/api/public/info').then(data => {
@@ -3104,7 +3153,8 @@ export const Login: React.FC<{ onLoginSuccess: () => void, publicConfig?: any, i
                 setPublicInfo({
                     thumb: data.thumb || null,
                     serverName: data.serverName || 'Server Portal',
-                    isConfigured: data.isConfigured !== false
+                    isConfigured: data.isConfigured !== false,
+                    mediaServerType: data.mediaServerType || 'plex'
                 });
                 if (data.thumb) updateFavicon(data.thumb);
                 if (data.serverName) document.title = `${data.serverName} Portal`;
@@ -3119,6 +3169,10 @@ export const Login: React.FC<{ onLoginSuccess: () => void, publicConfig?: any, i
             window.history.replaceState({}, '', portalUrl('/'));
         }
     }, [initialError]);
+
+    useEffect(() => () => {
+        if (quickConnectPollRef.current) clearInterval(quickConnectPollRef.current);
+    }, []);
 
     useEffect(() => {
         fetchPublicInfo();
@@ -3167,6 +3221,78 @@ export const Login: React.FC<{ onLoginSuccess: () => void, publicConfig?: any, i
         }
     };
 
+    const handleJellyfinLogin = async (event?: React.FormEvent) => {
+        event?.preventDefault();
+        setIsLoading(true);
+        setError('');
+        try {
+            await apiFetch('/api/auth/jellyfin/login', {
+                method: 'POST',
+                body: JSON.stringify({ username: jellyfinUsername.trim(), password: jellyfinPassword }),
+            });
+            onLoginSuccess();
+        } catch (e: any) {
+            setError(e.message || 'Failed to authenticate with Jellyfin');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const stopQuickConnectPolling = () => {
+        if (quickConnectPollRef.current) {
+            clearInterval(quickConnectPollRef.current);
+            quickConnectPollRef.current = null;
+        }
+    };
+
+    const pollJellyfinQuickConnect = (sessionId: string) => {
+        stopQuickConnectPolling();
+        quickConnectPollRef.current = setInterval(async () => {
+            try {
+                const data = await apiFetch('/api/auth/jellyfin/quick-connect/poll', {
+                    method: 'POST',
+                    body: JSON.stringify({ sessionId }),
+                });
+                if (data?.success) {
+                    stopQuickConnectPolling();
+                    onLoginSuccess();
+                }
+            } catch (e: any) {
+                stopQuickConnectPolling();
+                setIsLoading(false);
+                setError(e.message || 'Jellyfin Quick Connect failed');
+            }
+        }, 5000);
+    };
+
+    const handleJellyfinQuickConnect = async () => {
+        setIsLoading(true);
+        setError('');
+        try {
+            const data = await apiFetch('/api/auth/jellyfin/quick-connect/initiate', { method: 'POST' });
+            setQuickConnect({
+                sessionId: data.sessionId,
+                code: data.code,
+                jellyfinUrl: data.jellyfinUrl || '',
+            });
+            setIsLoading(false);
+            pollJellyfinQuickConnect(data.sessionId);
+        } catch (e: any) {
+            setIsLoading(false);
+            setError(e.message || 'Failed to start Jellyfin Quick Connect');
+        }
+    };
+
+    const handleOpenJellyfinQuickConnect = async () => {
+        if (!quickConnect?.jellyfinUrl) return;
+        try {
+            await copyTextToClipboard(quickConnect.code);
+        } catch {
+            // Clipboard access can be blocked by browser settings; opening Jellyfin is still useful.
+        }
+        window.open(jellyfinQuickConnectUrl(quickConnect.jellyfinUrl), '_blank', 'noopener,noreferrer');
+    };
+
     if (publicInfo.isConfigured === false || (typeof window !== 'undefined' && stripBasePath(window.location.pathname).startsWith('/auth/setup/'))) {
         return <SetupWizard onComplete={fetchPublicInfo} />;
     }
@@ -3175,14 +3301,17 @@ export const Login: React.FC<{ onLoginSuccess: () => void, publicConfig?: any, i
         return <Loader isLoading={true} />;
     }
 
-    const showTrialAccess = publicConfig?.allowTemporaryAccess !== false;
+    const mediaServerType = String(publicConfig?.mediaServerType || publicInfo.mediaServerType || 'plex').toLowerCase();
+    const isJellyfinAuth = mediaServerType === 'jellyfin';
+    const showTrialAccess = !isJellyfinAuth && publicConfig?.allowTemporaryAccess !== false;
     const logoSrc = publicConfig?.customLogoUrl
         ? resolvePortalAssetUrl(publicConfig.customLogoUrl)
         : (publicInfo.thumb ? resolvePortalAssetUrl(publicInfo.thumb) : '');
+    const splashBackgroundUrl = publicConfig?.backgroundImageUrl ? resolvePortalAssetUrl(publicConfig.backgroundImageUrl) : undefined;
 
     return (
         <div className="relative min-h-screen w-full flex flex-col items-center justify-center p-4 sm:p-6 md:p-8 lg:p-10 overflow-hidden">
-            <AuthPageBackground />
+            <AuthPageBackground backgroundImageUrl={splashBackgroundUrl} />
             <Loader isLoading={isLoading} />
 
             <div className="relative z-10 w-full max-w-6xl flex flex-col gap-6">
@@ -3217,12 +3346,12 @@ export const Login: React.FC<{ onLoginSuccess: () => void, publicConfig?: any, i
 
                     <div className={`flex flex-col justify-center items-center text-center p-6 sm:p-8 lg:p-10 xl:p-12 min-w-0 ${showTrialAccess ? 'flex-1' : 'w-full py-10 sm:py-12'}`}>
                         <div className="relative mb-8">
-                            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-36 h-36 bg-plex/20 rounded-full blur-[60px] pointer-events-none" />
+                            {!logoSrc && <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-36 h-36 bg-plex/20 rounded-full blur-[60px] pointer-events-none" />}
                             {logoSrc ? (
                                 <img
                                     src={logoSrc}
                                     alt="Server Logo"
-                                    className="w-28 h-28 sm:w-32 sm:h-32 object-cover rounded-full border-2 border-plex/40 shadow-[0_0_40px_rgba(229,160,13,0.25)] relative z-10"
+                                    className="w-28 sm:w-32 max-h-32 object-contain relative z-10 drop-shadow-[0_0_28px_rgba(0,0,0,0.65)]"
                                     onError={(e) => {
                                         e.currentTarget.src = logoUrl();
                                         e.currentTarget.className = 'w-28 h-28 sm:w-32 sm:h-32 object-cover rounded-full border-2 border-plex/40 shadow-[0_0_40px_rgba(229,160,13,0.25)] relative z-10';
@@ -3239,7 +3368,9 @@ export const Login: React.FC<{ onLoginSuccess: () => void, publicConfig?: any, i
                                     {publicInfo.serverName}
                                 </h1>
                                 <p className="text-muted text-sm sm:text-base leading-relaxed mb-8 max-w-sm">
-                                    Sign in with Plex to access your portal and manage your subscription.
+                                    {isJellyfinAuth
+                                        ? 'Sign in with your Jellyfin account to access your portal and manage your subscription.'
+                                        : 'Sign in with Plex to access your portal and manage your subscription.'}
                                 </p>
                             </>
                         )}
@@ -3254,12 +3385,82 @@ export const Login: React.FC<{ onLoginSuccess: () => void, publicConfig?: any, i
                             </>
                         )}
 
-                        <button type="button" className={loginSecondaryBtnClass} onClick={handlePlexLogin} disabled={isLoading}>
-                            <img src={logoUrl()} alt="" className="w-5 h-5 object-contain opacity-80" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-                            Login with Plex
-                        </button>
+                        {isJellyfinAuth ? (
+                            <div className="w-full max-w-sm flex flex-col gap-4 text-left">
+                                <button type="button" className={loginSecondaryBtnClass} onClick={handleJellyfinQuickConnect} disabled={isLoading}>
+                                    <img src={JELLYFIN_ICON_URL} alt="" className="w-5 h-5 object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                                    Login with Jellyfin
+                                </button>
 
-                        {!showTrialAccess && (
+                                {quickConnect && (
+                                    <div className="w-full rounded-xl border border-plex/30 bg-plex/10 p-4 text-center">
+                                        <p className="text-[10px] font-bold text-muted uppercase tracking-[0.14em] mb-2">Quick Connect code</p>
+                                        <div className="font-black text-3xl tracking-[0.18em] text-text tabular-nums mb-3">{quickConnect.code}</div>
+                                        <p className="text-xs text-muted leading-relaxed">
+                                            Approve this code in Jellyfin Quick Connect. This page will finish login automatically.
+                                        </p>
+                                        {quickConnect.jellyfinUrl && (
+                                            <button
+                                                type="button"
+                                                onClick={handleOpenJellyfinQuickConnect}
+                                                className="mt-3 inline-flex items-center justify-center text-xs font-bold text-plex hover:text-text transition"
+                                            >
+                                                Copy code & open Quick Connect
+                                            </button>
+                                        )}
+                                    </div>
+                                )}
+
+                                <button
+                                    type="button"
+                                    className="self-center text-xs font-bold text-muted hover:text-text transition"
+                                    onClick={() => setShowJellyfinPassword((value) => !value)}
+                                >
+                                    {showJellyfinPassword ? 'Hide password login' : 'Use password instead'}
+                                </button>
+
+                                {showJellyfinPassword && (
+                                    <form onSubmit={handleJellyfinLogin} className="w-full flex flex-col gap-3 text-left">
+                                        <label className="flex flex-col gap-1.5">
+                                            <span className="text-[10px] font-bold text-muted uppercase tracking-[0.14em]">Jellyfin username</span>
+                                            <input
+                                                value={jellyfinUsername}
+                                                onChange={(e) => setJellyfinUsername(e.target.value)}
+                                                autoComplete="username"
+                                                className="w-full bg-black/25 border border-white/15 rounded-xl px-4 py-3 text-sm text-text outline-none focus:border-plex/70 focus:ring-2 focus:ring-plex/20 transition"
+                                                placeholder="Username"
+                                                disabled={isLoading}
+                                                required
+                                            />
+                                        </label>
+                                        <label className="flex flex-col gap-1.5">
+                                            <span className="text-[10px] font-bold text-muted uppercase tracking-[0.14em]">Password</span>
+                                            <input
+                                                value={jellyfinPassword}
+                                                onChange={(e) => setJellyfinPassword(e.target.value)}
+                                                type="password"
+                                                autoComplete="current-password"
+                                                className="w-full bg-black/25 border border-white/15 rounded-xl px-4 py-3 text-sm text-text outline-none focus:border-plex/70 focus:ring-2 focus:ring-plex/20 transition"
+                                                placeholder="Password"
+                                                disabled={isLoading}
+                                                required
+                                            />
+                                        </label>
+                                        <button type="submit" className={loginSecondaryBtnClass} disabled={isLoading || !jellyfinUsername.trim() || !jellyfinPassword}>
+                                            <img src={JELLYFIN_ICON_URL} alt="" className="w-5 h-5 object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                                            Login with password
+                                        </button>
+                                    </form>
+                                )}
+                            </div>
+                        ) : (
+                            <button type="button" className={loginSecondaryBtnClass} onClick={handlePlexLogin} disabled={isLoading}>
+                                <img src={logoUrl()} alt="" className="w-5 h-5 object-contain opacity-80" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                                Login with Plex
+                            </button>
+                        )}
+
+                        {!showTrialAccess && !isJellyfinAuth && (
                             <div className="w-full mt-10 pt-8 border-t border-white/10">
                                 <LivePlexStats />
                             </div>
@@ -3936,7 +4137,7 @@ const WrapUpModal: React.FC<{ metric: string; analytics: any; days: number | str
 };
 
 const DiscoverPosterCard: React.FC<{
-    item: { title: string; thumb?: string; plexUrl: string; tags?: string[]; year?: number | string; parentTitle?: string };
+    item: { title: string; thumb?: string; thumbUrl?: string; plexUrl: string; tags?: string[]; year?: number | string; parentTitle?: string };
     aspect?: '2/3' | 'square';
     overlay?: React.ReactNode;
     variant?: 'discover' | 'home';
@@ -3959,7 +4160,7 @@ const DiscoverPosterCard: React.FC<{
             <div className={`${posterShell} ${aspect === 'square' ? 'aspect-square' : 'aspect-[2/3]'} w-full`}>
                 {item.thumb ? (
                     <img
-                        src={portalUrl(`/api/plex/image?path=${encodeURIComponent(item.thumb)}&width=300&height=${aspect === 'square' ? 300 : 450}`)}
+                        src={item.thumbUrl ? resolvePortalAssetUrl(item.thumbUrl) : portalUrl(`/api/plex/image?path=${encodeURIComponent(item.thumb)}&width=300&height=${aspect === 'square' ? 300 : 450}`)}
                         alt={item.title}
                         loading="lazy"
                         className={`w-full h-full object-cover ${variant === 'home' ? 'transition-[transform,opacity] duration-300 group-hover:scale-105 group-hover:opacity-80' : ''}`}
@@ -4053,7 +4254,56 @@ export const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onL
 
     const user = sessionInfo.account;
     const showQualityBadges = publicConfig?.showPosterQualityBadges !== false;
+    const isJellyfinPortal = String(publicConfig?.mediaServerType || 'plex').toLowerCase() === 'jellyfin';
     const [optOutNewsletter, setOptOutNewsletter] = useState(user?.optOutNewsletter || false);
+
+    const resolveHomeImage = (thumbUrl: string | null | undefined, fallback = logoUrl()) => {
+        if (!thumbUrl) return fallback;
+        if (thumbUrl.startsWith('http://') || thumbUrl.startsWith('https://') || thumbUrl.startsWith('/api/')) {
+            return resolvePortalAssetUrl(thumbUrl);
+        }
+        return portalUrl(`/api/plex/image?path=${encodeURIComponent(thumbUrl)}&width=256&height=256`);
+    };
+
+    const buildJellyfinHomeAnalytics = (data: any) => {
+        const topMovies = Array.isArray(data?.topMovies) ? data.topMovies : [];
+        const topShows = Array.isArray(data?.topShows) ? data.topShows : [];
+        const topMusic = Array.isArray(data?.topMusic) ? data.topMusic : [];
+        const topWatched = [...topShows, ...topMovies, ...topMusic].sort((a: any, b: any) => (b.plays || 0) - (a.plays || 0));
+        const peakHours = Array.isArray(data?.peakHours) ? data.peakHours : [];
+        const peakHour = peakHours.reduce((best: number, value: number, hour: number) => value > (peakHours[best] || 0) ? hour : best, 0);
+        const moviesCount = data?.jellystatInsights?.moviePlays || topMovies.reduce((sum: number, item: any) => sum + (item.plays || 0), 0);
+        const showsCount = data?.jellystatInsights?.tvPlays || topShows.reduce((sum: number, item: any) => sum + (item.plays || 0), 0);
+        const musicCount = data?.jellystatInsights?.musicPlays || topMusic.reduce((sum: number, item: any) => sum + (item.plays || 0), 0);
+        const topMovie = topMovies[0] || null;
+        const topBinge = topShows[0] || null;
+        const topLibraries = Array.isArray(data?.topLibraries) ? data.topLibraries : [];
+
+        return {
+            totalPlays: data?.totalPlaybacks || data?.jellystatInsights?.totalPlays || 0,
+            moviesCount,
+            showsCount,
+            musicCount,
+            topWatched,
+            recentHistory: [],
+            topMovie: topMovie ? { ...topMovie, artUrl: topMovie.thumbUrl } : null,
+            topBinge: topBinge ? { ...topBinge, artUrl: topBinge.thumbUrl } : null,
+            peakHour,
+            avgHour: peakHour,
+            timeOfDay: peakHour >= 5 && peakHour < 12 ? 'Early Bird' : peakHour >= 12 && peakHour < 18 ? 'Afternoon Watcher' : peakHour >= 18 ? 'Evening Streamer' : 'Night Owl',
+            popularDay: 'Recent Activity',
+            dayOfWeekCounts: {},
+            favoriteLibrary: topLibraries[0]?.title || 'None',
+            topLibraries,
+            mediaPreference: moviesCount > showsCount ? 'Movie Fan' : 'TV Binger',
+            watchStyle: topWatched.length >= 10 ? 'Explorer' : 'Focused',
+            uniqueTitles: topWatched.length,
+            streamingHabit: 'Jellyfin Viewer',
+            weekdayPlays: data?.totalPlaybacks || 0,
+            weekendPlays: 0,
+            libraryHealth: data?.libraryHealth || null,
+        };
+    };
 
     const handleToggleNewsletter = async () => {
         setIsLoading(true);
@@ -4112,7 +4362,9 @@ export const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onL
             try {
                 setAnalyticsLoading(true);
                 setAnalyticsError(null);
-                const res = await apiFetch(`/api/plex/analytics/me?days=${analyticsDays}`);
+                const res = isJellyfinPortal
+                    ? buildJellyfinHomeAnalytics(await apiFetch(`/api/jellystat/analytics?days=${analyticsDays}`))
+                    : await apiFetch(`/api/plex/analytics/me?days=${analyticsDays}`);
                 if (cancelled) return;
                 setAnalytics(res);
                 setTopContentPage(0);
@@ -4130,7 +4382,7 @@ export const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onL
         };
         fetchAnalytics();
         return () => { cancelled = true; };
-    }, [user, sessionInfo.session.isAdmin, analyticsDays]);
+    }, [user, sessionInfo.session.isAdmin, analyticsDays, isJellyfinPortal]);
 
     useEffect(() => {
         const mq = window.matchMedia('(min-width: 1024px)');
@@ -4160,7 +4412,7 @@ export const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onL
         const fetchDashboard = async () => {
             if (!isMounted) return;
             try {
-                const res = await apiFetch(`/api/plex/dashboard?limit=${RECENTLY_ADDED_ITEM_LIMIT}`);
+                const res = await apiFetch(`${isJellyfinPortal ? '/api/jellyfin/dashboard' : '/api/plex/dashboard'}?limit=${RECENTLY_ADDED_ITEM_LIMIT}`);
                 if (isMounted) setDashboardData(res);
             } catch (e) {
                 console.error('Failed to refresh dashboard data', e);
@@ -4170,14 +4422,16 @@ export const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onL
         const fetchServerData = async () => {
             if (!isMounted) return;
             try {
-                const p1 = apiFetch('/api/plex/stats').then(res => {
-                    if (isMounted) {
-                        setServerStats(res);
-                        if (res?.isBuilding) {
-                            pollTimer = setTimeout(fetchServerData, 5000);
+                const p1 = isJellyfinPortal
+                    ? Promise.resolve({ provider: 'jellyfin' }).then(res => { if (isMounted) setServerStats(res); })
+                    : apiFetch('/api/plex/stats').then(res => {
+                        if (isMounted) {
+                            setServerStats(res);
+                            if (res?.isBuilding) {
+                                pollTimer = setTimeout(fetchServerData, 5000);
+                            }
                         }
-                    }
-                }).catch(e => console.error("Failed to fetch server stats", e));
+                    }).catch(e => console.error("Failed to fetch server stats", e));
 
                 const p2 = fetchDashboard();
                 await Promise.all([p1, p2]);
@@ -4192,7 +4446,16 @@ export const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onL
             if (pollTimer) clearTimeout(pollTimer);
             if (dashboardTimer) clearInterval(dashboardTimer);
         };
-    }, []);
+    }, [isJellyfinPortal]);
+
+    useEffect(() => {
+        if (!isJellyfinPortal || !analytics?.libraryHealth) return;
+        setServerStats((current: any) => ({
+            ...(current || {}),
+            provider: 'jellyfin',
+            ...analytics.libraryHealth,
+        }));
+    }, [isJellyfinPortal, analytics?.libraryHealth]);
 
     const handleRelink = async () => {
         setIsLoading(true);
@@ -4282,8 +4545,8 @@ export const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onL
                         <div className="absolute -inset-[50%] opacity-40 transform -rotate-12 scale-110 flex gap-4 overflow-hidden pointer-events-none justify-center">
                             {[...Array(6)].map((_, colIdx) => (
                                 <div key={colIdx} className={`flex flex-col gap-4 ${colIdx % 2 === 0 ? 'animate-[scrollVertical_40s_linear_infinite]' : 'animate-[scrollVertical_50s_linear_infinite_reverse]'}`}>
-                                    {[...dashboardData.recentMovies, ...dashboardData.recentMovies].sort(() => 0.5 - Math.random()).map((m: any, i: number) => m.thumb && (
-                                        <img key={`c${colIdx}-${i}`} src={portalUrl(`/api/plex/image?path=${encodeURIComponent(m.thumb)}&width=200&height=300`)} className="w-32 md:w-48 rounded-xl object-cover" alt="" />
+                                    {[...dashboardData.recentMovies, ...dashboardData.recentMovies].sort(() => 0.5 - Math.random()).map((m: any, i: number) => (m.thumb || m.thumbUrl) && (
+                                        <img key={`c${colIdx}-${i}`} src={m.thumbUrl ? resolvePortalAssetUrl(m.thumbUrl) : portalUrl(`/api/plex/image?path=${encodeURIComponent(m.thumb)}&width=200&height=300`)} className="w-32 md:w-48 rounded-xl object-cover" alt="" />
                                     ))}
                                 </div>
                             ))}
@@ -4307,7 +4570,7 @@ export const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onL
                                 return (
                                     <div className="relative">
                                         <img
-                                            src={thumbUrl.startsWith('http') ? thumbUrl : portalUrl(`/api/plex/image?path=${encodeURIComponent(thumbUrl)}&width=256&height=256`)}
+                                            src={resolveHomeImage(thumbUrl)}
                                             alt={sessionInfo.session.username}
                                             className="relative w-28 h-28 md:w-32 md:h-32 rounded-full object-cover border-4 border-plex shadow-2xl bg-card"
                                             onError={(e) => {
@@ -4885,10 +5148,14 @@ export const StatusDashboard: React.FC<{ onBack: () => void, isAdmin: boolean, i
         </div>
     );
 };
-const StreamDetailsModal: React.FC<{ session: any, onClose: () => void, isAdmin?: boolean, onKilled?: () => void }> = ({ session, onClose, isAdmin, onKilled }) => {
+const StreamDetailsModal: React.FC<{ session: any, onClose: () => void, isAdmin?: boolean, onKilled?: () => void, providerLabel?: string }> = ({ session, onClose, isAdmin, onKilled, providerLabel = 'Plex' }) => {
     const [killReason, setKillReason] = useState('');
     const [isKilling, setIsKilling] = useState(false);
     const [showKillConfirm, setShowKillConfirm] = useState(false);
+    const sessionPosterSrc = session.thumbUrl
+        ? resolvePortalAssetUrl(session.thumbUrl)
+        : portalUrl(`/api/plex/image?path=${encodeURIComponent(session.thumb)}&width=400&height=600`);
+    const sessionUserThumbSrc = session.userThumb ? resolvePortalAssetUrl(session.userThumb) : 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y';
 
     const handleKill = async () => {
         setIsKilling(true);
@@ -4916,13 +5183,13 @@ const StreamDetailsModal: React.FC<{ session: any, onClose: () => void, isAdmin?
                 {/* Poster Side */}
                 <div className="w-full md:w-1/3 relative bg-black flex-shrink-0">
                     <div className="w-full pb-[150%] md:pb-0 md:h-full relative">
-                        <img src={portalUrl(`/api/plex/image?path=${encodeURIComponent(session.thumb)}&width=400&height=600`)} alt={session.title} className="absolute inset-0 w-full h-full object-cover opacity-80" />
+                        <img src={sessionPosterSrc} alt={session.title} className="absolute inset-0 w-full h-full object-cover opacity-80" />
                         <div className="absolute inset-0 bg-gradient-to-t from-card to-transparent md:bg-gradient-to-r"></div>
                     </div>
                     {/* User Avatar Badge */}
                     {session.user && (
                         <div className="absolute top-4 left-4 flex items-center gap-2 bg-black/60 backdrop-blur-md rounded-full pr-4 p-1.5 shadow-lg border border-white/10 z-10">
-                            <img src={session.userThumb ? session.userThumb : 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'} className="w-8 h-8 rounded-full object-cover" onError={(e) => { e.currentTarget.src = 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'; }} />
+                            <img src={sessionUserThumbSrc} className="w-8 h-8 rounded-full object-cover" onError={(e) => { e.currentTarget.src = 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'; }} />
                             <span className="text-xs font-bold text-white truncate max-w-[120px]">{session.user}</span>
                         </div>
                     )}
@@ -4988,7 +5255,7 @@ const StreamDetailsModal: React.FC<{ session: any, onClose: () => void, isAdmin?
                             )
                         )}
                         <a href={session.plexUrl} target="_blank" rel="noreferrer" className="flex-1 bg-plex text-background font-bold text-center py-3 rounded-lg hover:bg-plex-hover transition-colors shadow-lg">
-                            Open in Plex
+                            Open in {providerLabel}
                         </a>
                     </div>
                 </div>
@@ -4997,7 +5264,7 @@ const StreamDetailsModal: React.FC<{ session: any, onClose: () => void, isAdmin?
     );
 };
 
-export const LibraryDashboard: React.FC<{ onBack: () => void, isAdmin?: boolean, publicConfig?: any }> = ({ onBack, isAdmin, publicConfig }) => {
+export const LibraryDashboard: React.FC<{ onBack: () => void, isAdmin?: boolean, publicConfig?: any, mediaServerType?: string }> = ({ onBack, isAdmin, publicConfig, mediaServerType }) => {
     const [dashboardData, setDashboardData] = useState<{ activeSessions: any[], recentMovies: any[], recentShows: any[], recentMusic: any[] } | null>(null);
     const [trendingStats, setTrendingStats] = useState<{ trending7Days: any[], movies30Days: any[], shows30Days: any[], top365Days: any[], allTime: any[], weekendWarriors: any[], nightOwls: any[], retroHits: any[], cultClassics: any[] } | null>(null);
     const [dashboardLoading, setDashboardLoading] = useState(true);
@@ -5016,6 +5283,7 @@ export const LibraryDashboard: React.FC<{ onBack: () => void, isAdmin?: boolean,
     const recentLimit = recentLimitOverride ?? responsiveRecentLimit;
     const [selectedSession, setSelectedSession] = useState<any | null>(null);
     const showQualityBadges = publicConfig?.showPosterQualityBadges !== false;
+    const isJellyfinPortal = String(publicConfig?.mediaServerType || mediaServerType || 'plex').toLowerCase() === 'jellyfin';
     const hasLoadedDashboard = useRef(false);
     const hasLoadedTrending = useRef(false);
 
@@ -5026,6 +5294,16 @@ export const LibraryDashboard: React.FC<{ onBack: () => void, isAdmin?: boolean,
         return () => mq.removeEventListener('change', onChange);
     }, []);
 
+    useEffect(() => {
+        if (!isJellyfinPortal) return;
+        setDashboardData({ activeSessions: [], recentMovies: [], recentShows: [], recentMusic: [] });
+        setTrendingStats(null);
+        setError(null);
+        setPollError(null);
+        setDashboardLoading(false);
+        setTrendingLoading(false);
+    }, [isJellyfinPortal]);
+
     const handleRecentLimitChange = useCallback((value: string) => {
         const next = Number(value);
         setRecentLimitOverride(next);
@@ -5035,7 +5313,7 @@ export const LibraryDashboard: React.FC<{ onBack: () => void, isAdmin?: boolean,
 
     const fetchDashboardOnly = useCallback(async () => {
         try {
-            const res = await apiFetch(`/api/plex/dashboard?limit=${recentLimit}`);
+            const res = await apiFetch(`${isJellyfinPortal ? '/api/jellyfin/dashboard' : '/api/plex/dashboard'}?limit=${recentLimit}`);
             if (res.error) {
                 setPollError(res.error);
                 return;
@@ -5045,14 +5323,14 @@ export const LibraryDashboard: React.FC<{ onBack: () => void, isAdmin?: boolean,
         } catch (err: any) {
             setPollError(err?.message || 'Live dashboard update failed');
         }
-    }, [recentLimit]);
+    }, [recentLimit, isJellyfinPortal]);
 
     const fetchData = useCallback(async () => {
         setError(null);
         if (!hasLoadedDashboard.current) setDashboardLoading(true);
-        if (!hasLoadedTrending.current) setTrendingLoading(true);
+        if (!isJellyfinPortal && !hasLoadedTrending.current) setTrendingLoading(true);
         try {
-            const res = await apiFetch(`/api/plex/dashboard?limit=${recentLimit}`);
+            const res = await apiFetch(`${isJellyfinPortal ? '/api/jellyfin/dashboard' : '/api/plex/dashboard'}?limit=${recentLimit}`);
             if (res.error) throw new Error(res.error);
             setDashboardData(res);
         } catch (err: any) {
@@ -5060,6 +5338,13 @@ export const LibraryDashboard: React.FC<{ onBack: () => void, isAdmin?: boolean,
         } finally {
             hasLoadedDashboard.current = true;
             setDashboardLoading(false);
+        }
+
+        if (isJellyfinPortal) {
+            setTrendingStats(null);
+            hasLoadedTrending.current = true;
+            setTrendingLoading(false);
+            return;
         }
 
         try {
@@ -5073,7 +5358,7 @@ export const LibraryDashboard: React.FC<{ onBack: () => void, isAdmin?: boolean,
             hasLoadedTrending.current = true;
             setTrendingLoading(false);
         }
-    }, [recentLimit]);
+    }, [recentLimit, isJellyfinPortal]);
 
     useEffect(() => {
         fetchData();
@@ -5128,16 +5413,20 @@ export const LibraryDashboard: React.FC<{ onBack: () => void, isAdmin?: boolean,
                             <div className={activityStreamGridClass(isWidePortalLayout, dashboardData.activeSessions.length)}>
                                 {dashboardData.activeSessions.map((session, i) => {
                                     const activityCols = activityStreamColumnCount(isWidePortalLayout, dashboardData.activeSessions.length);
+                                    const sessionPosterSrc = session.thumbUrl
+                                        ? resolvePortalAssetUrl(session.thumbUrl)
+                                        : portalUrl(`/api/plex/image?path=${encodeURIComponent(session.thumb)}&width=300&height=500`);
+                                    const sessionUserThumbSrc = session.userThumb ? resolvePortalAssetUrl(session.userThumb) : 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y';
                                     return (
                                         <div key={session.sessionId ?? i} onClick={() => setSelectedSession(session)} className="bg-card rounded-xl border border-border flex flex-col overflow-hidden shadow-lg hover:border-plex/50 hover:shadow-plex/20 transition-all cursor-pointer select-none h-full min-h-[11.5rem] md:min-h-[14.5rem]">
                                             <div className="flex flex-row flex-1 items-stretch min-h-0">
                                                 <div className={`${activityCols === 4 ? 'w-28 md:w-32' : 'w-32 md:w-40'} flex-shrink-0 relative overflow-hidden bg-card self-stretch`}>
-                                                    <img src={portalUrl(`/api/plex/image?path=${encodeURIComponent(session.thumb)}&width=300&height=500`)} alt={session.title} loading="lazy" className="absolute inset-0 w-full h-full object-cover object-top drop-shadow-2xl" />
+                                                    <img src={sessionPosterSrc} alt={session.title} loading="lazy" className="absolute inset-0 w-full h-full object-cover object-top drop-shadow-2xl" />
                                                 </div>
                                                 <div className="p-2 md:p-3 flex flex-col flex-1 min-w-0 relative">
                                                     {session.user && (
                                                         <div className="absolute top-2 right-2 flex items-center gap-1.5 bg-black/50 backdrop-blur-md rounded-full pr-2.5 p-0.5 shadow-md border border-white/5">
-                                                            <img src={session.userThumb ? session.userThumb : 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'} alt={session.user} className="w-5 h-5 rounded-full object-cover" onError={(e) => { e.currentTarget.src = 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'; }} />
+                                                            <img src={sessionUserThumbSrc} alt={session.user} className="w-5 h-5 rounded-full object-cover" onError={(e) => { e.currentTarget.src = 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'; }} />
                                                             <span className="text-[10px] font-bold text-white/90 truncate max-w-[80px] md:max-w-[100px]">{session.user}</span>
                                                         </div>
                                                     )}
@@ -5255,12 +5544,12 @@ export const LibraryDashboard: React.FC<{ onBack: () => void, isAdmin?: boolean,
 
                     {/* RECENT TV SHOWS */}
                     <div className="flex flex-col">
-                        <h2 className="text-plex text-sm uppercase tracking-[2px] mb-6 font-bold border-b border-white/10 pb-2">RECENTLY ADDED TV SHOWS</h2>
+                        <h2 className="text-plex text-sm uppercase tracking-[2px] mb-6 font-bold border-b border-white/10 pb-2">{isJellyfinPortal ? 'RECENTLY ADDED EPISODES' : 'RECENTLY ADDED TV SHOWS'}</h2>
                         <div className={discoverPosterGridClass}>
                             {dashboardData && dashboardData.recentShows.slice(0, recentLimit).map((item, i) => (
                                 <DiscoverPosterCard key={i} item={item} showQualityBadges={showQualityBadges} />
                             ))}
-                            {(!dashboardData || dashboardData.recentShows.length === 0) && <div className="text-center text-muted p-8 border border-dashed border-border rounded-xl mt-4 w-full col-span-full">No recent TV shows</div>}
+                            {(!dashboardData || dashboardData.recentShows.length === 0) && <div className="text-center text-muted p-8 border border-dashed border-border rounded-xl mt-4 w-full col-span-full">{isJellyfinPortal ? 'No recent episodes' : 'No recent TV shows'}</div>}
                         </div>
                     </div>
 
@@ -5277,9 +5566,9 @@ export const LibraryDashboard: React.FC<{ onBack: () => void, isAdmin?: boolean,
                 </div>
 
                 {/* SERVER WIDE STATS SECTION */}
-                {trendingLoading && !trendingStats ? (
+                {!isJellyfinPortal && trendingLoading && !trendingStats ? (
                     <TrendingSectionsSkeleton count={trendingCount} sections={3} />
-                ) : trendingStats && (
+                ) : !isJellyfinPortal && trendingStats && (
                     <div className="mt-16 w-full flex flex-col gap-12">
                         <div className="flex flex-col gap-2 items-center text-center mb-4">
                             <h2 className="text-3xl md:text-4xl font-extrabold text-white tracking-tight">Other things happening on {publicConfig?.serverIdentifier || 'this server'}</h2>
@@ -5300,7 +5589,7 @@ export const LibraryDashboard: React.FC<{ onBack: () => void, isAdmin?: boolean,
             </main>
 
             {/* Stream Details Modal */}
-            {selectedSession && <StreamDetailsModal session={selectedSession} onClose={() => setSelectedSession(null)} isAdmin={isAdmin} onKilled={fetchData} />}
+            {selectedSession && <StreamDetailsModal session={selectedSession} onClose={() => setSelectedSession(null)} isAdmin={isAdmin} onKilled={fetchData} providerLabel={isJellyfinPortal ? 'Jellyfin' : 'Plex'} />}
         </div>
     );
 };
@@ -6555,15 +6844,17 @@ interface NavigationProps {
     isAdmin: boolean;
     serverName: string;
     adminThumb?: string | null;
+    customLogoUrl?: string | null;
     requestUrl: string;
     navOrder: string[];
     appVersion?: string;
 }
 
-export const Navigation: React.FC<NavigationProps> = ({ currentRoute, onNavigate, onLogout, isAdmin, serverName, adminThumb, requestUrl, navOrder, appVersion }) => {
+export const Navigation: React.FC<NavigationProps> = ({ currentRoute, onNavigate, onLogout, isAdmin, serverName, adminThumb, customLogoUrl, requestUrl, navOrder, appVersion }) => {
+    const serverIcon = customLogoUrl ? resolvePortalAssetUrl(customLogoUrl) : (adminThumb ? (adminThumb.startsWith('http') ? adminThumb : portalUrl(`/api/plex/image?path=${encodeURIComponent(adminThumb)}&width=256&height=256`)) : logoUrl());
     useEffect(() => {
-        updateFavicon(adminThumb);
-    }, [adminThumb]);
+        updateFavicon(serverIcon);
+    }, [serverIcon]);
 
     const navItemsConfig: Record<string, { label: string; icon: React.FC<any>; route: string; adminOnly: boolean; href?: string; onClick?: (e: any) => void }> = {
         'home': { label: 'Home', icon: Home, route: 'user', adminOnly: false },
@@ -6595,9 +6886,9 @@ export const Navigation: React.FC<NavigationProps> = ({ currentRoute, onNavigate
             <div className="md:hidden fixed top-0 left-0 right-0 h-16 nav-shell border-b z-50 flex items-center justify-between px-4 shadow-lg">
                 <div className="flex items-center gap-3">
                     <img
-                        src={adminThumb ? (adminThumb.startsWith('http') ? adminThumb : portalUrl(`/api/plex/image?path=${encodeURIComponent(adminThumb)}&width=64&height=64`)) : logoUrl()}
+                        src={serverIcon}
                         alt="Logo"
-                        className="w-8 h-8 rounded-full object-cover"
+                        className={`w-8 h-8 ${customLogoUrl ? 'object-contain' : 'rounded-full object-cover'}`}
                         onError={(e) => {
                             (e.target as HTMLImageElement).src = logoUrl();
                         }}
@@ -6645,7 +6936,18 @@ export const Navigation: React.FC<NavigationProps> = ({ currentRoute, onNavigate
                 </div>
 
                 <div className="flex flex-col items-center mt-auto pt-10 pb-4 group cursor-default">
-                    <div className="relative mb-6">
+                    <div className={`relative mb-6 ${customLogoUrl ? 'w-32 flex items-center justify-center' : ''}`}>
+                        {customLogoUrl ? (
+                            <img
+                                src={serverIcon}
+                                alt="Server Logo"
+                                className="max-w-32 max-h-32 object-contain drop-shadow-[0_0_24px_rgba(0,0,0,0.75)] group-hover:scale-105 transition-transform duration-700 ease-out"
+                                onError={(e) => {
+                                    (e.target as HTMLImageElement).src = logoUrl();
+                                }}
+                            />
+                        ) : (
+                            <>
                         {/* Soft ambient background glow */}
                         <div className="absolute inset-0 bg-plex blur-[25px] opacity-20 group-hover:opacity-40 transition-opacity duration-700 rounded-full"></div>
                         {/* Spinning gradient border */}
@@ -6654,15 +6956,17 @@ export const Navigation: React.FC<NavigationProps> = ({ currentRoute, onNavigate
                         <div className="relative w-28 h-28 rounded-full p-[4px] shadow-2xl bg-card">
                             <div className="w-full h-full rounded-full overflow-hidden bg-background">
                                 <img
-                                    src={adminThumb ? (adminThumb.startsWith('http') ? adminThumb : portalUrl(`/api/plex/image?path=${encodeURIComponent(adminThumb)}&width=256&height=256`)) : logoUrl()}
+                                    src={serverIcon}
                                     alt="Server Logo"
-                                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-out"
+                                    className={`w-full h-full group-hover:scale-110 transition-transform duration-700 ease-out ${customLogoUrl ? 'object-contain p-3' : 'object-cover'}`}
                                     onError={(e) => {
                                         (e.target as HTMLImageElement).src = logoUrl();
                                     }}
                                 />
                             </div>
                         </div>
+                            </>
+                        )}
                     </div>
 
                     <div className="flex flex-col items-center text-center px-2">

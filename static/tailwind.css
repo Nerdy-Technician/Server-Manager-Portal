@@ -555,8 +555,8 @@ video {
 }
 
 :root {
-  --color-plex: 229 160 13;
-  --color-plex-hover: 240 168 16;
+  --color-plex: 247 198 0;
+  --color-plex-hover: 248 208 46;
 }
 
 body {
@@ -669,7 +669,7 @@ input[type="date"], input[type="time"], input[type="datetime-local"], input[type
   --tw-gradient-from: rgb(var(--color-plex) / 1) var(--tw-gradient-from-position);
   --tw-gradient-to: rgb(var(--color-plex) / 0) var(--tw-gradient-to-position);
   --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
-  --tw-gradient-to: #f59e0b var(--tw-gradient-to-position);
+  --tw-gradient-to: rgb(var(--color-plex-hover) / 1) var(--tw-gradient-to-position);
   --tw-text-opacity: 1;
   color: rgb(13 17 23 / var(--tw-text-opacity, 1));
   transition-property: all;
@@ -694,7 +694,7 @@ input[type="date"], input[type="time"], input[type="datetime-local"], input[type
 }
 
 .btn-primary {
-  box-shadow: 0 8px 28px rgba(229, 160, 13, 0.35);
+  box-shadow: 0 8px 28px rgb(var(--color-plex) / 0.35);
 }
 
 .btn-primary-lg {
@@ -715,7 +715,7 @@ input[type="date"], input[type="time"], input[type="datetime-local"], input[type
   --tw-gradient-from: rgb(var(--color-plex) / 1) var(--tw-gradient-from-position);
   --tw-gradient-to: rgb(var(--color-plex) / 0) var(--tw-gradient-to-position);
   --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
-  --tw-gradient-to: #f59e0b var(--tw-gradient-to-position);
+  --tw-gradient-to: rgb(var(--color-plex-hover) / 1) var(--tw-gradient-to-position);
   --tw-text-opacity: 1;
   color: rgb(13 17 23 / var(--tw-text-opacity, 1));
   transition-property: all;
@@ -740,7 +740,7 @@ input[type="date"], input[type="time"], input[type="datetime-local"], input[type
 }
 
 .btn-primary-lg {
-  box-shadow: 0 8px 28px rgba(229, 160, 13, 0.35);
+  box-shadow: 0 8px 28px rgb(var(--color-plex) / 0.35);
 }
 
 .btn-secondary {
@@ -875,7 +875,7 @@ input[type="date"], input[type="time"], input[type="datetime-local"], input[type
   --tw-gradient-from: rgb(var(--color-plex) / 1) var(--tw-gradient-from-position);
   --tw-gradient-to: rgb(var(--color-plex) / 0) var(--tw-gradient-to-position);
   --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
-  --tw-gradient-to: #fbbf24 var(--tw-gradient-to-position);
+  --tw-gradient-to: rgb(var(--color-plex-hover) / 1) var(--tw-gradient-to-position);
   -webkit-background-clip: text;
           background-clip: text;
   font-size: 1.25rem;
@@ -896,9 +896,7 @@ input[type="date"], input[type="time"], input[type="datetime-local"], input[type
   background-color: rgb(var(--color-plex) / 0.15);
   --tw-text-opacity: 1;
   color: rgb(var(--color-plex) / var(--tw-text-opacity, 1));
-  --tw-shadow: 0 0 15px rgba(229,160,13,0.1);
-  --tw-shadow-colored: 0 0 15px var(--tw-shadow-color);
-  box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
+  box-shadow: 0 0 15px rgb(var(--color-plex) / 0.1);
 }
 
 .nav-shell {
@@ -2972,10 +2970,6 @@ input[type="date"], input[type="time"], input[type="datetime-local"], input[type
   background-color: rgb(245 158 11 / 0.15);
 }
 
-.bg-amber-500\/\[0\.04\] {
-  background-color: rgb(245 158 11 / 0.04);
-}
-
 .bg-background {
   --tw-bg-opacity: 1;
   background-color: rgb(13 17 23 / var(--tw-bg-opacity, 1));
@@ -3178,6 +3172,10 @@ input[type="date"], input[type="time"], input[type="datetime-local"], input[type
   background-color: rgb(var(--color-plex) / 0.03);
 }
 
+.bg-plex\/\[0\.04\] {
+  background-color: rgb(var(--color-plex) / 0.04);
+}
+
 .bg-plex\/\[0\.06\] {
   background-color: rgb(var(--color-plex) / 0.06);
 }
@@ -3301,14 +3299,6 @@ input[type="date"], input[type="time"], input[type="datetime-local"], input[type
 
 .bg-\[linear-gradient\(45deg\2c rgba\(255\2c 255\2c 255\2c 0\.15\)_25\%\2c transparent_25\%\2c transparent_50\%\2c rgba\(255\2c 255\2c 255\2c 0\.15\)_50\%\2c rgba\(255\2c 255\2c 255\2c 0\.15\)_75\%\2c transparent_75\%\2c transparent\)\] {
   background-image: linear-gradient(45deg,rgba(255,255,255,0.15) 25%,transparent 25%,transparent 50%,rgba(255,255,255,0.15) 50%,rgba(255,255,255,0.15) 75%,transparent 75%,transparent);
-}
-
-.bg-\[radial-gradient\(ellipse_70\%_40\%_at_50\%_0\%\2c rgba\(229\2c 160\2c 13\2c 0\.06\)\2c transparent\)\] {
-  background-image: radial-gradient(ellipse 70% 40% at 50% 0%,rgba(229,160,13,0.06),transparent);
-}
-
-.bg-\[radial-gradient\(ellipse_80\%_50\%_at_50\%_-20\%\2c rgba\(229\2c 160\2c 13\2c 0\.12\)\2c transparent\)\] {
-  background-image: radial-gradient(ellipse 80% 50% at 50% -20%,rgba(229,160,13,0.12),transparent);
 }
 
 .bg-gradient-to-b {
@@ -3472,6 +3462,11 @@ input[type="date"], input[type="time"], input[type="datetime-local"], input[type
   --tw-gradient-stops: var(--tw-gradient-from), rgb(var(--color-plex) / 1) var(--tw-gradient-via-position), var(--tw-gradient-to);
 }
 
+.via-plex-hover {
+  --tw-gradient-to: rgb(var(--color-plex-hover) / 0)  var(--tw-gradient-to-position);
+  --tw-gradient-stops: var(--tw-gradient-from), rgb(var(--color-plex-hover) / 1) var(--tw-gradient-via-position), var(--tw-gradient-to);
+}
+
 .via-plex\/10 {
   --tw-gradient-to: rgb(var(--color-plex) / 0)  var(--tw-gradient-to-position);
   --tw-gradient-stops: var(--tw-gradient-from), rgb(var(--color-plex) / 0.1) var(--tw-gradient-via-position), var(--tw-gradient-to);
@@ -3525,6 +3520,10 @@ input[type="date"], input[type="time"], input[type="datetime-local"], input[type
 
 .to-plex {
   --tw-gradient-to: rgb(var(--color-plex) / 1) var(--tw-gradient-to-position);
+}
+
+.to-plex-hover {
+  --tw-gradient-to: rgb(var(--color-plex-hover) / 1) var(--tw-gradient-to-position);
 }
 
 .to-plex\/0 {
@@ -4554,12 +4553,6 @@ input[type="date"], input[type="time"], input[type="datetime-local"], input[type
 
 .shadow-\[0_0_12px_rgba\(229\2c 160\2c 13\2c 0\.2\)\] {
   --tw-shadow: 0 0 12px rgba(229,160,13,0.2);
-  --tw-shadow-colored: 0 0 12px var(--tw-shadow-color);
-  box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
-}
-
-.shadow-\[0_0_12px_rgba\(229\2c 160\2c 13\2c 0\.5\)\] {
-  --tw-shadow: 0 0 12px rgba(229,160,13,0.5);
   --tw-shadow-colored: 0 0 12px var(--tw-shadow-color);
   box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
 }

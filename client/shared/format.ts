@@ -88,6 +88,12 @@ export const hexToRgb = (hex: string) => {
     return `${r} ${g} ${b}`;
 };
 
+export const accentHoverRgb = (hex: string) => {
+    const [r, g, b] = hexToRgb(hex).split(' ').map(Number);
+    const lift = (value: number) => Math.min(255, Math.round(value + (255 - value) * 0.18));
+    return `${lift(r)} ${lift(g)} ${lift(b)}`;
+};
+
 /** Round storage up to the nearest whole MB, GB, TB, or PB. */
 export const formatSizeCeil = (bytes: number): string => {
     const safe = Math.max(0, Number(bytes) || 0);

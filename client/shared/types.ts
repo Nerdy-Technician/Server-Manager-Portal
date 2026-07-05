@@ -14,7 +14,10 @@ export interface User {
 
 export interface PlexConfig {
     token: string;
+    mediaServerType?: 'plex' | 'jellyfin';
     serverIdentifier: string;
+    jellyfinUrl?: string;
+    jellyfinApiKey?: string;
     checkIntervalMinutes: number;
     smtpHost: string;
     smtpPort: number;
@@ -32,7 +35,10 @@ export interface PlexConfig {
 
 export interface AppSettings {
     token?: string;
+    mediaServerType?: 'plex' | 'jellyfin';
     serverIdentifier?: string;
+    jellyfinUrl?: string;
+    jellyfinApiKey?: string;
     checkIntervalMinutes: number;
     smtpHost?: string;
     smtpPort?: number;
@@ -54,7 +60,11 @@ export interface AppSettings {
     radarrApiKey?: string;
     tautulliUrl?: string;
     tautulliApiKey?: string;
+    jellystatUrl?: string;
+    jellystatApiKey?: string;
     primaryColor?: string;
+    customLogoUrl?: string;
+    backgroundImageUrl?: string;
     navOrder?: string[];
 }
 

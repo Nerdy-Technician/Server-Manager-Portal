@@ -5,6 +5,7 @@ import {
     ChevronLeft,
     ChevronRight,
     Film,
+    Layers,
     Music,
     Settings,
     Shield,
@@ -98,6 +99,7 @@ export const createMainGridWidgetRenderer = (deps: UserDashboardWidgetDeps) => {
         { value: 180, label: 'Last 180 Days' },
         { value: 'all' as const, label: 'All Time' },
     ];
+    const isJellyfinPortal = String(publicConfig?.mediaServerType || 'plex').toLowerCase() === 'jellyfin';
 
     return (id: MainGridWidgetId): React.ReactNode => {
         switch (id) {
@@ -261,6 +263,38 @@ export const createMainGridWidgetRenderer = (deps: UserDashboardWidgetDeps) => {
                     </div>
                 );
             case 'libraryStats':
+                if (isJellyfinPortal) {
+                    return (
+                        <div className="glass-card p-4 md:p-5 shadow-xl flex flex-col justify-center flex-shrink-0">
+                            <div className="flex items-center justify-between mb-3 md:mb-4">
+                                <p className="text-muted text-sm uppercase tracking-widest font-semibold">Jellyfin Library</p>
+                            </div>
+                            {serverDataLoading && !serverStats ? (
+                                <LibraryStatsSkeleton />
+                            ) : serverStats ? (
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 md:gap-3">
+                                    <div className="bg-background/60 p-3 md:p-4 rounded-2xl border border-white/5 flex flex-col items-center justify-center text-center shadow-inner hover:bg-background/80 transition-colors">
+                                        <Film className="w-7 h-7 text-plex mb-2 opacity-80" />
+                                        <span className="text-3xl font-black text-text drop-shadow-md mb-1">{serverStats.movies?.toLocaleString?.() || 0}</span>
+                                        <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-muted">Movies</span>
+                                    </div>
+                                    <div className="bg-background/60 p-3 md:p-4 rounded-2xl border border-white/5 flex flex-col items-center justify-center text-center shadow-inner hover:bg-background/80 transition-colors">
+                                        <Tv className="w-7 h-7 text-plex mb-2 opacity-80" />
+                                        <span className="text-3xl font-black text-text drop-shadow-md mb-1">{serverStats.shows?.toLocaleString?.() || 0}</span>
+                                        <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-muted">{serverStats.episodes?.toLocaleString?.() || 0} Episodes</span>
+                                    </div>
+                                    <div className="bg-background/60 p-3 md:p-4 rounded-2xl border border-white/5 flex flex-col items-center justify-center text-center shadow-inner hover:bg-background/80 transition-colors">
+                                        <Layers className="w-7 h-7 text-plex mb-2 opacity-80" />
+                                        <span className="text-3xl font-black text-text drop-shadow-md mb-1">{formatBytes(serverStats.totalCatalogBytes || 0)}</span>
+                                        <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-muted">Catalog Size</span>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="text-muted text-sm bg-background/50 p-4 rounded-xl border border-white/5">Could not load Jellyfin library statistics at this time.</div>
+                            )}
+                        </div>
+                    );
+                }
                 return (
                     <div className="glass-card p-4 md:p-5 shadow-xl flex flex-col justify-center flex-shrink-0">
                         <div className="flex items-center justify-between mb-3 md:mb-4">
@@ -308,6 +342,56 @@ export const createMainGridWidgetRenderer = (deps: UserDashboardWidgetDeps) => {
                 );
             case 'analytics':
                 if (!sessionInfo.session.isAdmin && !user) return null;
+                if (isJellyfinPortal) {
+                    return (
+                        <div className="glass-card p-3 md:p-4 shadow-xl flex flex-col flex-1 min-h-0">
+                            <div className="flex items-center justify-between flex-shrink-0">
+                                <h2 className="text-lg md:text-xl font-bold text-text flex items-center gap-2">
+                                    <Activity className="w-5 h-5 text-plex" /> Jellystat Activity
+                                </h2>
+                                <PeriodDropdown
+                                    value={analyticsDays}
+                                    open={analyticsDaysOpen}
+                                    onToggle={() => setAnalyticsDaysOpen(!analyticsDaysOpen)}
+                                    onClose={() => setAnalyticsDaysOpen(false)}
+                                    onChange={(value) => setAnalyticsDays(value as number | 'all')}
+                                    options={analyticsDaysOptions}
+                                />
+                            </div>
+                            {analyticsLoading ? (
+                                <div className="flex items-center gap-3 text-muted mt-4">
+                                    <div className="w-5 h-5 rounded-full border-2 border-plex border-t-transparent animate-spin" />
+                                    Loading Jellystat activity...
+                                </div>
+                            ) : analytics && analytics.totalPlays > 0 ? (
+                                <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 mt-4">
+                                    <div className="bg-background/60 rounded-xl border border-white/5 p-3">
+                                        <p className="text-[10px] text-muted uppercase tracking-widest font-bold">Total Plays</p>
+                                        <p className="text-2xl font-black text-text mt-1">{analytics.totalPlays?.toLocaleString?.() || 0}</p>
+                                    </div>
+                                    <div className="bg-background/60 rounded-xl border border-white/5 p-3">
+                                        <p className="text-[10px] text-muted uppercase tracking-widest font-bold">Top Library</p>
+                                        <p className="text-sm font-bold text-text mt-1 truncate">{analytics.favoriteLibrary || 'None'}</p>
+                                    </div>
+                                    <div className="bg-background/60 rounded-xl border border-white/5 p-3">
+                                        <p className="text-[10px] text-muted uppercase tracking-widest font-bold">Top Movie</p>
+                                        <p className="text-sm font-bold text-text mt-1 truncate">{analytics.topMovie?.title || 'None'}</p>
+                                    </div>
+                                    <div className="bg-background/60 rounded-xl border border-white/5 p-3">
+                                        <p className="text-[10px] text-muted uppercase tracking-widest font-bold">Top Show</p>
+                                        <p className="text-sm font-bold text-text mt-1 truncate">{analytics.topBinge?.title || 'None'}</p>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="flex flex-col items-center justify-center p-4 md:p-5 text-center flex-1 min-h-0 mt-2 md:mt-3">
+                                    <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center mb-3 text-xl shadow-inner">🍿</div>
+                                    <h3 className="font-bold text-text mb-1">No Jellystat activity yet</h3>
+                                    <p className="text-muted text-sm max-w-sm">Once Jellystat records playback activity, your server activity summary will appear right here.</p>
+                                </div>
+                            )}
+                        </div>
+                    );
+                }
                 return (
                     <div className="glass-card p-3 md:p-4 shadow-xl flex flex-col flex-1 min-h-0">
                         <div className="flex items-center justify-between flex-shrink-0">

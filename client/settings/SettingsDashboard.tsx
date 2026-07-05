@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Copy, ChevronUp, ChevronDown, Check } from 'lucide-react';
 import { apiFetch } from '../shared/api';
-import { portalUrl } from '../shared/basePath';
+import { portalUrl, resolvePortalAssetUrl } from '../shared/basePath';
 import { appConfirm } from '../shared/confirm';
 import { CustomSelect } from '../shared/ui';
 import { Loader, ToastContainer, pushToast, type ToastMessage } from '../shared/toast';
 import { SettingHint } from './SettingHint';
-import type { User, AuditEntry, DeletedUser } from '../shared/types';
-import { formatDateTime, formatEventName, hexToRgb, getDaysUntilExpiry, addMonths, addYears, formatDate } from '../shared/format';
+import type { User, AuditEntry, DeletedUser, PlexServer } from '../shared/types';
+import { formatDateTime, formatEventName, hexToRgb, accentHoverRgb, getDaysUntilExpiry, addMonths, addYears, formatDate } from '../shared/format';
 
 import { StreamKillRulesPanel } from './StreamKillRulesPanel';
 import { InvitesSettings } from './InvitesSettings';
@@ -26,6 +26,64 @@ const hasIntegrationCredentials = (
     const effectiveUrl = String(url || savedUrl || '').trim();
     const effectiveKey = String(apiKey || savedApiKey || '').trim();
     return Boolean(effectiveUrl && effectiveKey);
+};
+
+const SELFHST_ICON_BASE = 'https://cdn.jsdelivr.net/gh/selfhst/icons/svg';
+const APP_ICONS: Record<string, string> = {
+    sonarr: `${SELFHST_ICON_BASE}/sonarr.svg`,
+    radarr: `${SELFHST_ICON_BASE}/radarr.svg`,
+    tautulli: `${SELFHST_ICON_BASE}/tautulli.svg`,
+    seerr: `${SELFHST_ICON_BASE}/seerr.svg`,
+    overseerr: `${SELFHST_ICON_BASE}/seerr.svg`,
+    jellyseerr: `${SELFHST_ICON_BASE}/jellyseerr.svg`,
+    ombi: `${SELFHST_ICON_BASE}/ombi.svg`,
+    jellystat: 'https://cdn.jsdelivr.net/gh/selfhst/icons@main/png/jellystat.png',
+};
+
+const ProgramIcon: React.FC<{ app: string; label: string }> = ({ app, label }) => (
+    <span className="w-9 h-9 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center overflow-hidden flex-shrink-0">
+        {APP_ICONS[app] ? (
+            <img
+                src={APP_ICONS[app]}
+                alt=""
+                className="w-6 h-6 object-contain"
+                onError={(e) => { e.currentTarget.style.display = 'none'; }}
+            />
+        ) : (
+            <span className="text-[10px] font-black text-plex">{label.slice(0, 2).toUpperCase()}</span>
+        )}
+        <span className="sr-only">{label}</span>
+    </span>
+);
+
+const IntegrationHeading: React.FC<{ app: string; title: string; subtitle?: string; className?: string }> = ({ app, title, subtitle, className = '' }) => (
+    <div className={`flex items-center gap-3 border-b border-border pb-3 mb-4 ${className}`}>
+        <ProgramIcon app={app} label={title} />
+        <div>
+            <h3 className="text-xl font-bold text-text leading-tight">{title}</h3>
+            {subtitle && <p className="text-xs text-muted mt-0.5">{subtitle}</p>}
+        </div>
+    </div>
+);
+
+const BRAND_THEME_OPTIONS = [
+    { label: 'Plex', value: 'plex' },
+    { label: 'Jellyfin', value: 'jellyfin' },
+    { label: 'Custom', value: 'custom' },
+];
+
+const BRAND_THEME_COLORS: Record<string, string> = {
+    plex: '#F7C600',
+    jellyfin: '#00A4DC',
+};
+const JELLYFIN_BRAND_LOGO_URL = '/api/jellyfin/branding/icon';
+const JELLYFIN_BRAND_BACKGROUND_URL = '/api/jellyfin/branding/splash';
+
+const inferBrandTheme = (color = '') => {
+    const normalized = color.trim().toUpperCase();
+    if (normalized === BRAND_THEME_COLORS.plex) return 'plex';
+    if (normalized === BRAND_THEME_COLORS.jellyfin) return 'jellyfin';
+    return 'custom';
 };
 
 export const SettingsDashboard: React.FC = () => {
@@ -94,7 +152,10 @@ export const SettingsDashboard: React.FC = () => {
         }
     };
     const [token, setToken] = useState('');
+    const [mediaServerType, setMediaServerType] = useState<'plex' | 'jellyfin'>('plex');
     const [plexServerUrl, setPlexServerUrl] = useState('');
+    const [jellyfinUrl, setJellyfinUrl] = useState('');
+    const [jellyfinApiKey, setJellyfinApiKey] = useState('');
     const [servers, setServers] = useState<PlexServer[]>([]);
     const [selectedServer, setSelectedServer] = useState('');
     const [checkInterval, setCheckInterval] = useState(60);
@@ -121,8 +182,8 @@ export const SettingsDashboard: React.FC = () => {
         {
             title: 'Integrations',
             tabs: [
-                { id: 'plex', label: 'Plex Integration', keywords: ['token', 'server', 'libraries', 'docker', 'local', 'url', 'direct'] },
-                { id: 'mediastack', label: 'Media Stack', keywords: ['sonarr', 'radarr', 'tautulli'] },
+                { id: 'plex', label: 'Media Player', keywords: ['plex', 'jellyfin', 'media', 'player', 'token', 'server', 'libraries', 'docker', 'local', 'url', 'direct'] },
+                { id: 'mediastack', label: 'Media Stack', keywords: ['sonarr', 'radarr', 'tautulli', 'jellystat', 'seerr', 'jellyseerr'] },
                 { id: 'status', label: 'Status Monitor', keywords: ['uptime', 'health', 'services'] }
             ]
         },
@@ -224,6 +285,8 @@ export const SettingsDashboard: React.FC = () => {
     const [radarrApiKey, setRadarrApiKey] = useState('');
     const [tautulliUrl, setTautulliUrl] = useState('');
     const [tautulliApiKey, setTautulliApiKey] = useState('');
+    const [jellystatUrl, setJellystatUrl] = useState('');
+    const [jellystatApiKey, setJellystatApiKey] = useState('');
     const [requestAppType, setRequestAppType] = useState('none');
     const [requestAppUrl, setRequestAppUrl] = useState('');
     const [requestAppApiKey, setRequestAppApiKey] = useState('');
@@ -237,8 +300,10 @@ export const SettingsDashboard: React.FC = () => {
     }, []);
 
     // Branding & UI States
-    const [primaryColor, setPrimaryColor] = useState('#E5A00D');
+    const [brandTheme, setBrandTheme] = useState('plex');
+    const [primaryColor, setPrimaryColor] = useState(BRAND_THEME_COLORS.plex);
     const [customLogoUrl, setCustomLogoUrl] = useState('');
+    const [backgroundImageUrl, setBackgroundImageUrl] = useState('');
     const [referralEnabled, setReferralEnabled] = useState(false);
     const [referralTrialDays, setReferralTrialDays] = useState(3);
     const [referralRewardDays, setReferralRewardDays] = useState(7);
@@ -445,12 +510,18 @@ export const SettingsDashboard: React.FC = () => {
         );
     };
 
-    const trackedIntegrationKeys = ['plexConfigured', 'sonarrConfigured', 'radarrConfigured', 'tautulliConfigured', 'requestAppConfigured'] as const;
-    const integrationLabels: Record<(typeof trackedIntegrationKeys)[number], string> = {
+    const trackedIntegrationKeys = useMemo(() => {
+        const mediaKey = mediaServerType === 'jellyfin' ? 'jellyfinConfigured' : 'plexConfigured';
+        const analyticsKey = mediaServerType === 'jellyfin' ? 'jellystatConfigured' : 'tautulliConfigured';
+        return [mediaKey, 'sonarrConfigured', 'radarrConfigured', analyticsKey, 'requestAppConfigured'];
+    }, [mediaServerType]);
+    const integrationLabels: Record<string, string> = {
+        jellyfinConfigured: 'Jellyfin',
         plexConfigured: 'Plex',
         sonarrConfigured: 'Sonarr',
         radarrConfigured: 'Radarr',
         tautulliConfigured: 'Tautulli',
+        jellystatConfigured: 'Jellystat',
         requestAppConfigured: 'Request App',
     };
 
@@ -572,8 +643,9 @@ export const SettingsDashboard: React.FC = () => {
             .map((key) => [key, !!integrations[key]] as const);
         const cacheEntries = Object.entries(diagnostics.caches || {}).filter(([key]) => {
             if (!maintenanceExperimentalEnabled) {
-                return !key.startsWith('maintenance');
+                if (key.startsWith('maintenance')) return false;
             }
+            if (mediaServerType === 'jellyfin' && key === 'plexStats') return false;
             return true;
         });
         const cacheValues = cacheEntries.map(([, entry]: any) => !!entry?.exists);
@@ -621,7 +693,7 @@ export const SettingsDashboard: React.FC = () => {
             runningJobs,
             failingJobs
         };
-    }, [diagnostics, maintenanceExperimentalEnabled]);
+    }, [diagnostics, maintenanceExperimentalEnabled, mediaServerType, trackedIntegrationKeys]);
 
     const auditEventsPerPage = 12;
     const totalAuditLogPages = Math.max(1, Math.ceil(auditLogEntries.length / auditEventsPerPage));
@@ -647,7 +719,10 @@ export const SettingsDashboard: React.FC = () => {
     useEffect(() => {
         if (initialSettings) {
             setToken(initialSettings.token || '');
+            setMediaServerType(initialSettings.mediaServerType === 'jellyfin' ? 'jellyfin' : 'plex');
             setPlexServerUrl(initialSettings.plexServerUrl || '');
+            setJellyfinUrl(initialSettings.jellyfinUrl || '');
+            setJellyfinApiKey(initialSettings.jellyfinApiKey || '');
             setSelectedServer(initialSettings.serverIdentifier || '');
             setCheckInterval(initialSettings.checkIntervalMinutes || 60);
             setSmtpHost(initialSettings.smtpHost || '');
@@ -672,11 +747,15 @@ export const SettingsDashboard: React.FC = () => {
             setRadarrApiKey(initialSettings.radarrApiKey || '');
             setTautulliUrl(initialSettings.tautulliUrl || '');
             setTautulliApiKey(initialSettings.tautulliApiKey || '');
-            setRequestAppType(initialSettings.requestAppType || 'none');
+            setJellystatUrl(initialSettings.jellystatUrl || '');
+            setJellystatApiKey(initialSettings.jellystatApiKey || '');
+            setRequestAppType(initialSettings.requestAppType === 'overseerr' ? 'seerr' : (initialSettings.requestAppType || 'none'));
             setRequestAppUrl(initialSettings.requestAppUrl || '');
             setRequestAppApiKey(initialSettings.requestAppApiKey || '');
-            setPrimaryColor(initialSettings.primaryColor || '#E5A00D');
+            setBrandTheme(inferBrandTheme(initialSettings.primaryColor || BRAND_THEME_COLORS.plex));
+            setPrimaryColor(initialSettings.primaryColor || BRAND_THEME_COLORS.plex);
             setCustomLogoUrl(initialSettings.customLogoUrl || '');
+            setBackgroundImageUrl(initialSettings.backgroundImageUrl || '');
             setReferralEnabled(!!initialSettings.referralEnabled);
             setReferralTrialDays(initialSettings.referralTrialDays || 3);
             setReferralRewardDays(initialSettings.referralRewardDays || 7);
@@ -737,8 +816,12 @@ export const SettingsDashboard: React.FC = () => {
             await streamRulesSaveHandlerRef.current();
             return;
         }
-        if (!token || !selectedServer) {
+        if (mediaServerType === 'plex' && (!token || !selectedServer)) {
             addToast('Token and server must be selected.', 'error');
+            return;
+        }
+        if (mediaServerType === 'jellyfin' && (!jellyfinUrl || !hasIntegrationCredentials(jellyfinUrl, jellyfinApiKey, initialSettings.jellyfinUrl, initialSettings.jellyfinApiKey))) {
+            addToast('Jellyfin URL and API key must be set.', 'error');
             return;
         }
 
@@ -761,8 +844,11 @@ export const SettingsDashboard: React.FC = () => {
 
         await handleSaveConfig({
             token,
+            mediaServerType,
             serverIdentifier: selectedServer,
             plexServerUrl: plexServerUrl || '',
+            jellyfinUrl,
+            jellyfinApiKey,
             checkIntervalMinutes: checkInterval,
             smtpHost,
             smtpPort,
@@ -786,11 +872,14 @@ export const SettingsDashboard: React.FC = () => {
             radarrApiKey,
             tautulliUrl,
             tautulliApiKey,
+            jellystatUrl,
+            jellystatApiKey,
             requestAppType,
             requestAppUrl,
             requestAppApiKey,
             primaryColor,
             customLogoUrl,
+            backgroundImageUrl,
             referralEnabled,
             referralTrialDays,
             referralRewardDays,
@@ -809,6 +898,27 @@ export const SettingsDashboard: React.FC = () => {
         });
         document.documentElement.style.setProperty('--color-plex', hexToRgb(primaryColor));
     };
+
+    const applyBrandTheme = (theme: string) => {
+        setBrandTheme(theme);
+        if (theme === 'plex' || theme === 'jellyfin') {
+            setPrimaryColor(BRAND_THEME_COLORS[theme]);
+        }
+    };
+
+    const applyJellyfinBranding = () => {
+        setBrandTheme('jellyfin');
+        setPrimaryColor(BRAND_THEME_COLORS.jellyfin);
+        setCustomLogoUrl(JELLYFIN_BRAND_LOGO_URL);
+        setBackgroundImageUrl(JELLYFIN_BRAND_BACKGROUND_URL);
+        setLogoFile(null);
+        addToast('Jellyfin server icon and splash background applied. Save settings to publish.');
+    };
+
+    useEffect(() => {
+        document.documentElement.style.setProperty('--color-plex', hexToRgb(primaryColor));
+        document.documentElement.style.setProperty('--color-plex-hover', accentHoverRgb(primaryColor));
+    }, [primaryColor]);
 
     const handleTestEmail = async () => {
         if (!smtpHost || !smtpUser || !smtpPass || !testRecipient) {
@@ -939,7 +1049,46 @@ export const SettingsDashboard: React.FC = () => {
     
                         {activeTab === 'plex' && (
                             <div className="mb-8">
-                                <h3 className="text-xl font-bold text-plex mb-4 border-b border-border pb-2">Plex Integration</h3>
+                                <h3 className="text-xl font-bold text-plex mb-4 border-b border-border pb-2">Media Server Integration</h3>
+                                <div className="mb-4">
+                                    <label htmlFor="mediaServerType">Media Server Type</label>
+                                    <CustomSelect
+                                        id="mediaServerType"
+                                        value={mediaServerType}
+                                        onChange={(val) => setMediaServerType(val === 'jellyfin' ? 'jellyfin' : 'plex')}
+                                        options={[
+                                            { label: 'Plex', value: 'plex' },
+                                            { label: 'Jellyfin', value: 'jellyfin' }
+                                        ]}
+                                    />
+                                    <div className="mt-2">
+                                        <SettingHint>
+                                            Choose the media server used for portal authentication and server-specific integrations.
+                                        </SettingHint>
+                                    </div>
+                                </div>
+                                {mediaServerType === 'jellyfin' && (
+                                    <div className="mb-6 p-4 rounded-lg border border-border bg-background/40">
+                                        <h4 className="font-bold text-text mb-3">Jellyfin Connection</h4>
+                                        <div className="mb-4">
+                                            <label htmlFor="jellyfinUrl">Jellyfin URL</label>
+                                            <input className="w-full p-3 rounded-lg border border-border bg-background text-text outline-none focus:border-plex focus:ring-1 focus:ring-plex transition-all" id="jellyfinUrl" type="url" value={jellyfinUrl} onChange={(e) => setJellyfinUrl(e.target.value)} placeholder="http://192.168.1.6:8096" />
+                                        </div>
+                                        <div className="mb-4">
+                                            <label htmlFor="jellyfinApiKey">Jellyfin API Key</label>
+                                            <input className="w-full p-3 rounded-lg border border-border bg-background text-text outline-none focus:border-plex focus:ring-1 focus:ring-plex transition-all" id="jellyfinApiKey" type="password" value={jellyfinApiKey} onChange={(e) => setJellyfinApiKey(e.target.value)} placeholder="API key from Jellyfin dashboard" />
+                                        </div>
+                                        <IntegrationTestButton
+                                            type="jellyfin"
+                                            payload={{ jellyfinUrl, jellyfinApiKey }}
+                                            disabled={!hasIntegrationCredentials(jellyfinUrl, jellyfinApiKey, initialSettings.jellyfinUrl, initialSettings.jellyfinApiKey)}
+                                            onMessage={(msg, ok) => addToast(msg, ok ? 'success' : 'error')}
+                                        />
+                                    </div>
+                                )}
+                                {mediaServerType === 'plex' && (
+                                    <>
+                                <h4 className="text-lg font-bold text-text mb-4">Plex Connection</h4>
                                 <div className="mb-4">
                                     <label htmlFor="plexToken">Plex Token</label>
                                     <input className="w-full p-3 rounded-lg border border-border bg-background text-text outline-none focus:border-plex focus:ring-1 focus:ring-plex transition-all" id="plexToken" type="password" value={token} onChange={(e) => setToken(e.target.value)} placeholder="Enter your X-Plex-Token" />
@@ -1041,6 +1190,8 @@ export const SettingsDashboard: React.FC = () => {
                                             })}
                                         </div>
                                     </div>
+                                )}
+                                    </>
                                 )}
 
                                 <div className="mb-4 mt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 py-4 border-b border-border/40">
@@ -1207,7 +1358,7 @@ export const SettingsDashboard: React.FC = () => {
                             <h3 className="text-xl font-bold text-plex mb-4 border-b border-border pb-2">Automated User Cleanup</h3>
                             <div className="mb-6 bg-yellow-500/10 border border-yellow-500/20 p-4 rounded-lg">
                                 <p className="text-sm text-yellow-500 font-bold mb-1">Warning</p>
-                                <p className="text-xs text-muted">When enabled, the server will automatically revoke Plex access for users who have not watched anything for the specified number of days. You can exempt specific users from this rule by editing them in the Users table.</p>
+                                <p className="text-xs text-muted">When enabled, the server will automatically revoke portal access for users who have not watched anything for the specified number of days. You can exempt specific users from this rule by editing them in the Users table.</p>
                             </div>
 
                             <div className="mb-6 flex items-center justify-between py-4 border-b border-border/40">
@@ -1243,7 +1394,7 @@ export const SettingsDashboard: React.FC = () => {
                     )}
                     {activeTab === 'mediastack' && (
                         <div className="mb-8 animate-fade-in">
-                            <h3 className="text-xl font-bold text-plex mb-4 border-b border-border pb-2">Sonarr Integration</h3>
+                            <IntegrationHeading app="sonarr" title="Sonarr Integration" subtitle="TV series automation" />
                             <div className="mb-4">
                                 <label htmlFor="sonarrUrl">Sonarr URL</label>
                                 <input className="w-full p-3 rounded-lg border border-border bg-background text-text outline-none focus:border-plex focus:ring-1 focus:ring-plex transition-all" id="sonarrUrl" type="text" value={sonarrUrl} onChange={(e) => setSonarrUrl(e.target.value)} placeholder="http://localhost:8989" />
@@ -1263,7 +1414,7 @@ export const SettingsDashboard: React.FC = () => {
                                 onMessage={(msg, ok) => addToast(msg, ok ? 'success' : 'error')}
                             />
 
-                            <h3 className="text-xl font-bold text-plex mb-4 border-b border-border pb-2 mt-8">Radarr Integration</h3>
+                            <IntegrationHeading app="radarr" title="Radarr Integration" subtitle="Movie automation" className="mt-8" />
                             <div className="mb-4">
                                 <label htmlFor="radarrUrl">Radarr URL</label>
                                 <input className="w-full p-3 rounded-lg border border-border bg-background text-text outline-none focus:border-plex focus:ring-1 focus:ring-plex transition-all" id="radarrUrl" type="text" value={radarrUrl} onChange={(e) => setRadarrUrl(e.target.value)} placeholder="http://localhost:7878" />
@@ -1282,7 +1433,7 @@ export const SettingsDashboard: React.FC = () => {
                                 className="mb-6"
                                 onMessage={(msg, ok) => addToast(msg, ok ? 'success' : 'error')}
                             />
-                            <h3 className="text-xl font-bold text-plex mb-4 border-b border-border pb-2 mt-8">Tautulli Integration (Optional)</h3>
+                            <IntegrationHeading app="tautulli" title="Tautulli Integration" subtitle="Plex activity and analytics" className="mt-8" />
                             <div className="mb-4">
                                 <label htmlFor="tautulliUrl">Tautulli URL</label>
                                 <input className="w-full p-3 rounded-lg border border-border bg-background text-text outline-none focus:border-plex focus:ring-1 focus:ring-plex transition-all" id="tautulliUrl" type="text" value={tautulliUrl} onChange={(e) => setTautulliUrl(e.target.value)} placeholder="http://localhost:8181" />
@@ -1299,7 +1450,32 @@ export const SettingsDashboard: React.FC = () => {
                                 onMessage={(msg, ok) => addToast(msg, ok ? 'success' : 'error')}
                             />
 
-                            <h3 className="text-xl font-bold text-plex mb-4 border-b border-border pb-2 mt-8">Request App Integration</h3>
+                            <IntegrationHeading app="jellystat" title="Jellystat Integration" subtitle="Jellyfin activity and analytics" className="mt-8" />
+                            <div className="mb-4">
+                                <label htmlFor="jellystatUrl">Jellystat URL</label>
+                                <input className="w-full p-3 rounded-lg border border-border bg-background text-text outline-none focus:border-plex focus:ring-1 focus:ring-plex transition-all" id="jellystatUrl" type="text" value={jellystatUrl} onChange={(e) => setJellystatUrl(e.target.value)} placeholder="http://localhost:3000" />
+                                <div className="mt-2">
+                                    <SettingHint>The URL to your Jellystat instance. Jellystat is the Jellyfin analytics companion, similar to Tautulli for Plex.</SettingHint>
+                                </div>
+                            </div>
+                            <div className="mb-8">
+                                <label htmlFor="jellystatApiKey">Jellystat API Key</label>
+                                <input className="w-full p-3 rounded-lg border border-border bg-background text-text outline-none focus:border-plex focus:ring-1 focus:ring-plex transition-all" id="jellystatApiKey" type="password" value={jellystatApiKey} onChange={(e) => setJellystatApiKey(e.target.value)} placeholder="API key from Jellystat Settings" />
+                            </div>
+                            <IntegrationTestButton
+                                type="jellystat"
+                                payload={{ jellystatUrl, jellystatApiKey }}
+                                disabled={!hasIntegrationCredentials(jellystatUrl, jellystatApiKey, initialSettings.jellystatUrl, initialSettings.jellystatApiKey)}
+                                className="mb-6"
+                                onMessage={(msg, ok) => addToast(msg, ok ? 'success' : 'error')}
+                            />
+
+                            <IntegrationHeading
+                                app={requestAppType === 'none' ? 'seerr' : requestAppType}
+                                title="Request App Integration"
+                                subtitle="Seerr, Jellyseerr, or Ombi for media requests"
+                                className="mt-8"
+                            />
                             <div className="mb-4">
                                 <label htmlFor="requestAppType">Request App Type</label>
                                 <CustomSelect
@@ -1308,7 +1484,7 @@ export const SettingsDashboard: React.FC = () => {
                                     onChange={(val) => setRequestAppType(val)}
                                     options={[
                                         { label: 'Disabled', value: 'none' },
-                                        { label: 'Overseerr', value: 'overseerr' },
+                                        { label: 'Seerr', value: 'seerr' },
                                         { label: 'Jellyseerr', value: 'jellyseerr' },
                                         { label: 'Ombi', value: 'ombi' }
                                     ]}
@@ -1431,10 +1607,56 @@ export const SettingsDashboard: React.FC = () => {
                         <div className="mb-8 animate-fade-in">
                             <h3 className="text-xl font-bold text-plex mb-4 border-b border-border pb-2">Branding & UI</h3>
                             <div className="mb-4">
+                                <label>Theme</label>
+                                <CustomSelect
+                                    value={brandTheme}
+                                    onChange={applyBrandTheme}
+                                    options={BRAND_THEME_OPTIONS}
+                                />
+                            </div>
+                            {mediaServerType === 'jellyfin' && (
+                                <div className="mb-4 rounded-lg border border-plex/30 bg-plex/10 p-4">
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                        <div className="flex items-center gap-3 min-w-0">
+                                            <span className="w-11 h-11 rounded-lg bg-background border border-plex/30 flex items-center justify-center overflow-hidden flex-shrink-0">
+                                                <img src={JELLYFIN_BRAND_LOGO_URL} alt="" className="w-8 h-8 object-contain" />
+                                            </span>
+                                            <div className="min-w-0">
+                                                <h4 className="font-bold text-text">Jellyfin branding</h4>
+                                                <p className="text-xs text-muted mt-1">Use the Jellyfin server icon and splash background across the portal.</p>
+                                            </div>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={applyJellyfinBranding}
+                                            className="px-4 py-2 bg-plex hover:bg-plex-hover text-background rounded-md font-bold transition-colors whitespace-nowrap"
+                                        >
+                                            Use Jellyfin icon & splash
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                            <div className="mb-4">
                                 <label>Primary Accent Color</label>
                                 <div className="flex gap-4">
-                                    <input type="color" className="w-16 h-12 p-1 rounded-lg border border-border cursor-pointer bg-background" value={primaryColor} onChange={e => setPrimaryColor(e.target.value)} />
-                                    <input type="text" className="flex-1 p-3 rounded-lg border border-border bg-background text-text outline-none focus:border-plex transition-all uppercase font-mono" value={primaryColor} onChange={e => setPrimaryColor(e.target.value)} />
+                                    <input
+                                        type="color"
+                                        className="w-16 h-12 p-1 rounded-lg border border-border cursor-pointer bg-background"
+                                        value={primaryColor}
+                                        onChange={e => {
+                                            setBrandTheme('custom');
+                                            setPrimaryColor(e.target.value);
+                                        }}
+                                    />
+                                    <input
+                                        type="text"
+                                        className="flex-1 p-3 rounded-lg border border-border bg-background text-text outline-none focus:border-plex transition-all uppercase font-mono"
+                                        value={primaryColor}
+                                        onChange={e => {
+                                            setBrandTheme('custom');
+                                            setPrimaryColor(e.target.value);
+                                        }}
+                                    />
                                 </div>
                             </div>
                             <div className="mb-4">
@@ -1446,6 +1668,49 @@ export const SettingsDashboard: React.FC = () => {
                                 </div>
                                 <div className="mt-2">
                                     <SettingHint>Provide a URL or upload a file. (Max 5MB)</SettingHint>
+                                </div>
+                            </div>
+
+                            <div className="mb-4">
+                                <label>Splash Background Image</label>
+                                <input
+                                    type="url"
+                                    className="w-full p-3 rounded-lg border border-border bg-background text-text outline-none focus:border-plex transition-all"
+                                    value={backgroundImageUrl}
+                                    onChange={e => setBackgroundImageUrl(e.target.value)}
+                                    placeholder="https://example.com/background.png"
+                                />
+                                <div className="mt-2">
+                                    <SettingHint>Shown as a subtle splash image on the login screen and portal background.</SettingHint>
+                                </div>
+                            </div>
+
+                            <div className="mb-6 rounded-lg border border-border overflow-hidden bg-background/70">
+                                <div
+                                    className="relative min-h-[220px] flex items-center justify-center p-6 bg-card"
+                                    style={backgroundImageUrl ? {
+                                        backgroundImage: `linear-gradient(rgba(10,15,20,0.42), rgba(10,15,20,0.56)), url("${resolvePortalAssetUrl(backgroundImageUrl).replace(/"/g, '%22')}")`,
+                                        backgroundRepeat: 'no-repeat',
+                                        backgroundPosition: 'center',
+                                        backgroundSize: 'cover',
+                                    } : undefined}
+                                >
+                                    <div className="text-center">
+                                        {customLogoUrl ? (
+                                            <img
+                                                src={resolvePortalAssetUrl(customLogoUrl)}
+                                                alt="Server icon preview"
+                                                className="max-w-28 max-h-24 object-contain mx-auto mb-4 drop-shadow-[0_0_24px_rgba(0,0,0,0.75)]"
+                                                onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                            />
+                                        ) : (
+                                            <div className="w-24 h-24 rounded-full border-2 border-plex/50 bg-background/80 mx-auto mb-4 p-3 shadow-[0_0_36px_rgba(0,164,220,0.28)]">
+                                                <span className="w-full h-full flex items-center justify-center text-3xl font-black text-plex">S</span>
+                                            </div>
+                                        )}
+                                        <p className="text-sm font-bold text-text">Portal splash preview</p>
+                                        <p className="text-xs text-muted mt-1">This is the server icon and background users will see.</p>
+                                    </div>
                                 </div>
                             </div>
 
@@ -1697,15 +1962,24 @@ export const SettingsDashboard: React.FC = () => {
                                         <div><strong>Uptime:</strong> {diagnostics?.app?.uptimeSeconds || 0}s</div>
                                         <div><strong>Node:</strong> {diagnostics?.app?.nodeVersion || 'n/a'}</div>
                                         <div><strong>Memory:</strong> {diagnostics?.app?.memoryRssMB || 0} MB</div>
-                                        <div className="flex items-center justify-between gap-2"><strong>Plex</strong>{renderConfigPill(!!diagnostics?.integrations?.plexConfigured)}</div>
+                                        <div className="flex items-center justify-between gap-2">
+                                            <strong>Media Player ({mediaServerType === 'jellyfin' ? 'Jellyfin' : 'Plex'})</strong>
+                                            {renderConfigPill(mediaServerType === 'jellyfin' ? !!diagnostics?.integrations?.jellyfinConfigured : !!diagnostics?.integrations?.plexConfigured)}
+                                        </div>
                                         <div className="flex items-center justify-between gap-2"><strong>SMTP</strong>{renderOptionalIntegrationPill(!!diagnostics?.integrations?.smtpConfigured)}</div>
                                         <div className="flex items-center justify-between gap-2"><strong>Sonarr</strong>{renderConfigPill(!!diagnostics?.integrations?.sonarrConfigured)}</div>
                                         <div className="flex items-center justify-between gap-2"><strong>Radarr</strong>{renderConfigPill(!!diagnostics?.integrations?.radarrConfigured)}</div>
-                                        <div className="flex items-center justify-between gap-2"><strong>Tautulli</strong>{renderConfigPill(!!diagnostics?.integrations?.tautulliConfigured)}</div>
+                                        {mediaServerType === 'jellyfin' ? (
+                                            <div className="flex items-center justify-between gap-2"><strong>Jellystat</strong>{renderConfigPill(!!diagnostics?.integrations?.jellystatConfigured)}</div>
+                                        ) : (
+                                            <div className="flex items-center justify-between gap-2"><strong>Tautulli</strong>{renderConfigPill(!!diagnostics?.integrations?.tautulliConfigured)}</div>
+                                        )}
                                         <div className="flex items-center justify-between gap-2"><strong>Request App</strong>{renderOptionalPill(!!diagnostics?.integrations?.requestAppEnabled, !!diagnostics?.integrations?.requestAppConfigured)}</div>
                                         <div className="flex items-center justify-between gap-2"><strong>Analytics Cache</strong>{renderConfigPill(!!diagnostics?.caches?.analytics?.exists)}</div>
                                         <div className="flex items-center justify-between gap-2"><strong>Trending Cache</strong>{renderConfigPill(!!diagnostics?.caches?.trending?.exists)}</div>
-                                        <div className="flex items-center justify-between gap-2"><strong>Plex Stats Cache</strong>{renderConfigPill(!!diagnostics?.caches?.plexStats?.exists)}</div>
+                                        {mediaServerType !== 'jellyfin' && (
+                                            <div className="flex items-center justify-between gap-2"><strong>Plex Stats Cache</strong>{renderConfigPill(!!diagnostics?.caches?.plexStats?.exists)}</div>
+                                        )}
                                         <div className="flex items-center justify-between gap-2"><strong>Users File</strong>{renderConfigPill(!!diagnostics?.files?.users?.exists)}</div>
                                         <div className="flex items-center justify-between gap-2"><strong>Config File</strong>{renderConfigPill(!!diagnostics?.files?.config?.exists)}</div>
                                         <div className="flex items-center justify-between gap-2"><strong>Auto Backup</strong>{renderConfigPill(!!diagnostics?.backup?.enabled)}</div>

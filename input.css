@@ -4,8 +4,8 @@
 
 @layer base {
   :root {
-    --color-plex: 229 160 13;
-    --color-plex-hover: 240 168 16;
+    --color-plex: 247 198 0;
+    --color-plex-hover: 248 208 46;
   }
   body {
     @apply bg-background text-text font-sans antialiased;
@@ -83,18 +83,18 @@
   /* —— Buttons —— */
   .btn-primary {
     @apply inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-bold text-sm;
-    @apply bg-gradient-to-r from-plex to-amber-500 text-background;
+    @apply bg-gradient-to-r from-plex to-plex-hover text-background;
     @apply hover:brightness-110 active:scale-[0.98] transition-all;
     @apply disabled:opacity-50 disabled:pointer-events-none;
-    box-shadow: 0 8px 28px rgba(229, 160, 13, 0.35);
+    box-shadow: 0 8px 28px rgb(var(--color-plex) / 0.35);
   }
 
   .btn-primary-lg {
     @apply inline-flex items-center justify-center gap-2 w-full px-8 py-4 rounded-xl font-bold text-base;
-    @apply bg-gradient-to-r from-plex to-amber-500 text-background;
+    @apply bg-gradient-to-r from-plex to-plex-hover text-background;
     @apply hover:brightness-110 active:scale-[0.98] transition-all;
     @apply disabled:opacity-50 disabled:pointer-events-none;
-    box-shadow: 0 8px 28px rgba(229, 160, 13, 0.35);
+    box-shadow: 0 8px 28px rgb(var(--color-plex) / 0.35);
   }
 
   .btn-secondary {
@@ -126,11 +126,12 @@
   }
 
   .page-title {
-    @apply text-xl md:text-3xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-plex to-amber-400;
+    @apply text-xl md:text-3xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-plex to-plex-hover;
   }
 
   .nav-item-active {
-    @apply bg-plex/15 text-plex shadow-[0_0_15px_rgba(229,160,13,0.1)];
+    @apply bg-plex/15 text-plex;
+    box-shadow: 0 0 15px rgb(var(--color-plex) / 0.1);
   }
 
   .nav-shell {

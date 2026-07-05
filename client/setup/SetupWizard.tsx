@@ -7,11 +7,12 @@ import { getPublicOrigin, logoUrl, portalUrl, stripBasePath } from '../shared/ba
 import { IntegrationTestButton } from '../shared/IntegrationTestButton';
 import { CustomSelect } from '../shared/ui';
 import { AuthPageBackground, themeClasses } from '../shared/theme';
+import { accentHoverRgb, hexToRgb } from '../shared/format';
 import type { PlexServer } from '../shared/types';
 
 const STEPS = [
     { id: 'welcome', label: 'Welcome', icon: Sparkles, hint: 'Overview & what to expect' },
-    { id: 'plex', label: 'Plex', icon: Server, hint: 'Connect your media server' },
+    { id: 'plex', label: 'Media Server', icon: Server, hint: 'Choose Plex or Jellyfin' },
     { id: 'branding', label: 'Branding', icon: Palette, hint: 'Colors, logo & domain' },
     { id: 'email', label: 'Email', icon: Mail, hint: 'SMTP alerts & newsletters' },
     { id: 'integrations', label: 'Integrations', icon: Layers, hint: 'Sonarr, Radarr & more' },
@@ -21,7 +22,7 @@ const STEPS = [
 type StepId = (typeof STEPS)[number]['id'];
 
 const WELCOME_FEATURES = [
-    { icon: Server, title: 'Plex OAuth', desc: 'Secure sign-in as server owner' },
+    { icon: Server, title: 'Plex or Jellyfin', desc: 'Choose and test your media server' },
     { icon: Palette, title: 'Your Brand', desc: 'Custom colors, logo & domain' },
     { icon: Mail, title: 'Email Alerts', desc: 'Expiry reminders & newsletters' },
     { icon: Layers, title: 'Media Stack', desc: 'Sonarr, Radarr, Tautulli & requests' },
@@ -31,10 +32,54 @@ const SETUP_PLEX_STORAGE_KEY = 'setupWizardPlex';
 
 const REQUEST_APP_OPTIONS = [
     { label: 'Disabled', value: 'none' },
-    { label: 'Overseerr', value: 'overseerr' },
+    { label: 'Seerr', value: 'seerr' },
     { label: 'Jellyseerr', value: 'jellyseerr' },
     { label: 'Ombi', value: 'ombi' },
 ];
+
+const SELFHST_ICON_BASE = 'https://cdn.jsdelivr.net/gh/selfhst/icons/svg';
+const APP_ICONS: Record<string, string> = {
+    sonarr: `${SELFHST_ICON_BASE}/sonarr.svg`,
+    radarr: `${SELFHST_ICON_BASE}/radarr.svg`,
+    tautulli: `${SELFHST_ICON_BASE}/tautulli.svg`,
+    seerr: `${SELFHST_ICON_BASE}/seerr.svg`,
+    overseerr: `${SELFHST_ICON_BASE}/seerr.svg`,
+    jellyseerr: `${SELFHST_ICON_BASE}/jellyseerr.svg`,
+    ombi: `${SELFHST_ICON_BASE}/ombi.svg`,
+    jellystat: 'https://cdn.jsdelivr.net/gh/selfhst/icons@main/png/jellystat.png',
+};
+
+const ProgramIcon: React.FC<{ app: string; label: string }> = ({ app, label }) => (
+    <span className="w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center overflow-hidden flex-shrink-0">
+        {APP_ICONS[app] ? (
+            <img
+                src={APP_ICONS[app]}
+                alt=""
+                className="w-5 h-5 object-contain"
+                onError={(e) => { e.currentTarget.style.display = 'none'; }}
+            />
+        ) : (
+            <span className="text-[10px] font-black text-plex">{label.slice(0, 2).toUpperCase()}</span>
+        )}
+        <span className="sr-only">{label}</span>
+    </span>
+);
+
+const MEDIA_SERVER_OPTIONS = [
+    { label: 'Plex', value: 'plex' },
+    { label: 'Jellyfin', value: 'jellyfin' },
+];
+
+const BRAND_THEME_OPTIONS = [
+    { label: 'Plex', value: 'plex' },
+    { label: 'Jellyfin', value: 'jellyfin' },
+    { label: 'Custom', value: 'custom' },
+];
+
+const BRAND_THEME_COLORS: Record<string, string> = {
+    plex: '#F7C600',
+    jellyfin: '#00A4DC',
+};
 
 const readStoredSetupPlex = () => {
     try {
@@ -42,12 +87,16 @@ const readStoredSetupPlex = () => {
         if (!raw) return null;
         return JSON.parse(raw) as {
             token?: string;
+            mediaServerType?: string;
             servers?: PlexServer[];
             serverIdentifier?: string;
             plexServerUrl?: string;
+            jellyfinUrl?: string;
+            jellyfinApiKey?: string;
             username?: string;
             step?: StepId;
             publicDomain?: string;
+            brandTheme?: string;
             primaryColor?: string;
             customLogoUrl?: string;
             smtpHost?: string;
@@ -62,6 +111,8 @@ const readStoredSetupPlex = () => {
             radarrApiKey?: string;
             tautulliUrl?: string;
             tautulliApiKey?: string;
+            jellystatUrl?: string;
+            jellystatApiKey?: string;
             requestAppType?: string;
             requestAppUrl?: string;
             requestAppApiKey?: string;
@@ -85,14 +136,18 @@ export const SetupWizard: React.FC<{ onComplete: () => void }> = ({ onComplete }
     const [isLoading, setIsLoading] = useState(false);
 
     const [token, setToken] = useState(storedPlex?.token || '');
+    const [mediaServerType, setMediaServerType] = useState(storedPlex?.mediaServerType || 'plex');
     const [serverIdentifier, setServerIdentifier] = useState(storedPlex?.serverIdentifier || '');
     const [plexServerUrl, setPlexServerUrl] = useState(storedPlex?.plexServerUrl || '');
+    const [jellyfinUrl, setJellyfinUrl] = useState(storedPlex?.jellyfinUrl || '');
+    const [jellyfinApiKey, setJellyfinApiKey] = useState(storedPlex?.jellyfinApiKey || '');
     const [servers, setServers] = useState<PlexServer[]>(storedPlex?.servers || []);
     const [plexUsername, setPlexUsername] = useState(storedPlex?.username || '');
     const [showManualToken, setShowManualToken] = useState(false);
 
     const [publicDomain, setPublicDomain] = useState(storedPlex?.publicDomain ?? (typeof window !== 'undefined' ? getPublicOrigin() : ''));
-    const [primaryColor, setPrimaryColor] = useState(storedPlex?.primaryColor ?? '#E5A00D');
+    const [brandTheme, setBrandTheme] = useState(storedPlex?.brandTheme ?? 'plex');
+    const [primaryColor, setPrimaryColor] = useState(storedPlex?.primaryColor ?? BRAND_THEME_COLORS.plex);
     const [customLogoUrl, setCustomLogoUrl] = useState(storedPlex?.customLogoUrl ?? '');
 
     const [smtpHost, setSmtpHost] = useState(storedPlex?.smtpHost ?? '');
@@ -109,22 +164,55 @@ export const SetupWizard: React.FC<{ onComplete: () => void }> = ({ onComplete }
     const [radarrApiKey, setRadarrApiKey] = useState(storedPlex?.radarrApiKey ?? '');
     const [tautulliUrl, setTautulliUrl] = useState(storedPlex?.tautulliUrl ?? '');
     const [tautulliApiKey, setTautulliApiKey] = useState(storedPlex?.tautulliApiKey ?? '');
-    const [requestAppType, setRequestAppType] = useState(storedPlex?.requestAppType ?? 'none');
+    const [jellystatUrl, setJellystatUrl] = useState(storedPlex?.jellystatUrl ?? '');
+    const [jellystatApiKey, setJellystatApiKey] = useState(storedPlex?.jellystatApiKey ?? '');
+    const [requestAppType, setRequestAppType] = useState(storedPlex?.requestAppType === 'overseerr' ? 'seerr' : (storedPlex?.requestAppType ?? 'none'));
     const [requestAppUrl, setRequestAppUrl] = useState(storedPlex?.requestAppUrl ?? '');
     const [requestAppApiKey, setRequestAppApiKey] = useState(storedPlex?.requestAppApiKey ?? '');
+    const [integrationTab, setIntegrationTab] = useState<'arr' | 'requests' | 'analytics'>('arr');
 
     const stepIndex = STEPS.findIndex((s) => s.id === step);
-    const canGoNext = step !== 'plex' || (token && serverIdentifier);
+    const canGoNext = step !== 'plex'
+        || (mediaServerType === 'jellyfin'
+            ? Boolean(jellyfinUrl && jellyfinApiKey)
+            : Boolean(token && serverIdentifier));
+
+    const applyBrandTheme = (theme: string) => {
+        setBrandTheme(theme);
+        if (theme === 'plex' || theme === 'jellyfin') {
+            setPrimaryColor(BRAND_THEME_COLORS[theme]);
+        }
+    };
+
+    const applyMediaServerType = (type: string) => {
+        const nextType = type === 'jellyfin' ? 'jellyfin' : 'plex';
+        setMediaServerType(nextType);
+        if (brandTheme === 'plex' || brandTheme === 'jellyfin') {
+            applyBrandTheme(nextType);
+        }
+        if (requestAppType === 'none' || requestAppType === 'seerr' || requestAppType === 'overseerr' || requestAppType === 'jellyseerr') {
+            setRequestAppType(nextType === 'jellyfin' ? 'jellyseerr' : 'seerr');
+        }
+    };
+
+    useEffect(() => {
+        document.documentElement.style.setProperty('--color-plex', hexToRgb(primaryColor));
+        document.documentElement.style.setProperty('--color-plex-hover', accentHoverRgb(primaryColor));
+    }, [primaryColor]);
 
     const persistSetupPlex = (patch: Partial<ReturnType<typeof readStoredSetupPlex>>) => {
         const next = {
             token,
+            mediaServerType,
             servers,
             serverIdentifier,
             plexServerUrl,
+            jellyfinUrl,
+            jellyfinApiKey,
             username: plexUsername,
             step,
             publicDomain,
+            brandTheme,
             primaryColor,
             customLogoUrl,
             smtpHost,
@@ -139,6 +227,8 @@ export const SetupWizard: React.FC<{ onComplete: () => void }> = ({ onComplete }
             radarrApiKey,
             tautulliUrl,
             tautulliApiKey,
+            jellystatUrl,
+            jellystatApiKey,
             requestAppType,
             requestAppUrl,
             requestAppApiKey,
@@ -257,8 +347,11 @@ export const SetupWizard: React.FC<{ onComplete: () => void }> = ({ onComplete }
                 method: 'POST',
                 body: JSON.stringify({
                     token: token.trim(),
+                    mediaServerType,
                     serverIdentifier: serverIdentifier.trim(),
                     plexServerUrl: plexServerUrl || undefined,
+                    jellyfinUrl,
+                    jellyfinApiKey,
                     publicDomain,
                     primaryColor,
                     customLogoUrl,
@@ -274,6 +367,8 @@ export const SetupWizard: React.FC<{ onComplete: () => void }> = ({ onComplete }
                     radarrApiKey,
                     tautulliUrl,
                     tautulliApiKey,
+                    jellystatUrl,
+                    jellystatApiKey,
                     requestAppType,
                     requestAppUrl,
                     requestAppApiKey,
@@ -357,7 +452,7 @@ export const SetupWizard: React.FC<{ onComplete: () => void }> = ({ onComplete }
                             </div>
                             <div className="h-2 bg-white/5 rounded-full overflow-hidden border border-white/5">
                                 <div
-                                    className="h-full bg-gradient-to-r from-plex via-amber-400 to-orange-500 rounded-full transition-all duration-500 ease-out shadow-[0_0_12px_rgba(229,160,13,0.5)]"
+                                    className="h-full bg-gradient-to-r from-plex via-plex-hover to-plex rounded-full transition-all duration-500 ease-out shadow-plex/20 shadow-lg"
                                     style={{ width: `${progressPct}%` }}
                                 />
                             </div>
@@ -371,7 +466,7 @@ export const SetupWizard: React.FC<{ onComplete: () => void }> = ({ onComplete }
                         <div className="lg:hidden border-b border-white/10 bg-black/20 px-4 py-4 overflow-x-auto">
                             <div className="flex items-center gap-2 min-w-max">{renderStepNav(true)}</div>
                             <div className="mt-3 h-1.5 bg-white/5 rounded-full overflow-hidden">
-                                <div className="h-full bg-gradient-to-r from-plex to-amber-400 transition-all duration-500" style={{ width: `${progressPct}%` }} />
+                                <div className="h-full bg-gradient-to-r from-plex to-plex-hover transition-all duration-500" style={{ width: `${progressPct}%` }} />
                             </div>
                         </div>
 
@@ -392,7 +487,7 @@ export const SetupWizard: React.FC<{ onComplete: () => void }> = ({ onComplete }
                                         Welcome to your<br className="hidden sm:block" /> media portal
                                     </h2>
                                     <p className="text-muted text-base sm:text-lg leading-relaxed mb-8 max-w-xl">
-                                        A guided setup to connect Plex, brand your portal, and optionally wire up email and your media stack. Takes about five minutes.
+                                        A guided setup to connect Plex or Jellyfin, brand your portal, and optionally wire up email and your media stack. Takes about five minutes.
                                     </p>
                                     <div className="grid sm:grid-cols-2 gap-3 mb-2">
                                         {WELCOME_FEATURES.map(({ icon: Icon, title, desc }) => (
@@ -414,11 +509,31 @@ export const SetupWizard: React.FC<{ onComplete: () => void }> = ({ onComplete }
                         <div className="flex flex-col gap-6 max-w-2xl">
                             <div>
                                 <p className={labelClass + ' mb-2'}>Step {stepIndex + 1}</p>
-                                <h2 className="text-2xl sm:text-3xl font-black text-text tracking-tight mb-2">Plex Connection</h2>
-                                <p className="text-muted text-sm sm:text-base leading-relaxed">Sign in with your Plex account as the <strong className="text-text font-semibold">server owner</strong> to connect your library.</p>
+                                <h2 className="text-2xl sm:text-3xl font-black text-text tracking-tight mb-2">Media Server Connection</h2>
+                                <p className="text-muted text-sm sm:text-base leading-relaxed">Choose and connect the media server that will back this portal.</p>
                             </div>
 
-                            {!token ? (
+                            <div className={`${sectionCardClass} flex flex-col gap-4`}>
+                                <div className="flex flex-col gap-2.5">
+                                    <label className={labelClass}>Media Server Type</label>
+                                    <CustomSelect value={mediaServerType} onChange={applyMediaServerType} options={MEDIA_SERVER_OPTIONS} />
+                                </div>
+                                {mediaServerType === 'jellyfin' && (
+                                    <>
+                                        <div className="flex flex-col gap-2.5">
+                                            <label className={labelClass}>Jellyfin URL</label>
+                                            <input type="url" className={inputClass} value={jellyfinUrl} onChange={(e) => setJellyfinUrl(e.target.value)} placeholder="http://192.168.1.6:8096" />
+                                        </div>
+                                        <div className="flex flex-col gap-2.5">
+                                            <label className={labelClass}>Jellyfin API Key</label>
+                                            <input type="password" className={inputClass} value={jellyfinApiKey} onChange={(e) => setJellyfinApiKey(e.target.value)} placeholder="API key from Jellyfin dashboard" />
+                                        </div>
+                                        <IntegrationTestButton type="jellyfin" payload={{ jellyfinUrl, jellyfinApiKey }} disabled={!jellyfinUrl || !jellyfinApiKey} />
+                                    </>
+                                )}
+                            </div>
+
+                            {mediaServerType === 'plex' && (!token ? (
                                 <div className={`${sectionCardClass} flex flex-col gap-4`}>
                                     <button
                                         type="button"
@@ -454,9 +569,9 @@ export const SetupWizard: React.FC<{ onComplete: () => void }> = ({ onComplete }
                                         Sign out
                                     </button>
                                 </div>
-                            )}
+                            ))}
 
-                            {servers.length > 0 ? (
+                            {mediaServerType === 'plex' && (servers.length > 0 ? (
                                 <div className="flex flex-col gap-2.5">
                                     <label className={labelClass}>Select Server</label>
                                     <CustomSelect value={serverIdentifier} onChange={setServerIdentifier} options={servers.map((s) => ({ label: `${s.name} (${s.identifier})`, value: s.identifier }))} />
@@ -473,9 +588,9 @@ export const SetupWizard: React.FC<{ onComplete: () => void }> = ({ onComplete }
                                         <p>2) Copy <code className="bg-background px-1.5 py-0.5 rounded">machineIdentifier</code> from the response.</p>
                                     </div>
                                 </div>
-                            ) : null}
+                            ) : null)}
 
-                            <div className="flex flex-col gap-2.5">
+                            {mediaServerType === 'plex' && <div className="flex flex-col gap-2.5">
                                 <label className={labelClass}>
                                     Direct Plex URL <span className="text-muted/70 font-normal normal-case tracking-normal">(required in Docker)</span>
                                 </label>
@@ -487,15 +602,15 @@ export const SetupWizard: React.FC<{ onComplete: () => void }> = ({ onComplete }
                                     placeholder="http://192.168.1.6:32400"
                                 />
                                 <p className="text-xs text-muted leading-relaxed">Your Plex server&apos;s LAN address. Required when Plex.tv discovery fails from inside the container.</p>
-                            </div>
+                            </div>}
 
-                            <IntegrationTestButton
+                            {mediaServerType === 'plex' && <IntegrationTestButton
                                 type="plex"
                                 payload={{ token, serverIdentifier, plexServerUrl: plexServerUrl || undefined }}
                                 disabled={!token || !serverIdentifier}
-                            />
+                            />}
 
-                            <div className="border-t border-white/10 pt-5">
+                            {mediaServerType === 'plex' && <div className="border-t border-white/10 pt-5">
                                 <button
                                     type="button"
                                     onClick={() => setShowManualToken(!showManualToken)}
@@ -519,7 +634,7 @@ export const SetupWizard: React.FC<{ onComplete: () => void }> = ({ onComplete }
                                         </div>
                                     </div>
                                 )}
-                            </div>
+                            </div>}
                         </div>
                     )}
 
@@ -536,10 +651,31 @@ export const SetupWizard: React.FC<{ onComplete: () => void }> = ({ onComplete }
                                     <input type="text" className={inputClass} value={publicDomain} onChange={(e) => setPublicDomain(e.target.value)} placeholder="https://portal.yourdomain.com" />
                                 </div>
                                 <div className="flex flex-col gap-2.5">
+                                    <label className={labelClass}>Theme</label>
+                                    <CustomSelect value={brandTheme} onChange={applyBrandTheme} options={BRAND_THEME_OPTIONS} />
+                                </div>
+                                <div className="flex flex-col gap-2.5">
                                     <label className={labelClass}>Primary Color</label>
                                     <div className="flex gap-3 items-center">
-                                        <input type="color" value={primaryColor} onChange={(e) => setPrimaryColor(e.target.value)} className="w-14 h-14 rounded-xl border border-white/10 cursor-pointer bg-transparent flex-shrink-0" />
-                                        <input type="text" className={inputClass} value={primaryColor} onChange={(e) => setPrimaryColor(e.target.value)} placeholder="#E5A00D" />
+                                        <input
+                                            type="color"
+                                            value={primaryColor}
+                                            onChange={(e) => {
+                                                setBrandTheme('custom');
+                                                setPrimaryColor(e.target.value);
+                                            }}
+                                            className="w-14 h-14 rounded-xl border border-white/10 cursor-pointer bg-transparent flex-shrink-0"
+                                        />
+                                        <input
+                                            type="text"
+                                            className={inputClass}
+                                            value={primaryColor}
+                                            onChange={(e) => {
+                                                setBrandTheme('custom');
+                                                setPrimaryColor(e.target.value);
+                                            }}
+                                            placeholder="#F7C600"
+                                        />
                                     </div>
                                 </div>
                                 <div className="flex flex-col gap-2.5">
@@ -601,41 +737,102 @@ export const SetupWizard: React.FC<{ onComplete: () => void }> = ({ onComplete }
                     )}
 
                     {step === 'integrations' && (
-                        <div className="flex flex-col gap-5 max-w-2xl">
+                        <div className="flex flex-col gap-5 max-w-4xl">
                             <div>
                                 <p className={labelClass + ' mb-2'}>Step {stepIndex + 1}</p>
                                 <h2 className="text-2xl sm:text-3xl font-black text-text tracking-tight mb-2">Media Stack</h2>
-                                <p className="text-muted text-sm sm:text-base">All optional — powers analytics, maintenance rules, and media stack pages.</p>
+                                <p className="text-muted text-sm sm:text-base">All optional. Connect the apps that manage requests, downloads, activity, and maintenance.</p>
                             </div>
-                            {[
-                                { label: 'Sonarr', url: sonarrUrl, setUrl: setSonarrUrl, key: sonarrApiKey, setKey: setSonarrApiKey, type: 'sonarr' as const, placeholder: 'http://localhost:8989' },
-                                { label: 'Radarr', url: radarrUrl, setUrl: setRadarrUrl, key: radarrApiKey, setKey: setRadarrApiKey, type: 'radarr' as const, placeholder: 'http://localhost:7878' },
-                                { label: 'Tautulli', url: tautulliUrl, setUrl: setTautulliUrl, key: tautulliApiKey, setKey: setTautulliApiKey, type: 'tautulli' as const, placeholder: 'http://localhost:8181' },
-                            ].map(({ label, url, setUrl, key, setKey, type, placeholder }) => (
-                                <div key={type} className={`${sectionCardClass} flex flex-col gap-3.5`}>
-                                    <h3 className="font-bold text-plex text-base flex items-center gap-2">
-                                        <span className="w-2 h-2 rounded-full bg-plex shadow-[0_0_8px_rgba(229,160,13,0.6)]" />
-                                        {label}
-                                    </h3>
-                                    <input type="text" className={inputClass} value={url} onChange={(e) => setUrl(e.target.value)} placeholder={placeholder} />
-                                    <input type="password" className={inputClass} value={key} onChange={(e) => setKey(e.target.value)} placeholder="API Key" />
-                                    <IntegrationTestButton type={type} payload={{ [`${type}Url`]: url, [`${type}ApiKey`]: key }} disabled={!url || !key} />
+                            <div className="grid grid-cols-3 gap-2 rounded-xl border border-white/10 bg-background/50 p-1.5">
+                                {[
+                                    { id: 'arr' as const, label: 'Arr Apps' },
+                                    { id: 'requests' as const, label: 'Requests' },
+                                    { id: 'analytics' as const, label: mediaServerType === 'jellyfin' ? 'Jellystat' : 'Tautulli' },
+                                ].map((tab) => (
+                                    <button
+                                        key={tab.id}
+                                        type="button"
+                                        onClick={() => setIntegrationTab(tab.id)}
+                                        className={`px-3 py-2.5 rounded-lg text-xs sm:text-sm font-bold transition-all ${integrationTab === tab.id ? 'bg-plex text-background shadow-lg shadow-plex/20' : 'text-muted hover:text-text hover:bg-white/5'}`}
+                                    >
+                                        {tab.label}
+                                    </button>
+                                ))}
+                            </div>
+
+                            {integrationTab === 'arr' && (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {[
+                                        { label: 'Sonarr', desc: 'TV series automation', url: sonarrUrl, setUrl: setSonarrUrl, key: sonarrApiKey, setKey: setSonarrApiKey, type: 'sonarr' as const, placeholder: 'http://localhost:8989' },
+                                        { label: 'Radarr', desc: 'Movie automation', url: radarrUrl, setUrl: setRadarrUrl, key: radarrApiKey, setKey: setRadarrApiKey, type: 'radarr' as const, placeholder: 'http://localhost:7878' },
+                                    ].map(({ label, desc, url, setUrl, key, setKey, type, placeholder }) => (
+                                        <div key={type} className={`${sectionCardClass} flex flex-col gap-3.5`}>
+                                            <div className="flex items-center gap-3">
+                                                <ProgramIcon app={type} label={label} />
+                                                <div>
+                                                    <h3 className="font-bold text-text text-base leading-tight">{label}</h3>
+                                                    <p className="text-xs text-muted mt-0.5">{desc}</p>
+                                                </div>
+                                            </div>
+                                            <input type="text" className={inputClass} value={url} onChange={(e) => setUrl(e.target.value)} placeholder={placeholder} />
+                                            <input type="password" className={inputClass} value={key} onChange={(e) => setKey(e.target.value)} placeholder="API Key" />
+                                            <IntegrationTestButton type={type} payload={{ [`${type}Url`]: url, [`${type}ApiKey`]: key }} disabled={!url || !key} />
+                                        </div>
+                                    ))}
                                 </div>
-                            ))}
-                            <div className={`${sectionCardClass} flex flex-col gap-3.5`}>
-                                <h3 className="font-bold text-plex text-base flex items-center gap-2">
-                                    <span className="w-2 h-2 rounded-full bg-plex shadow-[0_0_8px_rgba(229,160,13,0.6)]" />
-                                    Request App
-                                </h3>
-                                <CustomSelect value={requestAppType} onChange={setRequestAppType} options={REQUEST_APP_OPTIONS} />
-                                {requestAppType !== 'none' && (
-                                    <>
-                                        <input type="text" className={inputClass} value={requestAppUrl} onChange={(e) => setRequestAppUrl(e.target.value)} placeholder="http://localhost:5055" />
-                                        <input type="password" className={inputClass} value={requestAppApiKey} onChange={(e) => setRequestAppApiKey(e.target.value)} placeholder="API Key" />
-                                        <IntegrationTestButton type="requestApp" payload={{ requestAppType, requestAppUrl, requestAppApiKey }} disabled={!requestAppUrl || !requestAppApiKey} />
-                                    </>
-                                )}
-                            </div>
+                            )}
+
+                            {integrationTab === 'requests' && (
+                                <div className={`${sectionCardClass} flex flex-col gap-3.5`}>
+                                    <div className="flex items-center gap-3">
+                                        <ProgramIcon app={requestAppType === 'none' ? (mediaServerType === 'jellyfin' ? 'jellyseerr' : 'seerr') : requestAppType} label="Request App" />
+                                        <div>
+                                            <h3 className="font-bold text-text text-base leading-tight">Request App</h3>
+                                            <p className="text-xs text-muted mt-0.5">Seerr, Jellyseerr, or Ombi for user requests.</p>
+                                        </div>
+                                    </div>
+                                    <CustomSelect value={requestAppType} onChange={setRequestAppType} options={REQUEST_APP_OPTIONS} />
+                                    {requestAppType !== 'none' && (
+                                        <>
+                                            <input type="text" className={inputClass} value={requestAppUrl} onChange={(e) => setRequestAppUrl(e.target.value)} placeholder="http://localhost:5055" />
+                                            <input type="password" className={inputClass} value={requestAppApiKey} onChange={(e) => setRequestAppApiKey(e.target.value)} placeholder="API Key" />
+                                            <IntegrationTestButton type="requestApp" payload={{ requestAppType, requestAppUrl, requestAppApiKey }} disabled={!requestAppUrl || !requestAppApiKey} />
+                                        </>
+                                    )}
+                                </div>
+                            )}
+
+                            {integrationTab === 'analytics' && (
+                                <div className={`${sectionCardClass} flex flex-col gap-3.5`}>
+                                    {mediaServerType === 'jellyfin' ? (
+                                        <>
+                                            <div className="flex items-center gap-3">
+                                                <ProgramIcon app="jellystat" label="Jellystat" />
+                                                <div>
+                                                    <h3 className="font-bold text-text text-base leading-tight">Jellystat</h3>
+                                                    <p className="text-xs text-muted mt-0.5">Jellyfin activity and analytics.</p>
+                                                </div>
+                                            </div>
+                                            <input type="text" className={inputClass} value={jellystatUrl} onChange={(e) => setJellystatUrl(e.target.value)} placeholder="http://localhost:3000" />
+                                            <input type="password" className={inputClass} value={jellystatApiKey} onChange={(e) => setJellystatApiKey(e.target.value)} placeholder="API Key" />
+                                            <IntegrationTestButton type="jellystat" payload={{ jellystatUrl, jellystatApiKey }} disabled={!jellystatUrl || !jellystatApiKey} />
+                                        </>
+                                    ) : (
+                                        <>
+                                            <div className="flex items-center gap-3">
+                                                <ProgramIcon app="tautulli" label="Tautulli" />
+                                                <div>
+                                                    <h3 className="font-bold text-text text-base leading-tight">Tautulli</h3>
+                                                    <p className="text-xs text-muted mt-0.5">Plex activity and analytics.</p>
+                                                </div>
+                                            </div>
+                                            <input type="text" className={inputClass} value={tautulliUrl} onChange={(e) => setTautulliUrl(e.target.value)} placeholder="http://localhost:8181" />
+                                            <input type="password" className={inputClass} value={tautulliApiKey} onChange={(e) => setTautulliApiKey(e.target.value)} placeholder="API Key" />
+                                            <IntegrationTestButton type="tautulli" payload={{ tautulliUrl, tautulliApiKey }} disabled={!tautulliUrl || !tautulliApiKey} />
+                                        </>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     )}
 
@@ -647,11 +844,11 @@ export const SetupWizard: React.FC<{ onComplete: () => void }> = ({ onComplete }
                             <p className={labelClass + ' mb-3'}>Step {stepIndex + 1}</p>
                             <h2 className="text-3xl sm:text-4xl font-black text-text tracking-tight mb-4">Ready to launch</h2>
                             <p className="text-muted text-base leading-relaxed mb-8">
-                                Your Plex server{sonarrUrl ? ', Sonarr' : ''}{radarrUrl ? ', Radarr' : ''}{tautulliUrl ? ', Tautulli' : ''} will be saved.
+                                Your {mediaServerType === 'jellyfin' ? 'Jellyfin' : 'Plex'} server{sonarrUrl ? ', Sonarr' : ''}{radarrUrl ? ', Radarr' : ''}{tautulliUrl ? ', Tautulli' : ''}{jellystatUrl ? ', Jellystat' : ''} will be saved.
                                 {smtpHost ? ' Email notifications enabled.' : ' You can add email later in Settings.'}
                             </p>
                             <div className={`${sectionCardClass} text-left text-sm space-y-3`}>
-                                <p className="flex justify-between gap-4 border-b border-white/5 pb-3"><span className="text-muted">Server</span> <strong className="text-text truncate">{serverIdentifier || '—'}</strong></p>
+                                <p className="flex justify-between gap-4 border-b border-white/5 pb-3"><span className="text-muted">Server</span> <strong className="text-text truncate">{mediaServerType === 'jellyfin' ? (jellyfinUrl || '—') : (serverIdentifier || '—')}</strong></p>
                                 <p className="flex justify-between gap-4 border-b border-white/5 pb-3"><span className="text-muted">Portal URL</span> <strong className="text-text truncate">{publicDomain || '—'}</strong></p>
                                 <p className="flex justify-between gap-4 items-center"><span className="text-muted">Accent</span> <span className="flex items-center gap-2"><span className="inline-block w-5 h-5 rounded-md border border-white/20 shadow-inner" style={{ backgroundColor: primaryColor }} /><strong className="text-text">{primaryColor}</strong></span></p>
                             </div>
@@ -669,7 +866,7 @@ export const SetupWizard: React.FC<{ onComplete: () => void }> = ({ onComplete }
                                 {STEPS[stepIndex].label} · {stepIndex + 1}/{STEPS.length}
                             </span>
                             {step === 'finish' ? (
-                                <button type="button" onClick={handleComplete} disabled={isLoading || !token || !serverIdentifier}
+                                <button type="button" onClick={handleComplete} disabled={isLoading || !canGoNext}
                                     className={primaryBtnClass}>
                                     {isLoading ? 'Saving…' : 'Complete Setup'} <Check className="w-4 h-4" />
                                 </button>

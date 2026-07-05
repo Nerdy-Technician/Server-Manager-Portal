@@ -4,13 +4,14 @@
 
 # Server Portal
 
-**A premium, fully-automated management and analytics portal for Plex Media Servers.**
+**A premium, fully-automated management and analytics portal for Plex and Jellyfin media servers.**
 
 Built with Node.js · Express · React · Tailwind CSS
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Node.js](https://img.shields.io/badge/Node.js-20%2B-green.svg)](https://nodejs.org/)
 [![Plex](https://img.shields.io/badge/Plex-Media%20Server-orange.svg)](https://www.plex.tv/)
+[![Jellyfin](https://img.shields.io/badge/Jellyfin-Media%20Server-00A4DC.svg)](https://jellyfin.org/)
 [![Docker Image Size](https://ghcr-badge.egpl.dev/jl94x4/server-manager-portal/size?label=docker%20image%20size&color=blue)](https://github.com/jl94x4/Server-Manager-Portal/pkgs/container/server-manager-portal)
 [![GitHub Stars](https://img.shields.io/github/stars/jl94x4/Server-Manager-Portal.svg?style=flat&logo=github&color=gold)](https://github.com/jl94x4/Server-Manager-Portal/stargazers)
 [![GitHub Forks](https://img.shields.io/github/forks/jl94x4/Server-Manager-Portal.svg?style=flat&logo=github)](https://github.com/jl94x4/Server-Manager-Portal/network/members)
@@ -20,9 +21,9 @@ Built with Node.js · Express · React · Tailwind CSS
 
 ---
 
-Server Portal is a self-hosted web application that turns your Plex Media Server into a fully managed streaming service. It handles everything from user onboarding and automated access management, to real-time analytics, live session monitoring, trending content discovery, and beautiful personalized wrap-ups for every user, all from one polished, mobile-first dashboard with a premium glass UI.
+Server Portal is a self-hosted web application that turns your Plex or Jellyfin server into a fully managed streaming service. It handles everything from user onboarding and automated access management, to real-time analytics, live session monitoring, trending content discovery, and personalized wrap-ups for every user, all from one polished, mobile-first dashboard with a premium glass UI.
 
-Once setup your users will be able to login using their own Plex account to see their own stats! 
+Once set up, users can sign in with Plex OAuth or Jellyfin authentication/Quick Connect to see their own portal, activity, and stats.
 
 ---
 <img width="2294" height="1218" alt="image" src="https://github.com/user-attachments/assets/16d548fb-c07c-4967-bd39-12ffdfac45c0" />
@@ -44,12 +45,12 @@ Every user gets a rich, personalized dashboard packed with insights about their 
 | **Media Profile** | Your viewer personality type (Movie Buff, TV Show Binger, Music Lover, Mixed Bag) with colour-coded breakdown bars, percentage splits, and top 3 movies + top 3 shows |
 | **Watch Style** | Discovery vs Rewatch analysis with a split progress bar and your top 5 most-rewatched titles |
 | **Streaming Habit** | Weekday vs Weekend split bar chart, average plays per day, and habit label (Weekend Warrior, Weekday Streamer, Balanced) |
-| **Top Library** | Your most-used Plex library with a full ranked breakdown of all libraries |
+| **Top Library** | Your most-used media library with a full ranked breakdown of all libraries |
 | **Top Day** | An animated bar chart showing your plays across all 7 days of the week, highlighting your peak day |
 | **Peak Hours** | An animated hourly distribution chart showing what time of day you stream the most |
 | **Time of Day** | Your streaming persona (Night Owl, Early Bird, Evening Streamer, Afternoon Watcher) with a contextual description |
 
-All cards open into detailed modals loaded with contextual data, Plex artwork, and dynamic charts.
+All cards open into detailed modals loaded with contextual data, media artwork, and dynamic charts.
 
 **Shareable wrap-up** - Export your personal wrap-up as a PNG image from the home dashboard. The share modal previews the real card grid and supports native share on supported devices, with download as a fallback.
 
@@ -62,7 +63,7 @@ All cards open into detailed modals loaded with contextual data, Plex artwork, a
 A comprehensive control panel for the server owner:
 
 - **Live Session Monitor** - Real-time view of all active streams with user avatar, media title, progress bar, stream type badge (Direct Play / Transcode), and a click-through technical modal showing video codec, audio codec, bitrate, channels, resolution, and transcode reason
-- **User Management Table** - View all users with their Plex avatar, username, email, access expiry date, last seen timestamp, and quick-action buttons (+1 Month, +1 Year, Unlimited, Revoke)
+- **User Management Table** - View all users with their Plex or Jellyfin avatar, username, email, access expiry date, last seen timestamp, and quick-action buttons (+1 Month, +1 Year, Unlimited, Revoke)
 - **Server Leaderboard** - Server-wide play count rankings across all time periods, updated automatically in the background
 - **Audit Log** - Timestamped record of all system actions (access granted, revoked, extended, expired)
 - **Settings UI** - Configure every aspect of the portal from the browser without touching config files
@@ -88,7 +89,7 @@ Layout settings are saved server-wide, validated on the backend, and applied to 
 
 ### Discover Page
 
-A curated content discovery experience for all users, powered by server-wide watch history and live Plex activity:
+A curated content discovery experience for all users, powered by server-wide watch history and live media activity:
 
 **Live activity**
 - Real-time stream summary cards (total streams, direct play, transcoding, bandwidth)
@@ -111,7 +112,7 @@ A curated content discovery experience for all users, powered by server-wide wat
 - **Cult Classics** - Niche content with extremely high plays relative to its tiny viewer count
 - **Blast from the Past** - Pre-2000 titles getting recent love
 
-All discover items display Plex artwork, play counts, and quality badges (4K, HDR, AV1/HEVC, Atmos, and more). Trending and analytics caches are reused on startup when still fresh, so the portal loads quickly after restarts.
+All discover items display server artwork, play counts, and quality badges (4K, HDR, AV1/HEVC, Atmos, and more). Trending and analytics caches are reused on startup when still fresh, so the portal loads quickly after restarts.
 
 ---
 
@@ -124,16 +125,17 @@ Browse your Sonarr and Radarr activity directly inside the portal:
 - **Recent History** - Import and grab history across both services
 - **Month Navigation** - Browse releases by month with auto-advance to the next month that has content
 
-Configure Sonarr/Radarr URLs and API keys in **Settings → Integrations**.
+Configure Sonarr/Radarr URLs and API keys in **Settings → Media Stack**.
 
 ---
 
 ### User Onboarding & Access Management
 
-- **Invite Link System** - Generate shareable invite links with a configurable max-use limit and custom duration. Users claim access via a branded landing page that automatically adds them to your Plex server
-- **Plex OAuth** - Secure login via official Plex.tv authentication. No passwords stored
+- **Invite Link System** - Generate shareable invite links with a configurable max-use limit and custom duration. Users claim access via a branded landing page
+- **Plex OAuth** - Secure login via official Plex.tv authentication. No Plex passwords stored
+- **Jellyfin Auth + Quick Connect** - Jellyfin portals support username/password auth and one-click Quick Connect, with admin detection from Jellyfin policy
 - **Automated Temporary Access** - Auto-grant configurable temporary access periods (e.g., 3 days) to all new users
-- **Access Expiry** - Set hard expiry dates per user. The system automatically removes Plex server access when time is up
+- **Access Expiry** - Set hard expiry dates per user. The system automatically revokes portal access when time is up
 - **Inactivity Cleanup** - Automatically remove users who haven't streamed in a configurable number of days, with per-user exemptions available
 - **Grace Period Notifications** - Warn users via email before their access expires
 
@@ -155,8 +157,8 @@ Beautiful, responsive HTML emails sent automatically:
 
 ### Public-Facing Pages
 
-- **Landing Page** - A sleek login page showing live library stats (total movies, shows, music) to entice new users
-- **Status Page** - A public `/status` dashboard showing the live uptime of your Plex server, request tools (Overseerr/Ombi), and download clients
+- **Landing Page** - A sleek login page showing live library stats (total movies, shows, music) and your configured server branding
+- **Status Page** - A public `/status` dashboard showing the live uptime of your media server, request tools (Seerr/Jellyseerr/Ombi), analytics companion, and download clients
 - **Invite Claim Page** - A dedicated, shareable page for invited users to claim their account
 
 ---
@@ -177,7 +179,7 @@ Beautiful, responsive HTML emails sent automatically:
 | **Backend** | Node.js, Express.js |
 | **Frontend** | React 18 (bundled via esbuild), TypeScript |
 | **Styling** | Tailwind CSS v3 |
-| **Auth** | JWT (httpOnly cookies) + Plex.tv OAuth |
+| **Auth** | JWT (httpOnly cookies) + Plex.tv OAuth or Jellyfin authentication |
 | **Data** | Local JSON flat-files (no database required) |
 | **Email** | Nodemailer (compatible with any SMTP provider) |
 | **Icons** | Lucide React |
@@ -187,12 +189,12 @@ Beautiful, responsive HTML emails sent automatically:
 
 ## Security
 
-- **No Passwords** - Authentication is handled 100% by Plex.tv. The app only stores Plex Account IDs, usernames, and emails
-- **JWT Session Security** - Cookies use `httpOnly`, `secure`, and `sameSite: lax` flags to reduce XSS and CSRF risk while keeping Plex OAuth redirects reliable
+- **No Plex Passwords** - Plex authentication is handled by Plex.tv OAuth. Jellyfin password login is exchanged directly with your Jellyfin server and is not stored by the portal
+- **JWT Session Security** - Cookies use `httpOnly`, `secure`, and `sameSite: lax` flags to reduce XSS and CSRF risk while keeping auth redirects reliable
 - **Rate Limiting** - Authentication endpoints have strict rate limiting to prevent brute-force attacks
 - **HTTP Security Headers** - HSTS, X-Content-Type-Options, X-Frame-Options, X-XSS-Protection, Referrer-Policy, and Permissions-Policy enforced on every response
-- **Admin Protection** - All admin routes are verified against live Plex server ownership, not just a stored flag. Home layout changes are admin-only and validated server-side
-- **Reverse Proxy Ready** - Supports Nginx, Caddy, and Cloudflare via `X-Forwarded-Proto` / `X-Forwarded-For` header trust, including optional subpath hosting (e.g. `https://plex.example.com/portal`)
+- **Admin Protection** - Admin routes require an authenticated admin session. Plex admins are verified from server ownership; Jellyfin admins are verified from Jellyfin user policy
+- **Reverse Proxy Ready** - Supports Nginx, Caddy, and Cloudflare via `X-Forwarded-Proto` / `X-Forwarded-For` header trust, including optional subpath hosting (e.g. `https://media.example.com/portal`)
 - **Injection Proof** - Uses a flat-file JSON system, making SQL injection structurally impossible
 
 ---
@@ -202,7 +204,7 @@ Beautiful, responsive HTML emails sent automatically:
 ### Prerequisites
 
 - **Node.js** v20.6 or newer (for native `.env` support)
-- A **Plex Media Server** with an admin Plex Token
+- A **Plex Media Server** with an admin Plex token, or a **Jellyfin Server** with an admin API key
 - *(Optional)* An SMTP provider for email notifications
 
 ### Installation
@@ -220,7 +222,7 @@ npm install
 
 **3. Generate your JWT secret**
 ```bash
-echo "JWT_SECRET=$(node -e "console.log(require('crypto').randomBytes(48).toString('hex'))")" > .env
+printf 'JWT_SECRET=%s\n' "$(node -e "console.log(require('crypto').randomBytes(48).toString('hex'))")" > .env
 ```
 
 **4. Start the application**
@@ -233,9 +235,19 @@ npm start
 **5. First-time admin setup**
 
 - Navigate to `http://localhost:2121`
-- Log in with your **Plex Admin account**
-- The app will auto-detect you as the server owner and grant Admin access
-- Go to **Settings** in the sidebar to configure your Plex token, SMTP, temporary access settings, and scheduled tasks
+- Choose **Plex** or **Jellyfin** in the first-time setup wizard
+- Plex setup uses Plex OAuth/token and server selection
+- Jellyfin setup uses Jellyfin URL + API key, then supports Jellyfin login and Quick Connect
+- Go to **Settings** in the sidebar to configure **Media Player**, SMTP, temporary access settings, branding, and scheduled tasks
+
+### Media player modes
+
+| Mode | Authentication | Analytics companion | Branding |
+|---|---|---|---|
+| **Plex** | Plex.tv OAuth, Plex token, selected owned server | Tautulli | Plex or custom theme |
+| **Jellyfin** | Jellyfin username/password or Quick Connect | Jellystat | Jellyfin server icon and splash screen proxy, or custom theme |
+
+Plex mode keeps the original Plex OAuth and Tautulli flow. Jellyfin mode uses your Jellyfin URL/API key for user sync, session activity, Quick Connect, and server branding assets.
 
 ---
 
@@ -292,7 +304,7 @@ PUBLIC_BASE_URL=https://portal.example.com
 docker compose up -d --build
 ```
 
-The portal listens on port **2121** by default. Open `http://localhost:2121` and sign in with your Plex admin account.
+The portal listens on port **2121** by default. Open `http://localhost:2121` and complete the first-time setup for Plex or Jellyfin.
 
 **3. Persisted data**
 
@@ -306,7 +318,7 @@ On first startup, any legacy JSON files still in the project root are automatica
 ### Docker Compose tips
 
 - Change the published port: set `PORT=8080` in `.env` (maps host `8080` → container `2121`).
-- Integrations on your LAN (Sonarr, Radarr, Tautulli): set `ALLOW_PRIVATE_INTEGRATION_URLS=true` and use reachable URLs from inside the container (e.g. `http://host.docker.internal:8989` on Docker Desktop, or your host IP on Linux).
+- Integrations on your LAN (Sonarr, Radarr, Tautulli, Jellystat, Seerr/Jellyseerr/Ombi): set `ALLOW_PRIVATE_INTEGRATION_URLS=true` and use reachable URLs from inside the container (e.g. `http://host.docker.internal:8989` on Docker Desktop, or your host IP on Linux).
 - View logs: `docker compose logs -f portal`
 - Update: `git pull && docker compose up -d --build`
 
@@ -343,12 +355,12 @@ Set `FORCE_SECURE_COOKIES=true` and `PUBLIC_BASE_URL=https://portal.example.com`
 
 #### Subpath hosting
 
-You can also host the portal under a path on an existing domain, for example `https://plex.example.com/portal` alongside Plex or other services.
+You can also host the portal under a path on an existing domain, for example `https://media.example.com/portal` alongside Plex, Jellyfin, or other services.
 
 Example Caddy:
 
 ```caddy
-plex.example.com {
+media.example.com {
     handle /portal/* {
         reverse_proxy localhost:2121
     }
@@ -359,7 +371,7 @@ Set these environment variables:
 
 ```env
 BASE_PATH=/portal
-PUBLIC_BASE_URL=https://plex.example.com/portal
+PUBLIC_BASE_URL=https://media.example.com/portal
 FORCE_SECURE_COOKIES=true
 ```
 
@@ -388,12 +400,12 @@ The template uses `ghcr.io/jl94x4/server-manager-portal:latest` by default.
 | `PORT` | No | Listen port inside the container (default `2121`) |
 | `BIND_HOST` | No | Bind address (default `0.0.0.0`) |
 | `CONFIG_DIR` | No | Runtime data directory (default `/app/config` in Docker) |
-| `PUBLIC_BASE_URL` | Recommended | Public HTTPS URL for links and emails. Include the subpath when using one, e.g. `https://plex.example.com/portal` |
+| `PUBLIC_BASE_URL` | Recommended | Public HTTPS URL for links and emails. Include the subpath when using one, e.g. `https://media.example.com/portal` |
 | `BASE_PATH` | No | URL prefix when hosted under a subpath (e.g. `/portal`). Leave empty for root hosting |
 | `FORCE_SECURE_COOKIES` | Recommended | Set `true` when behind HTTPS |
 | `ALLOW_PRIVATE_INTEGRATION_URLS` | No | Allow LAN/private URLs for Arr stack integrations |
 | `SETUP_TOKEN` | No | Token for remote first-time setup |
-| `CLIENT_ID` | No | Fixed Plex OAuth client id (auto-generated if unset) |
+| `CLIENT_ID` | No | Fixed Plex OAuth client id (auto-generated if unset; Plex mode only) |
 
 See `.env.example` for a full template.
 
@@ -405,16 +417,37 @@ All configuration is managed through the **Settings UI** in the browser. Key opt
 
 | Setting | Description |
 |---|---|
-| Plex Token | Your Plex admin token for API access |
-| Plex Server URL | Local or remote address of your Plex server |
-| Direct Plex URL | LAN URL for faster Plex image and history fetches (recommended in Docker) |
+| Media Player | Choose Plex or Jellyfin |
+| Plex Token / Server | Plex admin token, selected server, and optional direct Plex URL |
+| Jellyfin URL / API Key | Jellyfin server URL and API key for users, sessions, Quick Connect, and branding proxy |
+| Branding & UI | Portal accent colour, server logo, Jellyfin/Plex preset, and splash background |
 | Temporary Access Duration | Number of days new users get for free |
 | Inactivity Threshold | Days of inactivity before auto-removal |
 | SMTP Settings | Host, port, username, password, from address |
 | Newsletter Schedule | Weekly or monthly, with day/time selection |
 | Home Layout | Section order and visibility for the user home page |
-| Sonarr / Radarr URLs | For embedding media request tools |
+| Sonarr / Radarr URLs | For media stack calendar, queue, and history |
+| Tautulli / Jellystat | Tautulli for Plex analytics, Jellystat for Jellyfin analytics |
 | Status Page Services | Define services and their health check URLs |
+
+---
+
+## Background Tasks
+
+The **Settings → Background Tasks** page shows the active scheduler and lets admins run jobs manually. Task labels follow the selected media player:
+
+| Task | Plex mode | Jellyfin mode |
+|---|---|---|
+| User sync | Sync Plex Users | Sync Jellyfin Users |
+| Expiry checks | Email users nearing expiry | Same |
+| Revoke access | Removes expired Plex access | Revokes expired portal access |
+| Inactive cleanup | Revokes inactive users | Revokes inactive Jellyfin portal users |
+| Analytics cache | Uses Plex/Tautulli data where configured | Uses Jellyfin/Jellystat data where configured |
+| Library stats | Plex Stats Builder | Hidden in Jellyfin mode |
+| Maintenance index | Builds media/request index for cleanup rules | Same |
+| Auto rolling backup | Creates rolling config backups | Same |
+
+The **Settings → System** diagnostics page uses the same media-aware task list so Jellyfin portals are not penalized for Plex-only jobs.
 
 ---
 
@@ -422,13 +455,13 @@ All configuration is managed through the **Settings UI** in the browser. Key opt
 
 ```
 Server-Manager-Portal/
-├── index.js            # Backend: Express API, Plex integration, auth, email, scheduling
+├── index.js            # Backend: Express API, Plex/Jellyfin integrations, auth, email, background jobs
 ├── index.tsx           # Frontend entry point
 ├── client/             # React application source
 │   ├── App.tsx         # App shell, routing, responsive layout
 │   ├── screens.tsx     # Dashboards, Discover, login, and shared screens
 │   ├── home/           # User dashboard layout and widget renderers
-│   ├── settings/       # Settings UI (including Home Layout editor)
+│   ├── settings/       # Settings UI (Media Player, Home Layout, System, Background Tasks)
 │   ├── shared/         # API helpers, types, theme, skeletons, wrap-up cards
 │   ├── setup/          # First-time setup wizard
 │   └── maintenance/    # Library maintenance panel
