@@ -71,12 +71,12 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({ id, value, onChange,
         <div
             ref={dropRef}
             style={{ position: 'fixed', top: dropPos.top, left: dropPos.left, minWidth: dropPos.width, zIndex: 99999 }}
-            className="bg-[#1e2329] border border-border rounded-lg shadow-2xl py-1 max-h-64 overflow-y-auto custom-scrollbar"
+            className="bg-card border border-border rounded-lg shadow-2xl py-1 max-h-64 overflow-y-auto custom-scrollbar"
         >
             {options.map(opt => (
                 <div
                     key={String(opt.value)}
-                    className={`px-4 py-2.5 cursor-pointer hover:bg-white/10 transition-colors whitespace-nowrap text-sm ${String(value) === String(opt.value) ? 'bg-plex/10 text-plex font-bold' : 'text-text'}`}
+                    className={`px-4 py-2.5 cursor-pointer hover:bg-border/40 transition-colors whitespace-nowrap text-sm ${String(value) === String(opt.value) ? 'bg-plex/10 text-plex font-bold' : 'text-text'}`}
                     onMouseDown={e => { e.preventDefault(); onChange(String(opt.value)); setIsOpen(false); }}
                 >
                     {opt.label}

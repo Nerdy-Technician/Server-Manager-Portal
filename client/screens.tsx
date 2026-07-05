@@ -6848,9 +6848,11 @@ interface NavigationProps {
     requestUrl: string;
     navOrder: string[];
     appVersion?: string;
+    activeTheme: string;
+    setActiveTheme: (theme: string) => void;
 }
 
-export const Navigation: React.FC<NavigationProps> = ({ currentRoute, onNavigate, onLogout, isAdmin, serverName, adminThumb, customLogoUrl, requestUrl, navOrder, appVersion }) => {
+export const Navigation: React.FC<NavigationProps> = ({ currentRoute, onNavigate, onLogout, isAdmin, serverName, adminThumb, customLogoUrl, requestUrl, navOrder, appVersion, activeTheme, setActiveTheme }) => {
     const serverIcon = customLogoUrl ? resolvePortalAssetUrl(customLogoUrl) : (adminThumb ? (adminThumb.startsWith('http') ? adminThumb : portalUrl(`/api/plex/image?path=${encodeURIComponent(adminThumb)}&width=256&height=256`)) : logoUrl());
     useEffect(() => {
         updateFavicon(serverIcon);
@@ -6896,6 +6898,20 @@ export const Navigation: React.FC<NavigationProps> = ({ currentRoute, onNavigate
                     <span className="font-bold text-text uppercase tracking-widest text-sm">{serverName}</span>
                 </div>
                 <div className="flex items-center gap-4">
+                    <div className="relative w-28 h-8">
+                        <Palette className="w-4 h-4 text-muted absolute left-2.5 top-[8px] pointer-events-none z-10" />
+                        <CustomSelect
+                            value={activeTheme}
+                            onChange={setActiveTheme}
+                            compact={true}
+                            className="w-full h-full [&_div]:pl-8"
+                            options={[
+                                { label: 'Plex', value: 'plex' },
+                                { label: 'Slate', value: 'slate' },
+                                { label: 'Frost', value: 'nordic' },
+                            ]}
+                        />
+                    </div>
                     {isAdmin && (
                         <button onClick={(e) => { e.preventDefault(); onNavigate('logs'); }} className={`text-muted hover:text-text transition-colors ${currentRoute === 'logs' ? 'text-plex' : ''}`}>
                             <FileText className="w-5 h-5" />
@@ -6979,6 +6995,20 @@ export const Navigation: React.FC<NavigationProps> = ({ currentRoute, onNavigate
                                 Portal
                             </span>
                             <div className="h-px w-6 bg-gradient-to-l from-transparent to-plex/50"></div>
+                        </div>
+                        <div className="mt-4 mb-2 relative w-full px-2">
+                            <Palette className="w-4 h-4 text-muted absolute left-5 top-[14px] pointer-events-none z-10" />
+                            <CustomSelect
+                                value={activeTheme}
+                                onChange={setActiveTheme}
+                                compact={true}
+                                className="w-full [&_div]:pl-9"
+                                options={[
+                                    { label: 'Plex Dark', value: 'plex' },
+                                    { label: 'Sleek Slate', value: 'slate' },
+                                    { label: 'Nordic Frost', value: 'nordic' },
+                                ]}
+                            />
                         </div>
                         {appVersion && (
                             <div className="mt-2 text-[10px] text-white/50 font-mono tracking-wider opacity-80 hover:opacity-100 transition-opacity">

@@ -2098,6 +2098,7 @@ app.get('/api/config', requireAdmin, async (req, res) => {
                 requestAppApiKey: config.requestAppApiKey ? SECRET_MASK : '',
                 primaryColor: config.primaryColor || '#F7C600',
                 customLogoUrl: config.customLogoUrl || '',
+                brandingTheme: config.brandingTheme || 'plex',
                 backgroundImageUrl: config.backgroundImageUrl || '',
                 referralEnabled: !!config.referralEnabled,
                 referralTrialDays: config.referralTrialDays || 3,
@@ -2154,6 +2155,7 @@ app.get('/api/config', requireAdmin, async (req, res) => {
                 requestAppApiKey: '',
                 primaryColor: '#F7C600',
                 customLogoUrl: '',
+                brandingTheme: 'plex',
                 backgroundImageUrl: '',
                 referralEnabled: false,
                 referralTrialDays: 3,
@@ -2184,7 +2186,7 @@ app.post('/api/config', setupRateLimit, async (req, res) => {
         sonarrUrl, sonarrApiKey, radarrUrl, radarrApiKey, tautulliUrl, tautulliApiKey, jellystatUrl, jellystatApiKey,
         requestAppType, requestAppUrl, requestAppApiKey,
         inactiveCleanupEnabled, inactiveCleanupDays,
-        primaryColor, customLogoUrl, backgroundImageUrl, referralEnabled, referralTrialDays, referralRewardDays, announcement, navOrder, hideStreamUsers, defaultLibraryIds, use24HourClock, allowTemporaryAccess, showPosterQualityBadges,
+        primaryColor, customLogoUrl, brandingTheme, backgroundImageUrl, referralEnabled, referralTrialDays, referralRewardDays, announcement, navOrder, hideStreamUsers, defaultLibraryIds, use24HourClock, allowTemporaryAccess, showPosterQualityBadges,
         autoBackupEnabled, autoBackupIntervalDays, autoBackupRetentionCount, maintenanceExperimentalEnabled, dashboardLayout
     } = req.body;
 
@@ -2307,6 +2309,7 @@ app.post('/api/config', setupRateLimit, async (req, res) => {
         requestAppApiKey: resolveSecret(requestAppApiKey, existingConfig.requestAppApiKey),
         primaryColor: primaryColor || '#F7C600',
         customLogoUrl: customLogoUrl || '',
+        brandingTheme: ['plex', 'slate', 'nordic'].includes(String(brandingTheme || '').toLowerCase()) ? String(brandingTheme).toLowerCase() : (existingConfig.brandingTheme || 'plex'),
         backgroundImageUrl: backgroundImageUrl || '',
         referralEnabled: !!referralEnabled,
         referralTrialDays: parseInt(referralTrialDays, 10) || 3,
@@ -2363,6 +2366,7 @@ app.get('/api/config/public', async (req, res) => {
             mediaServerType: config.mediaServerType || 'plex',
             primaryColor: config.primaryColor || '#F7C600',
             customLogoUrl: config.customLogoUrl || '',
+            brandingTheme: config.brandingTheme || 'plex',
             backgroundImageUrl: config.backgroundImageUrl || '',
             announcement: config.announcement || '',
             referralEnabled: !!config.referralEnabled,
@@ -2378,6 +2382,7 @@ app.get('/api/config/public', async (req, res) => {
             mediaServerType: 'plex',
             primaryColor: '#F7C600',
             customLogoUrl: '',
+            brandingTheme: 'plex',
             backgroundImageUrl: '',
             announcement: '',
             referralEnabled: false,

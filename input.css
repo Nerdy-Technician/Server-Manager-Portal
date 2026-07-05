@@ -3,13 +3,40 @@
 @tailwind utilities;
 
 @layer base {
-  :root {
-    --color-plex: 247 198 0;
-    --color-plex-hover: 248 208 46;
+  :root, [data-theme="plex"] {
+    --color-bg: 13 17 23;
+    --color-card: 22 27 34;
+    --color-border: 48 54 61;
+    --color-text: 201 209 217;
+    --color-muted: 139 148 158;
+    --color-plex: 229 160 13;
+    --color-plex-hover: 240 168 16;
   }
+
+  [data-theme="slate"] {
+    --color-bg: 15 23 42;
+    --color-card: 30 41 59;
+    --color-border: 51 65 85;
+    --color-text: 241 245 249;
+    --color-muted: 148 163 184;
+    --color-plex: 56 189 248;
+    --color-plex-hover: 14 165 233;
+  }
+
+  [data-theme="nordic"] {
+    --color-bg: 11 15 25;
+    --color-card: 20 27 45;
+    --color-border: 37 47 70;
+    --color-text: 229 231 235;
+    --color-muted: 156 163 175;
+    --color-plex: 129 140 248;
+    --color-plex-hover: 99 102 241;
+  }
+
   body {
-    @apply bg-background text-text font-sans antialiased;
+    @apply bg-background text-text font-sans antialiased transition-colors duration-200;
   }
+
   input[type="date"], input[type="time"], input[type="datetime-local"], input[type="month"] {
     color-scheme: dark;
   }
