@@ -504,6 +504,12 @@ On first startup after an upgrade, any legacy JSON files still in the project ro
 
 ---
 
+## Contributors
+
+*   [Nerdy-Technician](https://github.com/Nerdy-Technician) - Added Jellyfin Support 🚀
+
+---
+
 ## License
 
 This project is open-source and available under the [MIT License](LICENSE).
