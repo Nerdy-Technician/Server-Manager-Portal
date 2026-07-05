@@ -4680,7 +4680,7 @@ export const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onL
                 {/* Blurred Background */}
                 <div className="absolute inset-0 bg-background overflow-hidden">
                     {publicConfig?.useTrendingSlideshow && publicConfig?.trendingBackgrounds?.length > 0 ? (
-                        <div className="absolute inset-0 scale-110 blur-[8px] opacity-60">
+                        <div className="absolute inset-0 opacity-80">
                             <SlideshowBackground backgrounds={publicConfig.trendingBackgrounds} intervalSeconds={publicConfig.trendingSlideshowInterval} opacity={1} />
                         </div>
                     ) : dashboardData?.recentMovies?.length > 0 ? (
