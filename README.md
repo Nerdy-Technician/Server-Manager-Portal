@@ -389,12 +389,24 @@ The proxy must forward requests **with** the `/portal` prefix intact (do not str
 
 ### Unraid
 
-For manual installation of the template on Unraid 6+:
+Server Manager Portal is available in the **Unraid Community Applications (CA) store**!
+
+#### Install via Community Applications (Recommended)
+
+1. Open the **Apps** tab in your Unraid dashboard
+2. Search for **"Server Manager Portal"**
+3. Click **Install**
+4. Set your **JWT Secret** and adjust appdata paths if needed (default: `/mnt/user/appdata/server-manager-portal/`)
+5. Click **Apply** and open the WebUI — you're done! 🎉
+
+#### Manual Template Installation (Alternative)
+
+If you prefer to install the template manually on Unraid 6+:
 
 1. Download the template file: [`unraid/server-manager-portal.xml`](unraid/server-manager-portal.xml)
-2. Rename the file to prefix it with `my-`, for example: `my-server-manager-portal.xml`
-3. Upload the file to your Unraid server at: `/boot/config/plugins/dockerMan/templates-user/`
-4. Go to **Docker** → **Add Container** and select the **Server-Manager-Portal** template from the **User Templates** dropdown
+2. Rename the file with a `my-` prefix, e.g. `my-server-manager-portal.xml`
+3. Upload it to your Unraid server at: `/boot/config/plugins/dockerMan/templates-user/`
+4. Go to **Docker** → **Add Container** and select **Server-Manager-Portal** from the **User Templates** dropdown
 5. Set **JWT Secret** and adjust appdata paths (defaults: `/mnt/user/appdata/server-manager-portal/`)
 6. Apply and open the WebUI
 
