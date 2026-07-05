@@ -190,7 +190,7 @@ const normalizeExternalBaseUrl = (rawUrl, { allowPrivate = false, allowHttp = tr
         throw new Error('URL must use http or https');
     }
     if (!allowPrivate && isBlockedHostName(parsed.hostname)) {
-        throw new Error('Private or local network hosts are not allowed');
+        throw new Error('Private or local network hosts are not allowed. Set ALLOW_PRIVATE_INTEGRATION_URLS=true in your environment to allow LAN/private URLs.');
     }
     parsed.hash = '';
     parsed.search = '';
@@ -2075,6 +2075,17 @@ const resolveTestCredential = (incoming, existing) => {
     return String(incoming);
 };
 
+const resolveIntegrationUrlForTest = (incoming, existing) => {
+    const url = resolveTestCredential(incoming, existing);
+    if (!url) return '';
+    const trimmedIncoming = typeof incoming === 'string' ? incoming.trim() : '';
+    const trimmedExisting = typeof existing === 'string' ? existing.trim() : '';
+    if (trimmedIncoming !== '' && trimmedIncoming !== trimmedExisting) {
+        return sanitizeIntegrationUrl(trimmedIncoming);
+    }
+    return resolveIntegrationUrlForFetch(url);
+};
+
 const isSeerrFamilyRequestApp = (type) => {
     const lower = String(type || '').toLowerCase();
     return lower === 'seerr' || lower === 'overseerr' || lower === 'jellyseerr';
@@ -2154,7 +2165,7 @@ app.post('/api/config/test-integration', setupRateLimit, async (req, res) => {
         }
 
         if (type === 'sonarr') {
-            const url = resolveIntegrationUrlForFetch(resolveTestCredential(sonarrUrl, stored.sonarrUrl));
+            const url = resolveIntegrationUrlForTest(sonarrUrl, stored.sonarrUrl);
             const apiKey = resolveTestCredential(sonarrApiKey, stored.sonarrApiKey);
             if (!url || !apiKey) return res.status(400).json({ error: 'Sonarr URL and API key are required.' });
             const statusRes = await fetchWithTimeout(`${url}/api/v3/system/status`, {
@@ -2166,7 +2177,7 @@ app.post('/api/config/test-integration', setupRateLimit, async (req, res) => {
         }
 
         if (type === 'radarr') {
-            const url = resolveIntegrationUrlForFetch(resolveTestCredential(radarrUrl, stored.radarrUrl));
+            const url = resolveIntegrationUrlForTest(radarrUrl, stored.radarrUrl);
             const apiKey = resolveTestCredential(radarrApiKey, stored.radarrApiKey);
             if (!url || !apiKey) return res.status(400).json({ error: 'Radarr URL and API key are required.' });
             const statusRes = await fetchWithTimeout(`${url}/api/v3/system/status`, {
@@ -2178,7 +2189,7 @@ app.post('/api/config/test-integration', setupRateLimit, async (req, res) => {
         }
 
         if (type === 'tautulli') {
-            const url = resolveIntegrationUrlForFetch(resolveTestCredential(tautulliUrl, stored.tautulliUrl));
+            const url = resolveIntegrationUrlForTest(tautulliUrl, stored.tautulliUrl);
             const apiKey = resolveTestCredential(tautulliApiKey, stored.tautulliApiKey);
             if (!url || !apiKey) return res.status(400).json({ error: 'Tautulli URL and API key are required.' });
             const infoRes = await fetchWithTimeout(`${url}/api/v2?apikey=${encodeURIComponent(apiKey)}&cmd=get_server_info`, {
@@ -2193,7 +2204,7 @@ app.post('/api/config/test-integration', setupRateLimit, async (req, res) => {
 
         if (type === 'requestApp') {
             const appType = String(resolveTestCredential(requestAppType, stored.requestAppType) || 'none').toLowerCase();
-            const baseUrl = resolveIntegrationUrlForFetch(resolveTestCredential(requestAppUrl, stored.requestAppUrl));
+            const baseUrl = resolveIntegrationUrlForTest(requestAppUrl, stored.requestAppUrl);
             const apiKey = resolveTestCredential(requestAppApiKey, stored.requestAppApiKey);
             if (appType === 'none') return res.status(400).json({ error: 'Request app type must be selected.' });
             if (!baseUrl || !apiKey) return res.status(400).json({ error: 'Request app URL and API key are required.' });

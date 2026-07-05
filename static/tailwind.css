@@ -1354,6 +1354,11 @@ input[type="date"], input[type="time"], input[type="datetime-local"], input[type
   margin-bottom: 0.5rem;
 }
 
+.my-8 {
+  margin-top: 2rem;
+  margin-bottom: 2rem;
+}
+
 .-ml-1 {
   margin-left: -0.25rem;
 }
@@ -3612,6 +3617,10 @@ input[type="date"], input[type="time"], input[type="datetime-local"], input[type
 
 .p-1\.5 {
   padding: 0.375rem;
+}
+
+.p-12 {
+  padding: 3rem;
 }
 
 .p-2 {
