@@ -5061,7 +5061,7 @@ export const StatusDashboard: React.FC<{ onBack: () => void, isAdmin: boolean, i
                         <button onClick={() => { setIsLoading(true); fetchStatus(); }} className="px-4 py-2 bg-white/5 hover:bg-white/10 rounded-lg text-text text-sm font-medium transition-colors">Retry</button>
                     </div>
                 ) : (
-                    <Loader isLoading={true} isCinematic={!!publicConfig?.useCinematicLoading} />
+                    <Loader isLoading={true} />
                 )}
             </div>
         );
@@ -6191,7 +6191,7 @@ export const MaintenanceDashboard: React.FC = () => {
 
     return (
         <div className="w-full flex flex-col">
-            <Loader isLoading={loading} isCinematic={!!publicConfig?.useCinematicLoading} />
+            <Loader isLoading={loading} />
             <ToastContainer toasts={toasts} setToasts={setToasts} />
             <header className="page-header">
                 <h1 className="page-title">Maintenance</h1>
