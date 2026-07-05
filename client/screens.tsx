@@ -4680,27 +4680,43 @@ export const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onL
                 {/* Blurred Background */}
                 <div className="absolute inset-0 bg-background overflow-hidden">
                     {publicConfig?.useTrendingSlideshow && publicConfig?.trendingBackgrounds?.length > 0 ? (
-                        <div className="absolute inset-0 opacity-80">
-                            <SlideshowBackground backgrounds={publicConfig.trendingBackgrounds} intervalSeconds={publicConfig.trendingSlideshowInterval} opacity={1} />
-                        </div>
+                        <>
+                            <div className="absolute inset-0 opacity-100">
+                                <SlideshowBackground backgrounds={publicConfig.trendingBackgrounds} intervalSeconds={publicConfig.trendingSlideshowInterval} opacity={1} />
+                            </div>
+                            <div className="absolute inset-0 bg-gradient-to-t from-card via-card/50 to-transparent" />
+                            <div className="absolute inset-0 bg-gradient-to-r from-card via-card/20 to-transparent" />
+                            <div className="absolute inset-0 bg-black/10" />
+                        </>
                     ) : dashboardData?.recentMovies?.length > 0 ? (
-                        <div className="absolute -inset-[50%] opacity-40 transform -rotate-12 scale-110 flex gap-4 overflow-hidden pointer-events-none justify-center">
-                            {[...Array(6)].map((_, colIdx) => (
-                                <div key={colIdx} className={`flex flex-col gap-4 ${colIdx % 2 === 0 ? 'animate-[scrollVertical_40s_linear_infinite]' : 'animate-[scrollVertical_50s_linear_infinite_reverse]'}`}>
-                                    {[...dashboardData.recentMovies, ...dashboardData.recentMovies].sort(() => 0.5 - Math.random()).map((m: any, i: number) => (m.thumb || m.thumbUrl) && (
-                                        <img key={`c${colIdx}-${i}`} src={m.thumbUrl ? resolvePortalAssetUrl(m.thumbUrl) : portalUrl(`/api/plex/image?path=${encodeURIComponent(m.thumb)}&width=200&height=300`)} className="w-32 md:w-48 rounded-xl object-cover" alt="" />
-                                    ))}
-                                </div>
-                            ))}
-                        </div>
-                    ) : heroBg && (
-                        <div
-                            className="absolute inset-0 bg-cover bg-center opacity-30 blur-2xl scale-110"
-                            style={{ backgroundImage: `url(${heroBg})` }}
-                        />
+                        <>
+                            <div className="absolute -inset-[50%] opacity-40 transform -rotate-12 scale-110 flex gap-4 overflow-hidden pointer-events-none justify-center">
+                                {[...Array(6)].map((_, colIdx) => (
+                                    <div key={colIdx} className={`flex flex-col gap-4 ${colIdx % 2 === 0 ? 'animate-[scrollVertical_40s_linear_infinite]' : 'animate-[scrollVertical_50s_linear_infinite_reverse]'}`}>
+                                        {[...dashboardData.recentMovies, ...dashboardData.recentMovies].sort(() => 0.5 - Math.random()).map((m: any, i: number) => (m.thumb || m.thumbUrl) && (
+                                            <img key={`c${colIdx}-${i}`} src={m.thumbUrl ? resolvePortalAssetUrl(m.thumbUrl) : portalUrl(`/api/plex/image?path=${encodeURIComponent(m.thumb)}&width=200&height=300`)} className="w-32 md:w-48 rounded-xl object-cover" alt="" />
+                                        ))}
+                                    </div>
+                                ))}
+                            </div>
+                            <div className="absolute inset-0 bg-gradient-to-t from-card via-card/80 to-transparent" />
+                            <div className="absolute inset-0 bg-gradient-to-r from-card via-card/40 to-transparent" />
+                        </>
+                    ) : heroBg ? (
+                        <>
+                            <div
+                                className="absolute inset-0 bg-cover bg-center opacity-30 blur-2xl scale-110"
+                                style={{ backgroundImage: `url(${heroBg})` }}
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-card via-card/80 to-transparent" />
+                            <div className="absolute inset-0 bg-gradient-to-r from-card via-card/40 to-transparent" />
+                        </>
+                    ) : (
+                        <>
+                            <div className="absolute inset-0 bg-gradient-to-t from-card via-card/80 to-transparent" />
+                            <div className="absolute inset-0 bg-gradient-to-r from-card via-card/40 to-transparent" />
+                        </>
                     )}
-                    <div className="absolute inset-0 bg-gradient-to-t from-card via-card/80 to-transparent" />
-                    <div className="absolute inset-0 bg-gradient-to-r from-card via-card/40 to-transparent" />
                 </div>
 
                 <div className="relative pt-14 pb-5 px-4 md:pt-20 md:pb-6 md:px-10 flex flex-col items-center md:items-start text-center md:text-left z-10">
