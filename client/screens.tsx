@@ -6607,23 +6607,22 @@ export const Navigation: React.FC<NavigationProps> = ({ currentRoute, onNavigate
                     <span className="font-bold text-text uppercase tracking-widest text-sm">{serverName}</span>
                 </div>
                 <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-1.5 bg-white/5 border border-white/10 rounded-lg px-2 py-1 cursor-pointer hover:bg-white/10 transition-colors relative">
-                        <Palette className="w-4 h-4 text-muted" />
-                        <select
+                    <div className="relative w-28 h-8">
+                        <Palette className="w-4 h-4 text-muted absolute left-2.5 top-[8px] pointer-events-none z-10" />
+                        <CustomSelect
                             value={activeTheme}
-                            onChange={(e) => setActiveTheme(e.target.value)}
-                            className="bg-transparent border-0 text-xs text-text focus:outline-none cursor-pointer pr-4 font-semibold appearance-none"
-                            style={{ background: 'none' }}
-                            aria-label="Select Theme"
-                        >
-                            <option className="bg-card text-text" value="plex">Plex</option>
-                            <option className="bg-card text-text" value="slate">Slate</option>
-                            <option className="bg-card text-text" value="nordic">Frost</option>
-                            <option className="bg-card text-text" value="emerald">Emerald</option>
-                            <option className="bg-card text-text" value="amethyst">Purple</option>
-                            <option className="bg-card text-text" value="light">Light</option>
-                        </select>
-                        <div className="absolute right-2 pointer-events-none text-muted text-[10px]">&#9662;</div>
+                            onChange={setActiveTheme}
+                            compact={true}
+                            className="w-full h-full [&_div]:pl-8"
+                            options={[
+                                { label: 'Plex', value: 'plex' },
+                                { label: 'Slate', value: 'slate' },
+                                { label: 'Frost', value: 'nordic' },
+                                { label: 'Emerald', value: 'emerald' },
+                                { label: 'Purple', value: 'amethyst' },
+                                { label: 'Light', value: 'light' },
+                            ]}
+                        />
                     </div>
                     {isAdmin && (
                         <button onClick={(e) => { e.preventDefault(); onNavigate('logs'); }} className={`text-muted hover:text-text transition-colors ${currentRoute === 'logs' ? 'text-plex' : ''}`}>
@@ -6697,24 +6696,21 @@ export const Navigation: React.FC<NavigationProps> = ({ currentRoute, onNavigate
                             <div className="h-px w-6 bg-gradient-to-l from-transparent to-plex/50"></div>
                         </div>
                         <div className="mt-4 mb-2 relative w-full px-2">
-                            <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-lg px-2.5 py-1.5 cursor-pointer hover:bg-white/10 transition-colors relative">
-                                <Palette className="w-4 h-4 text-muted flex-shrink-0" />
-                                <select
-                                    value={activeTheme}
-                                    onChange={(e) => setActiveTheme(e.target.value)}
-                                    className="w-full bg-transparent border-0 text-xs text-text focus:outline-none cursor-pointer pr-4 font-semibold appearance-none"
-                                    style={{ background: 'none' }}
-                                    aria-label="Select Theme"
-                                >
-                                    <option className="bg-card text-text" value="plex">Plex Dark</option>
-                                    <option className="bg-card text-text" value="slate">Sleek Slate</option>
-                                    <option className="bg-card text-text" value="nordic">Nordic Frost</option>
-                                    <option className="bg-card text-text" value="emerald">Vibrant Emerald</option>
-                                    <option className="bg-card text-text" value="amethyst">Amethyst</option>
-                                    <option className="bg-card text-text" value="light">Plex Light</option>
-                                </select>
-                                <div className="absolute right-2.5 pointer-events-none text-muted text-[10px]">&#9662;</div>
-                            </div>
+                            <Palette className="w-4 h-4 text-muted absolute left-5 top-[14px] pointer-events-none z-10" />
+                            <CustomSelect
+                                value={activeTheme}
+                                onChange={setActiveTheme}
+                                compact={true}
+                                className="w-full [&_div]:pl-9"
+                                options={[
+                                    { label: 'Plex Dark', value: 'plex' },
+                                    { label: 'Sleek Slate', value: 'slate' },
+                                    { label: 'Nordic Frost', value: 'nordic' },
+                                    { label: 'Vibrant Emerald', value: 'emerald' },
+                                    { label: 'Amethyst', value: 'amethyst' },
+                                    { label: 'Plex Light', value: 'light' },
+                                ]}
+                            />
                         </div>
                         {appVersion && (
                             <div className="mt-2 text-[10px] text-white/50 font-mono tracking-wider opacity-80 hover:opacity-100 transition-opacity">

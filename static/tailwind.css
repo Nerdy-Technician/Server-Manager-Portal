@@ -1247,12 +1247,20 @@ input[type="date"], input[type="time"], input[type="datetime-local"], input[type
   left: 0.5rem;
 }
 
+.left-2\.5 {
+  left: 0.625rem;
+}
+
 .left-3 {
   left: 0.75rem;
 }
 
 .left-4 {
   left: 1rem;
+}
+
+.left-5 {
+  left: 1.25rem;
 }
 
 .right-0 {
@@ -1265,10 +1273,6 @@ input[type="date"], input[type="time"], input[type="datetime-local"], input[type
 
 .right-2 {
   right: 0.5rem;
-}
-
-.right-2\.5 {
-  right: 0.625rem;
 }
 
 .right-3 {
@@ -1315,8 +1319,16 @@ input[type="date"], input[type="time"], input[type="datetime-local"], input[type
   top: 1rem;
 }
 
+.top-\[14px\] {
+  top: 14px;
+}
+
 .top-\[64px\] {
   top: 64px;
+}
+
+.top-\[8px\] {
+  top: 8px;
 }
 
 .top-full {
@@ -5360,6 +5372,10 @@ input[type="date"], input[type="time"], input[type="datetime-local"], input[type
   background-color: rgb(29 78 216 / var(--tw-bg-opacity, 1));
 }
 
+.hover\:bg-border\/40:hover {
+  background-color: rgb(var(--color-border) / 0.4);
+}
+
 .hover\:bg-green-500\/30:hover {
   background-color: rgb(34 197 94 / 0.3);
 }
@@ -6545,4 +6561,12 @@ input[type="date"], input[type="time"], input[type="datetime-local"], input[type
   .\32xl\:grid-cols-5 {
     grid-template-columns: repeat(5, minmax(0, 1fr));
   }
+}
+
+.\[\&_div\]\:pl-8 div {
+  padding-left: 2rem;
+}
+
+.\[\&_div\]\:pl-9 div {
+  padding-left: 2.25rem;
 }
