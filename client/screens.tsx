@@ -3351,7 +3351,7 @@ export const Login: React.FC<{ onLoginSuccess: () => void, publicConfig?: any, i
                                 <img
                                     src={logoSrc}
                                     alt="Server Logo"
-                                    className="w-28 sm:w-32 max-h-32 object-contain relative z-10 drop-shadow-[0_0_28px_rgba(0,0,0,0.65)]"
+                                    className="w-28 h-28 sm:w-32 sm:h-32 object-cover rounded-full border-2 border-plex/40 shadow-[0_0_40px_rgba(229,160,13,0.25)] relative z-10"
                                     onError={(e) => {
                                         e.currentTarget.src = logoUrl();
                                         e.currentTarget.className = 'w-28 h-28 sm:w-32 sm:h-32 object-cover rounded-full border-2 border-plex/40 shadow-[0_0_40px_rgba(229,160,13,0.25)] relative z-10';

@@ -4964,11 +4964,6 @@ input[type="date"], input[type="time"], input[type="datetime-local"], input[type
   filter: var(--tw-blur) var(--tw-brightness) var(--tw-contrast) var(--tw-grayscale) var(--tw-hue-rotate) var(--tw-invert) var(--tw-saturate) var(--tw-sepia) var(--tw-drop-shadow);
 }
 
-.drop-shadow-\[0_0_28px_rgba\(0\2c 0\2c 0\2c 0\.65\)\] {
-  --tw-drop-shadow: drop-shadow(0 0 28px rgba(0,0,0,0.65));
-  filter: var(--tw-blur) var(--tw-brightness) var(--tw-contrast) var(--tw-grayscale) var(--tw-hue-rotate) var(--tw-invert) var(--tw-saturate) var(--tw-sepia) var(--tw-drop-shadow);
-}
-
 .drop-shadow-\[0_0_8px_rgba\(229\2c 160\2c 13\2c 0\.3\)\] {
   --tw-drop-shadow: drop-shadow(0 0 8px rgba(229,160,13,0.3));
   filter: var(--tw-blur) var(--tw-brightness) var(--tw-contrast) var(--tw-grayscale) var(--tw-hue-rotate) var(--tw-invert) var(--tw-saturate) var(--tw-sepia) var(--tw-drop-shadow);
