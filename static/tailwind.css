@@ -1190,8 +1190,16 @@ input[type="date"], input[type="time"], input[type="datetime-local"], input[type
   top: -8rem;
 }
 
+.-top-4 {
+  top: -1rem;
+}
+
 .-top-40 {
   top: -10rem;
+}
+
+.-top-6 {
+  top: -1.5rem;
 }
 
 .bottom-0 {
@@ -1736,6 +1744,10 @@ input[type="date"], input[type="time"], input[type="datetime-local"], input[type
   height: 11rem;
 }
 
+.h-48 {
+  height: 12rem;
+}
+
 .h-5 {
   height: 1.25rem;
 }
@@ -2195,6 +2207,10 @@ input[type="date"], input[type="time"], input[type="datetime-local"], input[type
   max-width: 130px;
 }
 
+.max-w-\[140px\] {
+  max-width: 140px;
+}
+
 .max-w-\[150px\] {
   max-width: 150px;
 }
@@ -2336,6 +2352,22 @@ input[type="date"], input[type="time"], input[type="datetime-local"], input[type
 
 .transform {
   transform: translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y));
+}
+
+.animate-\[bar-grow_1s_ease-out\] {
+  animation: bar-grow 1s ease-out;
+}
+
+.animate-\[crown-pulse_2s_ease-in-out_infinite\] {
+  animation: crown-pulse 2s ease-in-out infinite;
+}
+
+.animate-\[rank-down_0\.3s_ease-out\] {
+  animation: rank-down 0.3s ease-out;
+}
+
+.animate-\[rank-up_0\.3s_ease-out\] {
+  animation: rank-up 0.3s ease-out;
 }
 
 .animate-\[scrollVertical_40s_linear_infinite\] {
@@ -2998,6 +3030,11 @@ input[type="date"], input[type="time"], input[type="datetime-local"], input[type
 
 .border-white\/5 {
   border-color: rgb(255 255 255 / 0.05);
+}
+
+.border-yellow-500 {
+  --tw-border-opacity: 1;
+  border-color: rgb(234 179 8 / var(--tw-border-opacity, 1));
 }
 
 .border-yellow-500\/20 {
@@ -4673,6 +4710,12 @@ input[type="date"], input[type="time"], input[type="datetime-local"], input[type
   box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
 }
 
+.shadow-\[0_0_15px_rgba\(234\2c 179\2c 8\2c 0\.3\)\] {
+  --tw-shadow: 0 0 15px rgba(234,179,8,0.3);
+  --tw-shadow-colored: 0 0 15px var(--tw-shadow-color);
+  box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
+}
+
 .shadow-\[0_0_15px_rgba\(245\2c 158\2c 11\2c 0\.25\)\] {
   --tw-shadow: 0 0 15px rgba(245,158,11,0.25);
   --tw-shadow-colored: 0 0 15px var(--tw-shadow-color);
@@ -4886,6 +4929,11 @@ input[type="date"], input[type="time"], input[type="datetime-local"], input[type
   box-shadow: var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow, 0 0 #0000);
 }
 
+.ring-amber-700 {
+  --tw-ring-opacity: 1;
+  --tw-ring-color: rgb(180 83 9 / var(--tw-ring-opacity, 1));
+}
+
 .ring-plex {
   --tw-ring-opacity: 1;
   --tw-ring-color: rgb(var(--color-plex) / var(--tw-ring-opacity, 1));
@@ -4901,6 +4949,16 @@ input[type="date"], input[type="time"], input[type="datetime-local"], input[type
 
 .ring-red-500\/60 {
   --tw-ring-color: rgb(239 68 68 / 0.6);
+}
+
+.ring-slate-300 {
+  --tw-ring-opacity: 1;
+  --tw-ring-color: rgb(203 213 225 / var(--tw-ring-opacity, 1));
+}
+
+.ring-yellow-500 {
+  --tw-ring-opacity: 1;
+  --tw-ring-color: rgb(234 179 8 / var(--tw-ring-opacity, 1));
 }
 
 .blur-2xl {
@@ -5160,6 +5218,48 @@ input[type="date"], input[type="time"], input[type="datetime-local"], input[type
 .hide-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
+}
+
+@keyframes rank-up {
+  0% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes rank-down {
+  0% {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes crown-pulse {
+  0%, 100% {
+    opacity: 1;
+    filter: drop-shadow(0 0 8px rgba(234, 179, 8, 0.6));
+  }
+
+  50% {
+    opacity: 0.8;
+    filter: drop-shadow(0 0 2px rgba(234, 179, 8, 0.3));
+  }
+}
+
+@keyframes bar-grow {
+  from {
+    width: 0;
+  }
 }
 
 @media (min-width: 768px) {
@@ -5721,6 +5821,11 @@ input[type="date"], input[type="time"], input[type="datetime-local"], input[type
   color: rgb(var(--color-plex) / var(--tw-text-opacity, 1));
 }
 
+.group:hover .group-hover\:text-text {
+  --tw-text-opacity: 1;
+  color: rgb(var(--color-text) / var(--tw-text-opacity, 1));
+}
+
 .group\/chart:hover .group-hover\/chart\:opacity-100 {
   opacity: 1;
 }
@@ -5776,6 +5881,10 @@ input[type="date"], input[type="time"], input[type="datetime-local"], input[type
     display: block;
   }
 
+  .sm\:inline {
+    display: inline;
+  }
+
   .sm\:flex {
     display: flex;
   }
@@ -5792,8 +5901,16 @@ input[type="date"], input[type="time"], input[type="datetime-local"], input[type
     height: 1.25rem;
   }
 
+  .sm\:w-10 {
+    width: 2.5rem;
+  }
+
   .sm\:w-2 {
     width: 0.5rem;
+  }
+
+  .sm\:w-20 {
+    width: 5rem;
   }
 
   .sm\:w-32 {
@@ -5860,8 +5977,16 @@ input[type="date"], input[type="time"], input[type="datetime-local"], input[type
     gap: 0.75rem;
   }
 
+  .sm\:gap-4 {
+    gap: 1rem;
+  }
+
   .sm\:rounded-xl {
     border-radius: 0.75rem;
+  }
+
+  .sm\:p-3 {
+    padding: 0.75rem;
   }
 
   .sm\:p-5 {

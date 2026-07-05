@@ -290,3 +290,19 @@
     }
   }
 }
+
+@keyframes rank-up {
+  0% { opacity: 0; transform: translateY(10px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+@keyframes rank-down {
+  0% { opacity: 0; transform: translateY(-10px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+@keyframes crown-pulse {
+  0%, 100% { opacity: 1; filter: drop-shadow(0 0 8px rgba(234, 179, 8, 0.6)); }
+  50% { opacity: 0.8; filter: drop-shadow(0 0 2px rgba(234, 179, 8, 0.3)); }
+}
+@keyframes bar-grow {
+  from { width: 0; }
+}
