@@ -1374,6 +1374,14 @@ input[type="date"], input[type="time"], input[type="datetime-local"], input[type
   z-index: 9999;
 }
 
+.order-first {
+  order: -9999;
+}
+
+.order-last {
+  order: 9999;
+}
+
 .col-span-1 {
   grid-column: span 1 / span 1;
 }
@@ -6441,6 +6449,10 @@ input[type="date"], input[type="time"], input[type="datetime-local"], input[type
 }
 
 @media (min-width: 1024px) {
+  .lg\:order-none {
+    order: 0;
+  }
+
   .lg\:col-span-1 {
     grid-column: span 1 / span 1;
   }
@@ -6497,12 +6509,12 @@ input[type="date"], input[type="time"], input[type="datetime-local"], input[type
     flex-direction: row;
   }
 
-  .lg\:border-b-0 {
-    border-bottom-width: 0px;
-  }
-
   .lg\:border-r {
     border-right-width: 1px;
+  }
+
+  .lg\:border-t-0 {
+    border-top-width: 0px;
   }
 
   .lg\:p-10 {
