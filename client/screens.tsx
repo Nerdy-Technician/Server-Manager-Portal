@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import ReactDOM from 'react-dom';
 import { Home, Film, Activity, Sparkles, LogOut, Settings, FileText, BarChart3, Users, PlaySquare, TrendingUp, X, Star, Layers, HardDrive, Calendar, Tv, Clock, DownloadCloud, MonitorSmartphone, Copy, ChevronUp, ChevronDown, List, Palette, Music, Play, Shield, CheckCircle, AlertCircle, RefreshCw, ChevronLeft, ChevronRight, Trophy, PlayCircle, Coffee, Compass, PieChart, Clapperboard, AlertTriangle, Check, Cpu, Monitor, LineChart as LucideLineChart, Share2, Search } from 'lucide-react';
-import { ResponsiveContainer, LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, PieChart as RechartsPieChart, Pie, Cell } from 'recharts';
+import { ResponsiveContainer, LineChart, Line, BarChart, Bar, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, PieChart as RechartsPieChart, Pie, Cell } from 'recharts';
 
 import { SettingsDashboard } from './settings/SettingsDashboard';
 import { LibraryMaintenancePanel } from './maintenance/LibraryMaintenancePanel';
@@ -8,7 +9,7 @@ import { appConfirm } from './shared/confirm';
 import { apiFetch } from './shared/api';
 import { getPublicOrigin, logoUrl, portalUrl, resolvePortalAssetUrl, stripBasePath } from './shared/basePath';
 import { formatDate, getDaysUntilExpiry, getAccessProgressPct, addMonths, addYears, formatTime, formatEventName, formatDateTime, hexToRgb, formatSizeCeil, formatStreamingHour } from './shared/format';
-import { CustomSelect, ConfirmModal, StyledCheckbox } from './shared/ui';
+import { CustomSelect, ConfirmModal, StyledCheckbox, ScrollReveal } from './shared/ui';
 import { PeriodDropdown } from './shared/PeriodDropdown';
 import { Loader, Toast, ToastContainer, pushToast } from './shared/toast';
 import {
@@ -24,10 +25,33 @@ import type { User, PlexConfig, AppSettings, PlexServer, ToastMessage, DeletedUs
 import { ShareWrapUpModal } from './shared/ShareWrapUp';
 import { WrapUpCardGrid } from './shared/WrapUpCards';
 import { SetupWizard } from './setup/SetupWizard';
-import { AuthPageBackground, themeClasses } from './shared/theme';
+import { AuthPageBackground, themeClasses, SlideshowBackground } from './shared/theme';
 import { activityStreamColumnCount, activityStreamGridClass, discoverPosterGridClass, usePortalWideContentLayout } from './shared/portalLayout';
 import { UserDashboardLayout } from './home/UserDashboardLayout';
 import { createMainGridWidgetRenderer, createRecentlyAddedWidgetRenderer } from './home/userDashboardWidgetRenderers';
+
+const JELLYFIN_ICON_URL = 'https://cdn.jsdelivr.net/gh/selfhst/icons/svg/jellyfin.svg';
+
+const jellyfinQuickConnectUrl = (baseUrl: string) => {
+    const base = String(baseUrl || '').replace(/\/+$/, '');
+    return base ? `${base}/web/#/quickconnect` : '';
+};
+
+const copyTextToClipboard = async (value: string) => {
+    if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(value);
+        return;
+    }
+    const textarea = document.createElement('textarea');
+    textarea.value = value;
+    textarea.setAttribute('readonly', 'true');
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = '0';
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand('copy');
+    document.body.removeChild(textarea);
+};
 
 declare global {
     interface Window {
@@ -73,7 +97,8 @@ const UserCard: React.FC<{
     isConfigured: boolean;
     isSelected: boolean;
     onSelect: (id: string) => void;
-}> = ({ user, onEdit, onDelete, onRevoke, isConfigured, isSelected, onSelect }) => {
+    providerLabel?: string;
+}> = ({ user, onEdit, onDelete, onRevoke, isConfigured, isSelected, onSelect, providerLabel = 'Plex' }) => {
     const { status, statusText, daysRemainingText, pillClass, borderClass } = useMemo(() => {
         const days = getDaysUntilExpiry(user.expiryDate);
         let status: UserStatus = 'active';
@@ -120,7 +145,7 @@ const UserCard: React.FC<{
                         style={{ borderRadius: '50%' }}
                     />
                     {user.thumb ? (
-                        <img src={user.thumb} alt={user.username} className="w-10 h-10 rounded-full object-cover border border-border flex-shrink-0" />
+                        <img src={resolvePortalAssetUrl(user.thumb)} alt={user.username} className="w-10 h-10 rounded-full object-cover border border-border flex-shrink-0" />
                     ) : (
                         <div className="w-10 h-10 rounded-full bg-border flex items-center justify-center text-text font-bold text-sm uppercase flex-shrink-0">
                             {user.username.substring(0, 2)}
@@ -143,7 +168,7 @@ const UserCard: React.FC<{
                     <span className="text-text font-medium flex flex-wrap justify-end md:items-center gap-1"><span className="whitespace-nowrap">{formatDate(user.expiryDate)}</span> <span className="text-[0.7rem] text-muted whitespace-nowrap">({daysRemainingText})</span></span>
                 </div>
                 <div className="flex justify-between items-center text-sm pb-2 border-b border-white/5 last:border-0 last:pb-0">
-                    <span className="text-muted text-xs uppercase tracking-wider font-bold">Plex</span>
+                    <span className="text-muted text-xs uppercase tracking-wider font-bold">{providerLabel}</span>
                     <span className="info-value plex-status">
                         <span className={`plex-status-dot ${user.plexAccessStatus || 'unknown'}`}></span>
                         {(user.plexAccessStatus || 'unknown').charAt(0).toUpperCase() + (user.plexAccessStatus || 'unknown').slice(1)}
@@ -1784,6 +1809,242 @@ const TautulliGraphsTab: React.FC = () => {
     );
 };
 
+const ServerInsightsWidget: React.FC<{
+    peakHours: number[],
+    tautulliData: any,
+    compare: any,
+    analyticsSourceLabel: string
+}> = ({ peakHours, tautulliData, compare, analyticsSourceLabel }) => {
+    
+    // Format chart data
+    const chartData = peakHours ? peakHours.map((count, hour) => {
+        const ampm = hour >= 12 ? 'PM' : 'AM';
+        const h = hour % 12 || 12;
+        return {
+            time: `${h}${ampm}`,
+            plays: count
+        };
+    }) : [];
+
+    const formatChange = (data: any) => {
+        if (!data || data.percent === null) return null;
+        const isPos = data.percent > 0;
+        const color = isPos ? 'text-green-500' : (data.percent < 0 ? 'text-red-500' : 'text-muted');
+        const icon = isPos ? '↑' : (data.percent < 0 ? '↓' : '');
+        return <span className={`text-xs font-bold ${color} ml-2`}>{icon}{Math.abs(data.percent)}%</span>;
+    };
+
+    return (
+        <div className="w-full flex flex-col gap-6 lg:col-span-2">
+            <h2 className="text-xl font-bold text-text uppercase tracking-wider flex items-center gap-2">
+                <Activity className="text-plex w-5 h-5" /> Server Insights & Load
+            </h2>
+
+            {/* Peak Hours Chart */}
+            <div className="glass-card-sm p-4 md:p-6 w-full flex flex-col flex-1">
+                <h3 className="text-sm font-bold text-muted uppercase tracking-wider mb-4 flex items-center gap-2">
+                    <Clock className="w-4 h-4" /> Peak Playback Hours
+                </h3>
+                <div className="w-full h-[250px] sm:h-[320px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                            <defs>
+                                <linearGradient id="colorPlays" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="5%" stopColor="#e5a00d" stopOpacity={0.4}/>
+                                    <stop offset="95%" stopColor="#e5a00d" stopOpacity={0}/>
+                                </linearGradient>
+                            </defs>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
+                            <XAxis dataKey="time" stroke="#ffffff40" fontSize={10} tickMargin={10} minTickGap={15} />
+                            <YAxis stroke="#ffffff40" fontSize={10} tickFormatter={(val) => val} />
+                            <RechartsTooltip 
+                                contentStyle={{ backgroundColor: '#111315', borderColor: '#ffffff20', borderRadius: '8px', color: '#fff', fontSize: '12px', fontWeight: 'bold' }}
+                                itemStyle={{ color: '#e5a00d' }}
+                                formatter={(value: any) => [`${value} plays`, 'Activity']}
+                            />
+                            <Area type="monotone" dataKey="plays" stroke="#e5a00d" strokeWidth={3} fillOpacity={1} fill="url(#colorPlays)" />
+                        </AreaChart>
+                    </ResponsiveContainer>
+                </div>
+            </div>
+
+            {/* Server Records Grid */}
+            {tautulliData && (
+                <div className="glass-card-sm p-4 md:p-6 w-full flex flex-col relative overflow-hidden">
+                    <div className="absolute top-0 right-0 p-3 opacity-5 pointer-events-none">
+                        <Activity className="w-48 h-48 text-[#3b82f6]" />
+                    </div>
+                    <h3 className="text-sm font-bold text-muted uppercase tracking-wider mb-4 flex items-center gap-2 relative z-10">
+                        <Activity className="w-4 h-4 text-[#3b82f6]" /> {analyticsSourceLabel} Records & Period Stats
+                    </h3>
+                    <div className="grid grid-cols-2 gap-3 relative z-10">
+                        <div className="flex flex-col p-3 bg-black/20 rounded-lg border border-white/5 shadow-inner">
+                            <span className="font-bold text-muted text-[10px] uppercase tracking-wider mb-1 flex items-center gap-1.5"><Users className="w-3 h-3 text-[#3b82f6]"/> Peak Streams</span>
+                            <p className="text-xl font-black text-[#3b82f6]">{tautulliData?.streamsRecord || 0} <span className="text-[9px] font-normal text-muted">concurrent</span></p>
+                        </div>
+                        <div className="flex flex-col p-3 bg-black/20 rounded-lg border border-white/5 shadow-inner">
+                            <span className="font-bold text-muted text-[10px] uppercase tracking-wider mb-1 flex items-center gap-1.5"><Clock className="w-3 h-3 text-green-400"/> Watch Time</span>
+                            <p className="text-base font-black text-green-400 leading-tight">{tautulliData?.totalTimeStr || '0 mins'}</p>
+                        </div>
+                        <div className="flex flex-col p-3 bg-black/20 rounded-lg border border-white/5 shadow-inner">
+                            <span className="font-bold text-muted text-[10px] uppercase tracking-wider mb-1 flex items-center gap-1.5"><TrendingUp className="w-3 h-3 text-yellow-400"/> Period Plays</span>
+                            <p className="text-xl font-black text-yellow-400 flex items-center">{compare?.totalPlaybacks?.current || 0} {formatChange(compare?.totalPlaybacks)}</p>
+                        </div>
+                        <div className="flex flex-col p-3 bg-black/20 rounded-lg border border-white/5 shadow-inner">
+                            <span className="font-bold text-muted text-[10px] uppercase tracking-wider mb-1 flex items-center gap-1.5"><Users className="w-3 h-3 text-pink-400"/> Unique Viewers</span>
+                            <p className="text-xl font-black text-pink-400 flex items-center">{compare?.uniqueViewers?.current || 0} {formatChange(compare?.uniqueViewers)}</p>
+                        </div>
+                        <div className="flex flex-col p-3 bg-black/20 rounded-lg border border-white/5 shadow-inner">
+                            <span className="font-bold text-muted text-[10px] uppercase tracking-wider mb-1 flex items-center gap-1.5"><Monitor className="w-3 h-3 text-cyan-400" /> Peak Direct Plays</span>
+                            <p className="font-mono font-black text-cyan-400 text-xl">{tautulliData?.directPlayRecord || 0}</p>
+                        </div>
+                        <div className="flex flex-col p-3 bg-black/20 rounded-lg border border-white/5 shadow-inner">
+                            <span className="font-bold text-muted text-[10px] uppercase tracking-wider mb-1 flex items-center gap-1.5"><Activity className="w-3 h-3 text-orange-400" /> Peak Direct Streams</span>
+                            <p className="font-mono font-black text-orange-400 text-xl">{tautulliData?.directStreamRecord || 0}</p>
+                        </div>
+                        <div className="flex flex-col p-3 bg-black/20 rounded-lg border border-white/5 shadow-inner">
+                            <span className="font-bold text-muted text-[10px] uppercase tracking-wider mb-1 flex items-center gap-1.5"><Settings className="w-3 h-3 text-rose-400" /> Peak Transcodes</span>
+                            <p className="font-mono font-black text-rose-400 text-xl">{tautulliData?.transcodeRecord || 0}</p>
+                        </div>
+                        <div className="flex flex-col p-3 bg-black/20 rounded-lg border border-white/5 shadow-inner">
+                            <span className="font-bold text-muted text-[10px] uppercase tracking-wider mb-1 flex items-center gap-1.5"><PlaySquare className="w-3 h-3 text-purple-400" /> TV Shows Played</span>
+                            <p className="font-mono font-black text-purple-400 text-xl">{tautulliData?.tvPlays ? tautulliData.tvPlays.toLocaleString() : 0}</p>
+                        </div>
+                        <div className="flex flex-col p-3 bg-black/20 rounded-lg border border-white/5 shadow-inner">
+                            <span className="font-bold text-muted text-[10px] uppercase tracking-wider mb-1 flex items-center gap-1.5"><Film className="w-3 h-3 text-red-400" /> Movies Played</span>
+                            <p className="font-mono font-black text-red-400 text-xl">{tautulliData?.moviePlays ? tautulliData.moviePlays.toLocaleString() : 0}</p>
+                        </div>
+                        <div className="flex flex-col p-3 bg-black/20 rounded-lg border border-white/5 shadow-inner">
+                            <span className="font-bold text-muted text-[10px] uppercase tracking-wider mb-1 flex items-center gap-1.5"><Music className="w-3 h-3 text-emerald-400" /> Music Played</span>
+                            <p className="font-mono font-black text-emerald-400 text-xl">{tautulliData?.musicPlays ? tautulliData.musicPlays.toLocaleString() : 0}</p>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
+const LibraryDeltaBadge: React.FC<{ value?: number }> = ({ value }) => {
+    if (!value) return null;
+    const isPos = value > 0;
+    return (
+        <span className={`text-sm font-bold ml-2 ${isPos ? 'text-green-500' : 'text-red-500'} animate-[fade-in_0.5s_ease-out]`}>
+            {isPos ? '+' : ''}{value.toLocaleString()}
+        </span>
+    );
+};
+const AnimatedLeaderboard: React.FC<{ users: any[], resolveAvatar: (thumb: string | null | undefined, w?: number, h?: number) => string, isAdmin: boolean, onUserClick: (u: any) => void }> = ({ users, resolveAvatar, isAdmin, onUserClick }) => {
+    const prevUsersRef = useRef<any[]>([]);
+    
+    useEffect(() => {
+        prevUsersRef.current = users;
+    }, [users]);
+
+    const prevUsers = prevUsersRef.current;
+    
+    if (!users || users.length === 0) return null;
+
+    const maxPlays = Math.max(...users.map(u => u.plays || 0), 1);
+
+    const top3 = users.slice(0, 3);
+    const rest = users.slice(3, 10);
+
+    const getRankDelta = (userId: string, currentRank: number) => {
+        if (!prevUsers || prevUsers.length === 0) return null;
+        const prevIdx = prevUsers.findIndex(u => u.id === userId);
+        if (prevIdx === -1) return { type: 'new' };
+        const diff = prevIdx - (currentRank - 1);
+        if (diff > 0) return { type: 'up', val: diff };
+        if (diff < 0) return { type: 'down', val: Math.abs(diff) };
+        return null;
+    };
+
+    const renderPodiumCard = (user: any, rank: number) => {
+        const delta = getRankDelta(user.id, rank);
+        const isFirst = rank === 1;
+        const heightClass = isFirst ? 'h-48' : 'h-40';
+        const ringClass = isFirst ? 'ring-2 ring-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.3)]' : rank === 2 ? 'ring-1 ring-slate-300' : 'ring-1 ring-amber-700';
+        
+        return (
+            <div onClick={() => isAdmin && onUserClick(user)} className={`flex flex-col items-center justify-end bg-card/80 border border-border rounded-xl p-4 relative cursor-pointer hover:bg-white/5 transition-all group w-full ${heightClass} ${ringClass}`}>
+                {isFirst && <div className="absolute -top-6 text-4xl animate-[crown-pulse_2s_ease-in-out_infinite]">👑</div>}
+                {!isFirst && <div className="absolute -top-4 text-3xl">{rank === 2 ? '🥈' : '🥉'}</div>}
+                
+                <img src={resolveAvatar(user.thumb, 80, 80)} alt={user.username} onError={(e) => { (e.target as HTMLImageElement).src = logoUrl(); }} className={`rounded-full object-cover mb-2 border-2 ${isFirst ? 'w-20 h-20 border-yellow-500' : 'w-16 h-16 border-border'} bg-card`} />
+                <span className="font-bold text-text group-hover:text-plex transition-colors truncate w-full text-center">{user.username}</span>
+                <span className="text-xs text-muted font-mono mt-1">{user.plays} plays</span>
+                
+                {delta && (
+                    <div className="absolute -right-2 -top-2">
+                        {delta.type === 'new' && <span className="bg-plex text-black text-[9px] font-bold px-1.5 py-0.5 rounded-full animate-[rank-up_0.3s_ease-out]">NEW</span>}
+                        {delta.type === 'up' && <span className="bg-green-500/20 text-green-400 text-[10px] font-bold px-1.5 py-0.5 rounded flex items-center animate-[rank-up_0.3s_ease-out]">↑{delta.val}</span>}
+                        {delta.type === 'down' && <span className="bg-red-500/20 text-red-400 text-[10px] font-bold px-1.5 py-0.5 rounded flex items-center animate-[rank-down_0.3s_ease-out]">↓{delta.val}</span>}
+                    </div>
+                )}
+            </div>
+        );
+    };
+
+    return (
+        <div className="w-full flex flex-col gap-4">
+            <h2 className="text-xl font-bold text-text uppercase tracking-wider flex items-center gap-2">
+                <Trophy className="text-plex w-5 h-5" /> Hall of Fame
+            </h2>
+            
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Podium */}
+                {top3.length > 0 && (
+                    <div className="lg:col-span-1 flex flex-col justify-center h-full pt-8 lg:pt-0">
+                        <div className="flex items-end justify-center gap-2 sm:gap-4">
+                            {top3[1] && <div className="flex-1 max-w-[120px]">{renderPodiumCard(top3[1], 2)}</div>}
+                            <div className="flex-1 max-w-[140px] z-10">{renderPodiumCard(top3[0], 1)}</div>
+                            {top3[2] && <div className="flex-1 max-w-[120px]">{renderPodiumCard(top3[2], 3)}</div>}
+                        </div>
+                    </div>
+                )}
+
+                {/* List */}
+                <div className="lg:col-span-2 flex flex-col gap-2 justify-center">
+                    {rest.map((user, idx) => {
+                        const rank = idx + 4;
+                        const delta = getRankDelta(user.id, rank);
+                        const pct = Math.max(2, (user.plays / maxPlays) * 100);
+                        const hasFire = user.plays >= (maxPlays * 0.4) && user.plays > 0;
+
+                        return (
+                            <div key={user.id} onClick={() => isAdmin && onUserClick(user)} className="flex items-center gap-3 sm:gap-4 bg-black/20 p-2 sm:p-3 rounded-lg border border-border/50 cursor-pointer hover:bg-black/40 hover:border-plex/50 transition-colors group relative overflow-hidden">
+                                <div className="absolute left-0 top-0 bottom-0 bg-plex/10 animate-[bar-grow_1s_ease-out]" style={{ width: `${pct}%` }}></div>
+                                
+                                <div className="w-6 text-center font-bold text-muted group-hover:text-text z-10">#{rank}</div>
+                                <img src={resolveAvatar(user.thumb, 40, 40)} onError={(e) => { (e.target as HTMLImageElement).src = logoUrl(); }} className="w-8 h-8 rounded-full border border-border z-10 bg-card flex-shrink-0" />
+                                
+                                <div className="flex-1 flex items-center gap-2 z-10 min-w-0">
+                                    <span className="font-bold text-text truncate group-hover:text-plex transition-colors">{user.username}</span>
+                                    {hasFire && <span className="text-sm" title="Hot Streak!">🔥</span>}
+                                </div>
+
+                                <div className="flex items-center gap-3 z-10 flex-shrink-0">
+                                    {delta && (
+                                        <div className="w-8 sm:w-10 text-right">
+                                            {delta.type === 'new' && <span className="bg-plex/20 text-plex text-[9px] font-bold px-1.5 py-0.5 rounded animate-[rank-up_0.3s_ease-out]">NEW</span>}
+                                            {delta.type === 'up' && <span className="text-green-400 text-xs font-bold animate-[rank-up_0.3s_ease-out]">↑{delta.val}</span>}
+                                            {delta.type === 'down' && <span className="text-red-400 text-xs font-bold animate-[rank-down_0.3s_ease-out]">↓{delta.val}</span>}
+                                        </div>
+                                    )}
+                                    <div className="w-16 sm:w-20 text-right font-mono text-xs sm:text-sm whitespace-nowrap">
+                                        <CountUp end={user.plays} /> <span className="text-muted hidden sm:inline">plays</span>
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
+        </div>
+    );
+};
+
 export const AnalyticsDashboard: React.FC<{ isAdmin: boolean, sessionInfo: any }> = ({ isAdmin, sessionInfo }) => {
     const [analyticsData, setAnalyticsData] = useState<{
         topUsers: any[],
@@ -1835,6 +2096,18 @@ export const AnalyticsDashboard: React.FC<{ isAdmin: boolean, sessionInfo: any }
     const [viewerPage, setViewerPage] = useState(1);
     const viewersPerPage = 10;
     const [viewTab, setViewTab] = useState<'overview' | 'graphs'>('overview');
+    const mediaServerType = String(sessionInfo?.mediaServerType || 'plex').toLowerCase();
+    const isJellyfinPortal = mediaServerType === 'jellyfin';
+    const analyticsSourceLabel = isJellyfinPortal ? 'Jellystat' : 'Tautulli';
+    const libraryDeltas = (analyticsData?.libraryHealth as any)?.deltas || {};
+
+    const resolveUserAvatar = (thumb: string | null | undefined, width = 80, height = 80) => {
+        if (!thumb) return logoUrl();
+        if (thumb.startsWith('http://') || thumb.startsWith('https://') || thumb.startsWith('/api/')) {
+            return resolvePortalAssetUrl(thumb);
+        }
+        return portalUrl(`/api/plex/image?path=${encodeURIComponent(thumb)}&width=${width}&height=${height}`);
+    };
 
     useEffect(() => {
         if (!isAdmin) return;
@@ -1853,18 +2126,19 @@ export const AnalyticsDashboard: React.FC<{ isAdmin: boolean, sessionInfo: any }
         let cancelled = false;
         const fetchAnalytics = async () => {
             setLoading(true);
+            setError(null);
             try {
-                const data = await apiFetch(`/api/plex/analytics?days=${days}`);
+                const data = await apiFetch(`${isJellyfinPortal ? '/api/jellystat/analytics' : '/api/plex/analytics'}?days=${days}`);
                 if (cancelled) return;
                 setAnalyticsData(data);
 
                 if (isAdmin) {
                     try {
-                        const tData = await apiFetch('/api/tautulli/stats');
+                        const tData = isJellyfinPortal ? data.jellystatInsights : await apiFetch('/api/tautulli/stats');
                         if (cancelled) return;
                         setTautulliData(tData);
                     } catch (e) {
-                        // Tautulli might not be configured, ignore error
+                        // Tautulli/Jellystat might not be configured, ignore the extra panel.
                         if (!cancelled) setTautulliData(null);
                     }
                 } else {
@@ -1878,7 +2152,11 @@ export const AnalyticsDashboard: React.FC<{ isAdmin: boolean, sessionInfo: any }
         };
         fetchAnalytics();
         return () => { cancelled = true; };
-    }, [days, isAdmin]);
+    }, [days, isAdmin, isJellyfinPortal]);
+
+    useEffect(() => {
+        if (isJellyfinPortal && viewTab === 'graphs') setViewTab('overview');
+    }, [isJellyfinPortal, viewTab]);
 
     const topUsersLength = analyticsData?.topUsers?.length || 0;
     const totalViewerPages = Math.max(1, Math.ceil(topUsersLength / viewersPerPage));
@@ -1958,9 +2236,11 @@ export const AnalyticsDashboard: React.FC<{ isAdmin: boolean, sessionInfo: any }
                         <button onClick={() => setViewTab('overview')} className={`px-4 py-2 rounded-md text-sm font-bold uppercase tracking-wider transition-colors flex items-center gap-2 ${viewTab === 'overview' ? 'bg-plex text-white shadow-lg' : 'text-muted hover:text-white'}`}>
                             <Activity className="w-4 h-4" /> Overview
                         </button>
-                        <button onClick={() => setViewTab('graphs')} className={`px-4 py-2 rounded-md text-sm font-bold uppercase tracking-wider transition-colors flex items-center gap-2 ${viewTab === 'graphs' ? 'bg-plex text-white shadow-lg' : 'text-muted hover:text-white'}`}>
-                            <LucideLineChart className="w-4 h-4" /> Graphs
-                        </button>
+                        {!isJellyfinPortal && (
+                            <button onClick={() => setViewTab('graphs')} className={`px-4 py-2 rounded-md text-sm font-bold uppercase tracking-wider transition-colors flex items-center gap-2 ${viewTab === 'graphs' ? 'bg-plex text-white shadow-lg' : 'text-muted hover:text-white'}`}>
+                                <LucideLineChart className="w-4 h-4" /> Graphs
+                            </button>
+                        )}
                     </div>
                 </div>
                 {viewTab === 'overview' && (
@@ -2057,112 +2337,53 @@ export const AnalyticsDashboard: React.FC<{ isAdmin: boolean, sessionInfo: any }
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <div className="glass-card-sm p-4 flex flex-col justify-center">
                                     <p className="text-muted text-xs uppercase tracking-wider font-bold mb-1">Movies Catalog</p>
-                                    <p className="text-xl font-black text-text">{libraryHealth.movies?.toLocaleString() || '0'}</p>
+                                    <div className="flex items-center">
+                                        <p className="text-xl font-black text-text"><CountUp end={libraryHealth.movies || 0} /></p>
+                                        <LibraryDeltaBadge value={libraryDeltas.movies} />
+                                    </div>
                                     <p className="text-[11px] text-muted">Total movies in library</p>
                                 </div>
                                 <div className="glass-card-sm p-4 flex flex-col justify-center">
                                     <p className="text-muted text-xs uppercase tracking-wider font-bold mb-1">TV Shows Catalog</p>
-                                    <p className="text-xl font-black text-text">{libraryHealth.shows?.toLocaleString() || '0'} <span className="text-xs font-semibold text-muted">Shows</span></p>
-                                    <p className="text-[11px] text-muted">{libraryHealth.episodes?.toLocaleString() || '0'} episodes</p>
+                                    <div className="flex items-center gap-1">
+                                        <p className="text-xl font-black text-text"><CountUp end={libraryHealth.shows || 0} /></p>
+                                        <span className="text-xs font-semibold text-muted ml-1">Shows</span>
+                                        <LibraryDeltaBadge value={libraryDeltas.shows} />
+                                    </div>
+                                    <div className="flex items-center text-[11px] text-muted mt-0.5">
+                                        <CountUp end={libraryHealth.episodes || 0} /> <span className="ml-1">episodes</span>
+                                        <LibraryDeltaBadge value={libraryDeltas.episodes} />
+                                    </div>
                                 </div>
                                 <div className="glass-card-sm p-4 flex flex-col justify-center">
                                     <p className="text-muted text-xs uppercase tracking-wider font-bold mb-1">Music Catalog</p>
-                                    <p className="text-xl font-black text-text">{libraryHealth.artists?.toLocaleString() || '0'} <span className="text-xs font-semibold text-muted">Artists</span></p>
-                                    <p className="text-[11px] text-muted">{libraryHealth.albums?.toLocaleString() || '0'} albums • {libraryHealth.tracks?.toLocaleString() || '0'} tracks</p>
+                                    <div className="flex items-center gap-1">
+                                        <p className="text-xl font-black text-text"><CountUp end={libraryHealth.artists || 0} /></p>
+                                        <span className="text-xs font-semibold text-muted ml-1">Artists</span>
+                                        <LibraryDeltaBadge value={libraryDeltas.artists} />
+                                    </div>
+                                    <div className="flex items-center text-[11px] text-muted mt-0.5">
+                                        <CountUp end={libraryHealth.albums || 0} /> <span className="mx-1">albums</span> <LibraryDeltaBadge value={libraryDeltas.albums} />
+                                        <span className="mx-1">•</span> 
+                                        <CountUp end={libraryHealth.tracks || 0} /> <span className="mx-1">tracks</span> <LibraryDeltaBadge value={libraryDeltas.tracks} />
+                                    </div>
                                 </div>
                             </div>
                         </>
                     )}
 
+                    <div className="w-full">
+                        <AnimatedLeaderboard users={topUsers} resolveAvatar={resolveUserAvatar} isAdmin={isAdmin} onUserClick={setSelectedUser as any} />
+                    </div>
+
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-                        {/* Top Users Card */}
-                        <div className="glass-card-sm p-4 md:p-6 lg:col-span-2">
-                            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
-                                <h2 className="text-xl font-bold text-text uppercase tracking-wider flex items-center gap-2 whitespace-nowrap"><Users className="text-plex w-5 h-5" /> Top Viewers</h2>
-                                {isAdmin && (
-                                    <div className="relative w-full sm:w-auto flex-grow max-w-[250px] z-50">
-                                        <input
-                                            type="text"
-                                            placeholder="Search all users..."
-                                            value={searchQuery}
-                                            onChange={(e) => {
-                                                setSearchQuery(e.target.value);
-                                                setIsSearching(e.target.value.length > 0);
-                                            }}
-                                            onFocus={() => {
-                                                if (searchQuery.length > 0) setIsSearching(true);
-                                            }}
-                                            onBlur={() => setTimeout(() => setIsSearching(false), 200)}
-                                            className="w-full bg-black/40 border border-border rounded-lg px-3 py-2 text-sm text-text focus:outline-none focus:border-plex focus:ring-1 focus:ring-plex transition-all placeholder-muted/50"
-                                        />
-                                        {isSearching && searchQuery.length > 0 && (
-                                            <div className="absolute top-full left-0 right-0 mt-2 bg-[#1e2329] border border-border rounded-lg shadow-2xl z-[100] max-h-60 overflow-y-auto custom-scrollbar">
-                                                {allUsers.filter(u => u.username.toLowerCase().includes(searchQuery.toLowerCase())).length > 0 ? (
-                                                    allUsers.filter(u => u.username.toLowerCase().includes(searchQuery.toLowerCase())).map(u => (
-                                                        <div
-                                                            key={u.id}
-                                                            className="px-3 py-2.5 hover:bg-white/10 cursor-pointer flex items-center gap-3 border-b border-white/5 last:border-0 transition-colors"
-                                                            onClick={() => {
-                                                                setSelectedUser({ id: u.id, username: u.username, thumb: u.thumb || null });
-                                                                setSearchQuery('');
-                                                                setIsSearching(false);
-                                                            }}
-                                                        >
-                                                            {u.thumb ? (
-                                                                <img src={u.thumb.startsWith('http') ? u.thumb : portalUrl(`/api/plex/image?path=${encodeURIComponent(u.thumb)}&width=32&height=32`)} className="w-8 h-8 rounded-full object-cover border border-border flex-shrink-0" />
-                                                            ) : (
-                                                                <div className="w-8 h-8 rounded-full bg-border flex items-center justify-center text-[10px] font-bold border border-border/50 flex-shrink-0">{u.username.substring(0, 2).toUpperCase()}</div>
-                                                            )}
-                                                            <span className="text-sm font-medium text-text truncate">{u.username}</span>
-                                                        </div>
-                                                    ))
-                                                ) : (
-                                                    <div className="px-4 py-4 text-sm text-muted text-center italic">No users found</div>
-                                                )}
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-                            </div>
-                            <div className="flex flex-col gap-4">
-                                {topUsers.length === 0 ? <p className="text-muted text-sm">No data available.</p> : pagedTopUsers.map((user, idx) => (
-                                    <div key={user.id} onClick={() => { if (isAdmin) setSelectedUser({ id: user.id, username: user.username, thumb: user.thumb }); }} className={`flex items-center justify-between p-3 bg-black/20 rounded-lg transition-colors group ${isAdmin ? 'hover:bg-black/40 cursor-pointer hover:ring-1 hover:ring-plex' : ''}`}>
-                                        <div className="flex items-center gap-4">
-                                            <div className="relative">
-                                                <div className="w-10 h-10 rounded-full p-[2px] bg-gradient-to-r from-plex to-[#e5a00d]">
-                                                    <img src={user.thumb ? (user.thumb.startsWith('http') ? user.thumb : portalUrl(`/api/plex/image?path=${encodeURIComponent(user.thumb)}&width=80&height=80`)) : logoUrl()} alt={user.username} className="w-full h-full rounded-full object-cover bg-card" onError={(e) => { (e.target as HTMLImageElement).src = logoUrl(); }} />
-                                                </div>
-                                                <div className="absolute -top-2 -right-2 bg-plex text-black font-bold text-[10px] w-5 h-5 rounded-full flex items-center justify-center">#{((viewerPageSafe - 1) * viewersPerPage) + idx + 1}</div>
-                                            </div>
-                                            <span className="font-bold text-text group-hover:text-plex transition-colors">{user.username}</span>
-                                        </div>
-                                        <span className="font-mono text-plex font-bold">{user.plays} plays</span>
-                                    </div>
-                                ))}
-                                {topUsers.length > viewersPerPage && (
-                                    <div className="flex items-center justify-between pt-2">
-                                        <button
-                                            onClick={() => setViewerPage(Math.max(1, viewerPageSafe - 1))}
-                                            disabled={viewerPageSafe === 1}
-                                            className="px-3 py-1.5 text-xs font-bold rounded-md border border-border bg-black/20 text-text disabled:opacity-40 disabled:cursor-not-allowed hover:bg-black/40 transition-colors"
-                                        >
-                                            Previous
-                                        </button>
-                                        <span className="text-xs text-muted font-semibold">
-                                            Page {viewerPageSafe} of {totalViewerPages}
-                                        </span>
-                                        <button
-                                            onClick={() => setViewerPage(Math.min(totalViewerPages, viewerPageSafe + 1))}
-                                            disabled={viewerPageSafe >= totalViewerPages}
-                                            className="px-3 py-1.5 text-xs font-bold rounded-md border border-border bg-black/20 text-text disabled:opacity-40 disabled:cursor-not-allowed hover:bg-black/40 transition-colors"
-                                        >
-                                            Next
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
+                        <ServerInsightsWidget 
+                            peakHours={analyticsData?.peakHours || []} 
+                            tautulliData={tautulliData} 
+                            compare={analyticsData?.compare} 
+                            analyticsSourceLabel={analyticsSourceLabel}
+                        />
 
                         {/* Top Devices & Libraries Container */}
                         <div className="flex flex-col gap-6 lg:col-span-1">
@@ -2186,7 +2407,7 @@ export const AnalyticsDashboard: React.FC<{ isAdmin: boolean, sessionInfo: any }
 
                             {/* Top Devices Card */}
                             {topDevices && topDevices.length > 0 && (
-                                <div className="glass-card-sm p-4 md:p-6 mt-6">
+                                <div className="glass-card-sm p-4 md:p-6">
                                     <h2 className="text-xl font-bold text-text mb-4 uppercase tracking-wider flex items-center gap-2"><MonitorSmartphone className="text-plex w-5 h-5" /> Top Devices</h2>
                                     <div className="flex flex-col gap-4">
                                         {topDevices.slice(0, 5).map((device: any, idx: number) => (
@@ -2207,49 +2428,7 @@ export const AnalyticsDashboard: React.FC<{ isAdmin: boolean, sessionInfo: any }
                             )}
                         </div>
 
-                        {/* Tautulli Insights Card */}
-                        {tautulliData && (
-                            <div className="glass-card-sm p-4 md:p-6 col-span-full relative overflow-hidden">
-                                <div className="absolute top-0 right-0 p-3 opacity-10 pointer-events-none">
-                                    <Activity className="w-32 h-32 text-[#3b82f6]" />
-                                </div>
-                                <h2 className="text-xl font-bold text-text mb-6 uppercase tracking-wider flex items-center gap-2 relative z-10"><Activity className="text-[#3b82f6] w-5 h-5" /> Tautulli All-Time Insights</h2>
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 relative z-10">
-                                    <div className="flex flex-col p-4 bg-black/20 rounded-lg border border-white/5 shadow-inner">
-                                        <span className="font-bold text-muted text-xs uppercase tracking-wider mb-2 flex items-center gap-2"><Users className="w-4 h-4 text-[#3b82f6]" /> Peak Streams</span>
-                                        <span className="font-mono font-black text-[#3b82f6] text-3xl">{tautulliData.streamsRecord || 0}</span>
-                                    </div>
-                                    <div className="flex flex-col p-4 bg-black/20 rounded-lg border border-white/5 shadow-inner">
-                                        <span className="font-bold text-muted text-xs uppercase tracking-wider mb-2 flex items-center gap-2"><Clock className="w-4 h-4 text-green-400" /> Watch Time</span>
-                                        <span className="font-mono font-black text-green-400 text-sm xl:text-lg leading-tight mt-auto">{tautulliData.totalTimeStr || '0 hrs'}</span>
-                                    </div>
-                                    <div className="flex flex-col p-4 bg-black/20 rounded-lg border border-white/5 shadow-inner">
-                                        <span className="font-bold text-muted text-xs uppercase tracking-wider mb-2 flex items-center gap-2"><PlaySquare className="w-4 h-4 text-purple-400" /> TV Shows Played</span>
-                                        <span className="font-mono font-black text-purple-400 text-3xl">{tautulliData.tvPlays ? tautulliData.tvPlays.toLocaleString() : 0}</span>
-                                    </div>
-                                    <div className="flex flex-col p-4 bg-black/20 rounded-lg border border-white/5 shadow-inner">
-                                        <span className="font-bold text-muted text-xs uppercase tracking-wider mb-2 flex items-center gap-2"><Film className="w-4 h-4 text-red-400" /> Movies Played</span>
-                                        <span className="font-mono font-black text-red-400 text-3xl">{tautulliData.moviePlays ? tautulliData.moviePlays.toLocaleString() : 0}</span>
-                                    </div>
-                                    <div className="flex flex-col p-4 bg-black/20 rounded-lg border border-white/5 shadow-inner">
-                                        <span className="font-bold text-muted text-xs uppercase tracking-wider mb-2 flex items-center gap-2"><Monitor className="w-4 h-4 text-cyan-400" /> Peak Direct Plays</span>
-                                        <span className="font-mono font-black text-cyan-400 text-3xl">{tautulliData.directPlayRecord || 0}</span>
-                                    </div>
-                                    <div className="flex flex-col p-4 bg-black/20 rounded-lg border border-white/5 shadow-inner">
-                                        <span className="font-bold text-muted text-xs uppercase tracking-wider mb-2 flex items-center gap-2"><Activity className="w-4 h-4 text-orange-400" /> Peak Direct Streams</span>
-                                        <span className="font-mono font-black text-orange-400 text-3xl">{tautulliData.directStreamRecord || 0}</span>
-                                    </div>
-                                    <div className="flex flex-col p-4 bg-black/20 rounded-lg border border-white/5 shadow-inner">
-                                        <span className="font-bold text-muted text-xs uppercase tracking-wider mb-2 flex items-center gap-2"><Settings className="w-4 h-4 text-rose-400" /> Peak Transcodes</span>
-                                        <span className="font-mono font-black text-rose-400 text-3xl">{tautulliData.transcodeRecord || 0}</span>
-                                    </div>
-                                    <div className="flex flex-col p-4 bg-black/20 rounded-lg border border-white/5 shadow-inner">
-                                        <span className="font-bold text-muted text-xs uppercase tracking-wider mb-2 flex items-center gap-2"><Music className="w-4 h-4 text-yellow-400" /> Music Played</span>
-                                        <span className="font-mono font-black text-yellow-400 text-3xl">{tautulliData.musicPlays ? tautulliData.musicPlays.toLocaleString() : 0}</span>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
+
 
                         {/* Trending Content Card */}
                         <div className="glass-card-sm p-4 md:p-6 col-span-full">
@@ -2264,7 +2443,7 @@ export const AnalyticsDashboard: React.FC<{ isAdmin: boolean, sessionInfo: any }
                             <div className="flex flex-col gap-4">
                                 {activeContent.length === 0 ? <p className="text-muted text-sm col-span-full">No data available.</p> : activeContent.slice(0, 10).map((item, idx) => (
                                     <a key={item.key} href={item.plexUrl} target="_blank" rel="noreferrer" className="flex flex-col sm:flex-row bg-black/20 rounded-xl overflow-hidden hover:bg-black/40 transition-all cursor-pointer group hover:ring-1 hover:ring-plex shadow-md">
-                                        <div className="sm:w-32 lg:w-40 flex-shrink-0 aspect-[2/3] relative">
+                                        <div className={`sm:w-32 lg:w-40 flex-shrink-0 relative ${contentTab === 'music' ? 'aspect-square' : 'aspect-[2/3]'}`}>
                                             {item.thumbUrl ? (
                                                 <img src={resolvePortalAssetUrl(item.thumbUrl)} alt={item.title} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
                                             ) : (
@@ -2557,6 +2736,8 @@ export const AdminDashboard: React.FC<{ onLogout: () => void, onViewUserPortal: 
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'trial' | 'expiring' | 'expired' | 'revoked'>('all');
     const [sortBy, setSortBy] = useState<'username-asc' | 'username-desc' | 'expiry-asc' | 'expiry-desc' | 'joined-desc'>('username-asc');
+    const mediaServerType = String(configSettings.mediaServerType || 'plex').toLowerCase();
+    const mediaServerLabel = mediaServerType === 'jellyfin' ? 'Jellyfin' : 'Plex';
 
     const addToast = useCallback((message: string, type: 'success' | 'error' = 'success') => {
         setToasts(t => pushToast(t, message, type));
@@ -2596,7 +2777,7 @@ export const AdminDashboard: React.FC<{ onLogout: () => void, onViewUserPortal: 
                     await fetchUsers();
                     await fetchSecurityData();
                 } else {
-                    addToast('Welcome! Please configure your Plex settings to begin.', 'success');
+                    addToast('Welcome! Please configure your media server settings to begin.', 'success');
                     setSettingsModalOpen(true);
                 }
             } catch (error) {
@@ -2644,13 +2825,13 @@ export const AdminDashboard: React.FC<{ onLogout: () => void, onViewUserPortal: 
 
     const handleImportUsers = async () => {
         if (!isConfigured) {
-            addToast('Please configure Plex settings first.', 'error');
+            addToast(`Please configure ${mediaServerLabel} settings first.`, 'error');
             return;
         }
         setLoading(true);
         try {
             const result = await apiFetch('/api/sync', { method: 'POST' });
-            addToast(result.message || `Synced ${result.count} users from Plex.`);
+            addToast(result.message || `Synced ${result.count} users from ${mediaServerLabel}.`);
             await fetchUsers(); // Refresh user list
             await fetchSecurityData();
         } catch (error) {
@@ -2703,7 +2884,7 @@ export const AdminDashboard: React.FC<{ onLogout: () => void, onViewUserPortal: 
     };
 
     const handleDeleteUser = async (userId: string) => {
-        appConfirm('Are you sure you want to delete this user? This will revoke Plex access first.', async () => {
+        appConfirm(`Are you sure you want to delete this user? This will revoke ${mediaServerLabel} access first where supported.`, async () => {
             setLoading(true);
             try {
                 await apiFetch(`/api/users/${userId}`, { method: 'DELETE' });
@@ -2834,7 +3015,7 @@ export const AdminDashboard: React.FC<{ onLogout: () => void, onViewUserPortal: 
                         <span className="font-bold text-muted uppercase tracking-wider text-sm hidden md:inline-block mr-2">Quick Actions:</span>
                         <div className="grid grid-cols-2 md:flex md:flex-row gap-3 w-full md:w-auto flex-1">
                             <button className="col-span-2 md:col-span-1 px-3 py-2 bg-plex text-background rounded-md font-bold hover:bg-plex-hover transition-colors flex items-center justify-center gap-2 text-sm md:text-base" onClick={handleImportUsers} disabled={isLoading}>
-                                Sync Plex Users
+                                Sync {mediaServerLabel} Users
                             </button>
                         </div>
                     </div>
@@ -2940,6 +3121,7 @@ export const AdminDashboard: React.FC<{ onLogout: () => void, onViewUserPortal: 
                             isConfigured={isConfigured}
                             isSelected={selectedUserIds.includes(user.id)}
                             onSelect={handleToggleSelection}
+                            providerLabel={mediaServerLabel}
                         />
                     ))}
                 </div>
@@ -3096,7 +3278,12 @@ const LivePlexStats: React.FC = () => {
 export const Login: React.FC<{ onLoginSuccess: () => void, publicConfig?: any, initialError?: string }> = ({ onLoginSuccess, publicConfig, initialError }) => {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState(initialError || '');
-    const [publicInfo, setPublicInfo] = useState<{ thumb: string | null, serverName: string, isConfigured: boolean | null }>({ thumb: null, serverName: 'Server Portal', isConfigured: null });
+    const [jellyfinUsername, setJellyfinUsername] = useState('');
+    const [jellyfinPassword, setJellyfinPassword] = useState('');
+    const [showJellyfinPassword, setShowJellyfinPassword] = useState(false);
+    const [quickConnect, setQuickConnect] = useState<{ sessionId: string, code: string, jellyfinUrl: string } | null>(null);
+    const quickConnectPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    const [publicInfo, setPublicInfo] = useState<{ thumb: string | null, serverName: string, isConfigured: boolean | null, mediaServerType?: string }>({ thumb: null, serverName: 'Server Portal', isConfigured: null, mediaServerType: 'plex' });
 
     const fetchPublicInfo = () => {
         apiFetch('/api/public/info').then(data => {
@@ -3104,7 +3291,8 @@ export const Login: React.FC<{ onLoginSuccess: () => void, publicConfig?: any, i
                 setPublicInfo({
                     thumb: data.thumb || null,
                     serverName: data.serverName || 'Server Portal',
-                    isConfigured: data.isConfigured !== false
+                    isConfigured: data.isConfigured !== false,
+                    mediaServerType: data.mediaServerType || 'plex'
                 });
                 if (data.thumb) updateFavicon(data.thumb);
                 if (data.serverName) document.title = `${data.serverName} Portal`;
@@ -3119,6 +3307,10 @@ export const Login: React.FC<{ onLoginSuccess: () => void, publicConfig?: any, i
             window.history.replaceState({}, '', portalUrl('/'));
         }
     }, [initialError]);
+
+    useEffect(() => () => {
+        if (quickConnectPollRef.current) clearInterval(quickConnectPollRef.current);
+    }, []);
 
     useEffect(() => {
         fetchPublicInfo();
@@ -3167,28 +3359,103 @@ export const Login: React.FC<{ onLoginSuccess: () => void, publicConfig?: any, i
         }
     };
 
+    const handleJellyfinLogin = async (event?: React.FormEvent) => {
+        event?.preventDefault();
+        setIsLoading(true);
+        setError('');
+        try {
+            await apiFetch('/api/auth/jellyfin/login', {
+                method: 'POST',
+                body: JSON.stringify({ username: jellyfinUsername.trim(), password: jellyfinPassword }),
+            });
+            onLoginSuccess();
+        } catch (e: any) {
+            setError(e.message || 'Failed to authenticate with Jellyfin');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const stopQuickConnectPolling = () => {
+        if (quickConnectPollRef.current) {
+            clearInterval(quickConnectPollRef.current);
+            quickConnectPollRef.current = null;
+        }
+    };
+
+    const pollJellyfinQuickConnect = (sessionId: string) => {
+        stopQuickConnectPolling();
+        quickConnectPollRef.current = setInterval(async () => {
+            try {
+                const data = await apiFetch('/api/auth/jellyfin/quick-connect/poll', {
+                    method: 'POST',
+                    body: JSON.stringify({ sessionId }),
+                });
+                if (data?.success) {
+                    stopQuickConnectPolling();
+                    onLoginSuccess();
+                }
+            } catch (e: any) {
+                stopQuickConnectPolling();
+                setIsLoading(false);
+                setError(e.message || 'Jellyfin Quick Connect failed');
+            }
+        }, 5000);
+    };
+
+    const handleJellyfinQuickConnect = async () => {
+        setIsLoading(true);
+        setError('');
+        try {
+            const data = await apiFetch('/api/auth/jellyfin/quick-connect/initiate', { method: 'POST' });
+            setQuickConnect({
+                sessionId: data.sessionId,
+                code: data.code,
+                jellyfinUrl: data.jellyfinUrl || '',
+            });
+            setIsLoading(false);
+            pollJellyfinQuickConnect(data.sessionId);
+        } catch (e: any) {
+            setIsLoading(false);
+            setError(e.message || 'Failed to start Jellyfin Quick Connect');
+        }
+    };
+
+    const handleOpenJellyfinQuickConnect = async () => {
+        if (!quickConnect?.jellyfinUrl) return;
+        try {
+            await copyTextToClipboard(quickConnect.code);
+        } catch {
+            // Clipboard access can be blocked by browser settings; opening Jellyfin is still useful.
+        }
+        window.open(jellyfinQuickConnectUrl(quickConnect.jellyfinUrl), '_blank', 'noopener,noreferrer');
+    };
+
     if (publicInfo.isConfigured === false || (typeof window !== 'undefined' && stripBasePath(window.location.pathname).startsWith('/auth/setup/'))) {
         return <SetupWizard onComplete={fetchPublicInfo} />;
     }
 
     if (publicInfo.isConfigured === null) {
-        return <Loader isLoading={true} />;
+        return <Loader isLoading={true} isCinematic={!!publicConfig?.useCinematicLoading} />;
     }
 
-    const showTrialAccess = publicConfig?.allowTemporaryAccess !== false;
+    const mediaServerType = String(publicConfig?.mediaServerType || publicInfo.mediaServerType || 'plex').toLowerCase();
+    const isJellyfinAuth = mediaServerType === 'jellyfin';
+    const showTrialAccess = !isJellyfinAuth && publicConfig?.allowTemporaryAccess !== false;
     const logoSrc = publicConfig?.customLogoUrl
         ? resolvePortalAssetUrl(publicConfig.customLogoUrl)
         : (publicInfo.thumb ? resolvePortalAssetUrl(publicInfo.thumb) : '');
+    const splashBackgroundUrl = publicConfig?.backgroundImageUrl ? resolvePortalAssetUrl(publicConfig.backgroundImageUrl) : undefined;
 
     return (
         <div className="relative min-h-screen w-full flex flex-col items-center justify-center p-4 sm:p-6 md:p-8 lg:p-10 overflow-hidden">
-            <AuthPageBackground />
-            <Loader isLoading={isLoading} />
+            <AuthPageBackground backgroundImageUrl={splashBackgroundUrl} trendingBackgrounds={publicConfig?.trendingBackgrounds} trendingSlideshowInterval={publicConfig?.trendingSlideshowInterval} />
+            <Loader isLoading={isLoading} isCinematic={!!publicConfig?.useCinematicLoading} />
 
             <div className="relative z-10 w-full max-w-6xl flex flex-col gap-6">
                 <div className={`glass-card-lg overflow-hidden flex flex-col ${showTrialAccess ? 'lg:flex-row min-h-[min(680px,calc(100vh-3rem))]' : 'max-w-xl mx-auto w-full'}`}>
                     {showTrialAccess && (
-                        <div className="flex-1 flex flex-col justify-center p-6 sm:p-8 lg:p-10 xl:p-12 border-b lg:border-b-0 lg:border-r border-white/10 bg-gradient-to-br from-plex/[0.08] via-plex/[0.03] to-transparent min-w-0">
+                        <div className="flex-1 flex flex-col justify-center p-6 sm:p-8 lg:p-10 xl:p-12 border-t lg:border-t-0 lg:border-r border-white/10 bg-gradient-to-br from-plex/[0.08] via-plex/[0.03] to-transparent min-w-0 order-last lg:order-none">
                             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-plex/10 border border-plex/25 text-plex text-[11px] font-bold uppercase tracking-widest mb-5 w-fit">
                                 <Sparkles className="w-3.5 h-3.5" /> New here?
                             </div>
@@ -3215,9 +3482,9 @@ export const Login: React.FC<{ onLoginSuccess: () => void, publicConfig?: any, i
                         </div>
                     )}
 
-                    <div className={`flex flex-col justify-center items-center text-center p-6 sm:p-8 lg:p-10 xl:p-12 min-w-0 ${showTrialAccess ? 'flex-1' : 'w-full py-10 sm:py-12'}`}>
+                    <div className={`flex flex-col justify-center items-center text-center p-6 sm:p-8 lg:p-10 xl:p-12 min-w-0 ${showTrialAccess ? 'flex-1 order-first lg:order-none' : 'w-full py-10 sm:py-12'}`}>
                         <div className="relative mb-8">
-                            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-36 h-36 bg-plex/20 rounded-full blur-[60px] pointer-events-none" />
+                            {!logoSrc && <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-36 h-36 bg-plex/20 rounded-full blur-[60px] pointer-events-none" />}
                             {logoSrc ? (
                                 <img
                                     src={logoSrc}
@@ -3239,7 +3506,9 @@ export const Login: React.FC<{ onLoginSuccess: () => void, publicConfig?: any, i
                                     {publicInfo.serverName}
                                 </h1>
                                 <p className="text-muted text-sm sm:text-base leading-relaxed mb-8 max-w-sm">
-                                    Sign in with Plex to access your portal and manage your subscription.
+                                    {isJellyfinAuth
+                                        ? 'Sign in with your Jellyfin account to access your portal and manage your subscription.'
+                                        : 'Sign in with Plex to access your portal and manage your subscription.'}
                                 </p>
                             </>
                         )}
@@ -3254,12 +3523,82 @@ export const Login: React.FC<{ onLoginSuccess: () => void, publicConfig?: any, i
                             </>
                         )}
 
-                        <button type="button" className={loginSecondaryBtnClass} onClick={handlePlexLogin} disabled={isLoading}>
-                            <img src={logoUrl()} alt="" className="w-5 h-5 object-contain opacity-80" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-                            Login with Plex
-                        </button>
+                        {isJellyfinAuth ? (
+                            <div className="w-full max-w-sm flex flex-col gap-4 text-left">
+                                <button type="button" className={loginSecondaryBtnClass} onClick={handleJellyfinQuickConnect} disabled={isLoading}>
+                                    <img src={JELLYFIN_ICON_URL} alt="" className="w-5 h-5 object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                                    Login with Jellyfin
+                                </button>
 
-                        {!showTrialAccess && (
+                                {quickConnect && (
+                                    <div className="w-full rounded-xl border border-plex/30 bg-plex/10 p-4 text-center">
+                                        <p className="text-[10px] font-bold text-muted uppercase tracking-[0.14em] mb-2">Quick Connect code</p>
+                                        <div className="font-black text-3xl tracking-[0.18em] text-text tabular-nums mb-3">{quickConnect.code}</div>
+                                        <p className="text-xs text-muted leading-relaxed">
+                                            Approve this code in Jellyfin Quick Connect. This page will finish login automatically.
+                                        </p>
+                                        {quickConnect.jellyfinUrl && (
+                                            <button
+                                                type="button"
+                                                onClick={handleOpenJellyfinQuickConnect}
+                                                className="mt-3 inline-flex items-center justify-center text-xs font-bold text-plex hover:text-text transition"
+                                            >
+                                                Copy code & open Quick Connect
+                                            </button>
+                                        )}
+                                    </div>
+                                )}
+
+                                <button
+                                    type="button"
+                                    className="self-center text-xs font-bold text-muted hover:text-text transition"
+                                    onClick={() => setShowJellyfinPassword((value) => !value)}
+                                >
+                                    {showJellyfinPassword ? 'Hide password login' : 'Use password instead'}
+                                </button>
+
+                                {showJellyfinPassword && (
+                                    <form onSubmit={handleJellyfinLogin} className="w-full flex flex-col gap-3 text-left">
+                                        <label className="flex flex-col gap-1.5">
+                                            <span className="text-[10px] font-bold text-muted uppercase tracking-[0.14em]">Jellyfin username</span>
+                                            <input
+                                                value={jellyfinUsername}
+                                                onChange={(e) => setJellyfinUsername(e.target.value)}
+                                                autoComplete="username"
+                                                className="w-full bg-black/25 border border-white/15 rounded-xl px-4 py-3 text-sm text-text outline-none focus:border-plex/70 focus:ring-2 focus:ring-plex/20 transition"
+                                                placeholder="Username"
+                                                disabled={isLoading}
+                                                required
+                                            />
+                                        </label>
+                                        <label className="flex flex-col gap-1.5">
+                                            <span className="text-[10px] font-bold text-muted uppercase tracking-[0.14em]">Password</span>
+                                            <input
+                                                value={jellyfinPassword}
+                                                onChange={(e) => setJellyfinPassword(e.target.value)}
+                                                type="password"
+                                                autoComplete="current-password"
+                                                className="w-full bg-black/25 border border-white/15 rounded-xl px-4 py-3 text-sm text-text outline-none focus:border-plex/70 focus:ring-2 focus:ring-plex/20 transition"
+                                                placeholder="Password"
+                                                disabled={isLoading}
+                                                required
+                                            />
+                                        </label>
+                                        <button type="submit" className={loginSecondaryBtnClass} disabled={isLoading || !jellyfinUsername.trim() || !jellyfinPassword}>
+                                            <img src={JELLYFIN_ICON_URL} alt="" className="w-5 h-5 object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                                            Login with password
+                                        </button>
+                                    </form>
+                                )}
+                            </div>
+                        ) : (
+                            <button type="button" className={loginSecondaryBtnClass} onClick={handlePlexLogin} disabled={isLoading}>
+                                <img src={logoUrl()} alt="" className="w-5 h-5 object-contain opacity-80" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                                Login with Plex
+                            </button>
+                        )}
+
+                        {!showTrialAccess && !isJellyfinAuth && (
                             <div className="w-full mt-10 pt-8 border-t border-white/10">
                                 <LivePlexStats />
                             </div>
@@ -3936,7 +4275,7 @@ const WrapUpModal: React.FC<{ metric: string; analytics: any; days: number | str
 };
 
 const DiscoverPosterCard: React.FC<{
-    item: { title: string; thumb?: string; plexUrl: string; tags?: string[]; year?: number | string; parentTitle?: string };
+    item: { title: string; thumb?: string; thumbUrl?: string; plexUrl: string; tags?: string[]; year?: number | string; parentTitle?: string };
     aspect?: '2/3' | 'square';
     overlay?: React.ReactNode;
     variant?: 'discover' | 'home';
@@ -3959,7 +4298,7 @@ const DiscoverPosterCard: React.FC<{
             <div className={`${posterShell} ${aspect === 'square' ? 'aspect-square' : 'aspect-[2/3]'} w-full`}>
                 {item.thumb ? (
                     <img
-                        src={portalUrl(`/api/plex/image?path=${encodeURIComponent(item.thumb)}&width=300&height=${aspect === 'square' ? 300 : 450}`)}
+                        src={item.thumbUrl ? resolvePortalAssetUrl(item.thumbUrl) : portalUrl(`/api/plex/image?path=${encodeURIComponent(item.thumb)}&width=300&height=${aspect === 'square' ? 300 : 450}`)}
                         alt={item.title}
                         loading="lazy"
                         className={`w-full h-full object-cover ${variant === 'home' ? 'transition-[transform,opacity] duration-300 group-hover:scale-105 group-hover:opacity-80' : ''}`}
@@ -4009,10 +4348,10 @@ const DISCOVER_LIMIT_OPTIONS = [
     { value: '250', label: '250 Items' },
 ];
 
-const TrendingDiscoverSection: React.FC<{ title: string; items: any[]; limit: number; showQualityBadges?: boolean }> = ({ title, items, limit, showQualityBadges = true }) => {
+const TrendingDiscoverSection: React.FC<{ title: string; items: any[]; limit: number; showQualityBadges?: boolean; useScrollRevealAnimations?: boolean }> = ({ title, items, limit, showQualityBadges = true, useScrollRevealAnimations }) => {
     if (!items?.length) return null;
     return (
-        <div className="flex flex-col">
+        <ScrollReveal enabled={!!useScrollRevealAnimations} className="flex flex-col">
             <h3 className="text-plex text-sm uppercase tracking-[2px] mb-6 font-bold border-b border-white/10 pb-2">{title}</h3>
             <div className={discoverPosterGridClass}>
                 {items.slice(0, limit).map((item, i) => (
@@ -4024,7 +4363,7 @@ const TrendingDiscoverSection: React.FC<{ title: string; items: any[]; limit: nu
                     />
                 ))}
             </div>
-        </div>
+        </ScrollReveal>
     );
 };
 
@@ -4053,7 +4392,56 @@ export const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onL
 
     const user = sessionInfo.account;
     const showQualityBadges = publicConfig?.showPosterQualityBadges !== false;
+    const isJellyfinPortal = String(publicConfig?.mediaServerType || 'plex').toLowerCase() === 'jellyfin';
     const [optOutNewsletter, setOptOutNewsletter] = useState(user?.optOutNewsletter || false);
+
+    const resolveHomeImage = (thumbUrl: string | null | undefined, fallback = logoUrl()) => {
+        if (!thumbUrl) return fallback;
+        if (thumbUrl.startsWith('http://') || thumbUrl.startsWith('https://') || thumbUrl.startsWith('/api/')) {
+            return resolvePortalAssetUrl(thumbUrl);
+        }
+        return portalUrl(`/api/plex/image?path=${encodeURIComponent(thumbUrl)}&width=256&height=256`);
+    };
+
+    const buildJellyfinHomeAnalytics = (data: any) => {
+        const topMovies = Array.isArray(data?.topMovies) ? data.topMovies : [];
+        const topShows = Array.isArray(data?.topShows) ? data.topShows : [];
+        const topMusic = Array.isArray(data?.topMusic) ? data.topMusic : [];
+        const topWatched = [...topShows, ...topMovies, ...topMusic].sort((a: any, b: any) => (b.plays || 0) - (a.plays || 0));
+        const peakHours = Array.isArray(data?.peakHours) ? data.peakHours : [];
+        const peakHour = peakHours.reduce((best: number, value: number, hour: number) => value > (peakHours[best] || 0) ? hour : best, 0);
+        const moviesCount = data?.jellystatInsights?.moviePlays || topMovies.reduce((sum: number, item: any) => sum + (item.plays || 0), 0);
+        const showsCount = data?.jellystatInsights?.tvPlays || topShows.reduce((sum: number, item: any) => sum + (item.plays || 0), 0);
+        const musicCount = data?.jellystatInsights?.musicPlays || topMusic.reduce((sum: number, item: any) => sum + (item.plays || 0), 0);
+        const topMovie = topMovies[0] || null;
+        const topBinge = topShows[0] || null;
+        const topLibraries = Array.isArray(data?.topLibraries) ? data.topLibraries : [];
+
+        return {
+            totalPlays: data?.totalPlaybacks || data?.jellystatInsights?.totalPlays || 0,
+            moviesCount,
+            showsCount,
+            musicCount,
+            topWatched,
+            recentHistory: [],
+            topMovie: topMovie ? { ...topMovie, artUrl: topMovie.thumbUrl } : null,
+            topBinge: topBinge ? { ...topBinge, artUrl: topBinge.thumbUrl } : null,
+            peakHour,
+            avgHour: peakHour,
+            timeOfDay: peakHour >= 5 && peakHour < 12 ? 'Early Bird' : peakHour >= 12 && peakHour < 18 ? 'Afternoon Watcher' : peakHour >= 18 ? 'Evening Streamer' : 'Night Owl',
+            popularDay: 'Recent Activity',
+            dayOfWeekCounts: {},
+            favoriteLibrary: topLibraries[0]?.title || 'None',
+            topLibraries,
+            mediaPreference: moviesCount > showsCount ? 'Movie Fan' : 'TV Binger',
+            watchStyle: topWatched.length >= 10 ? 'Explorer' : 'Focused',
+            uniqueTitles: topWatched.length,
+            streamingHabit: 'Jellyfin Viewer',
+            weekdayPlays: data?.totalPlaybacks || 0,
+            weekendPlays: 0,
+            libraryHealth: data?.libraryHealth || null,
+        };
+    };
 
     const handleToggleNewsletter = async () => {
         setIsLoading(true);
@@ -4112,7 +4500,9 @@ export const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onL
             try {
                 setAnalyticsLoading(true);
                 setAnalyticsError(null);
-                const res = await apiFetch(`/api/plex/analytics/me?days=${analyticsDays}`);
+                const res = isJellyfinPortal
+                    ? buildJellyfinHomeAnalytics(await apiFetch(`/api/jellystat/analytics?days=${analyticsDays}`))
+                    : await apiFetch(`/api/plex/analytics/me?days=${analyticsDays}`);
                 if (cancelled) return;
                 setAnalytics(res);
                 setTopContentPage(0);
@@ -4130,7 +4520,7 @@ export const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onL
         };
         fetchAnalytics();
         return () => { cancelled = true; };
-    }, [user, sessionInfo.session.isAdmin, analyticsDays]);
+    }, [user, sessionInfo.session.isAdmin, analyticsDays, isJellyfinPortal]);
 
     useEffect(() => {
         const mq = window.matchMedia('(min-width: 1024px)');
@@ -4160,7 +4550,7 @@ export const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onL
         const fetchDashboard = async () => {
             if (!isMounted) return;
             try {
-                const res = await apiFetch(`/api/plex/dashboard?limit=${RECENTLY_ADDED_ITEM_LIMIT}`);
+                const res = await apiFetch(`${isJellyfinPortal ? '/api/jellyfin/dashboard' : '/api/plex/dashboard'}?limit=${RECENTLY_ADDED_ITEM_LIMIT}`);
                 if (isMounted) setDashboardData(res);
             } catch (e) {
                 console.error('Failed to refresh dashboard data', e);
@@ -4170,14 +4560,16 @@ export const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onL
         const fetchServerData = async () => {
             if (!isMounted) return;
             try {
-                const p1 = apiFetch('/api/plex/stats').then(res => {
-                    if (isMounted) {
-                        setServerStats(res);
-                        if (res?.isBuilding) {
-                            pollTimer = setTimeout(fetchServerData, 5000);
+                const p1 = isJellyfinPortal
+                    ? Promise.resolve({ provider: 'jellyfin' }).then(res => { if (isMounted) setServerStats(res); })
+                    : apiFetch('/api/plex/stats').then(res => {
+                        if (isMounted) {
+                            setServerStats(res);
+                            if (res?.isBuilding) {
+                                pollTimer = setTimeout(fetchServerData, 5000);
+                            }
                         }
-                    }
-                }).catch(e => console.error("Failed to fetch server stats", e));
+                    }).catch(e => console.error("Failed to fetch server stats", e));
 
                 const p2 = fetchDashboard();
                 await Promise.all([p1, p2]);
@@ -4192,7 +4584,16 @@ export const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onL
             if (pollTimer) clearTimeout(pollTimer);
             if (dashboardTimer) clearInterval(dashboardTimer);
         };
-    }, []);
+    }, [isJellyfinPortal]);
+
+    useEffect(() => {
+        if (!isJellyfinPortal || !analytics?.libraryHealth) return;
+        setServerStats((current: any) => ({
+            ...(current || {}),
+            provider: 'jellyfin',
+            ...analytics.libraryHealth,
+        }));
+    }, [isJellyfinPortal, analytics?.libraryHealth]);
 
     const handleRelink = async () => {
         setIsLoading(true);
@@ -4271,34 +4672,54 @@ export const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onL
 
     return (
         <div className="w-full flex flex-col gap-3 md:gap-4">
-            <Loader isLoading={isLoading} />
+            <Loader isLoading={isLoading} isCinematic={!!publicConfig?.useCinematicLoading} />
             {toast && <Toast message={toast.message} type={toast.type} onDismiss={() => setToast(null)} />}
 
             {/* Massive Hero Banner */}
             <div className="relative w-full rounded-2xl overflow-hidden shadow-2xl bg-card border border-border">
                 {/* Blurred Background */}
                 <div className="absolute inset-0 bg-background overflow-hidden">
-                    {dashboardData?.recentMovies?.length > 0 ? (
-                        <div className="absolute -inset-[50%] opacity-40 transform -rotate-12 scale-110 flex gap-4 overflow-hidden pointer-events-none justify-center">
-                            {[...Array(6)].map((_, colIdx) => (
-                                <div key={colIdx} className={`flex flex-col gap-4 ${colIdx % 2 === 0 ? 'animate-[scrollVertical_40s_linear_infinite]' : 'animate-[scrollVertical_50s_linear_infinite_reverse]'}`}>
-                                    {[...dashboardData.recentMovies, ...dashboardData.recentMovies].sort(() => 0.5 - Math.random()).map((m: any, i: number) => m.thumb && (
-                                        <img key={`c${colIdx}-${i}`} src={portalUrl(`/api/plex/image?path=${encodeURIComponent(m.thumb)}&width=200&height=300`)} className="w-32 md:w-48 rounded-xl object-cover" alt="" />
-                                    ))}
-                                </div>
-                            ))}
-                        </div>
-                    ) : heroBg && (
-                        <div
-                            className="absolute inset-0 bg-cover bg-center opacity-30 blur-2xl scale-110"
-                            style={{ backgroundImage: `url(${heroBg})` }}
-                        />
+                    {publicConfig?.useTrendingSlideshow && publicConfig?.trendingBackgrounds?.length > 0 ? (
+                        <>
+                            <div className="absolute inset-0 opacity-100">
+                                <SlideshowBackground backgrounds={publicConfig.trendingBackgrounds} intervalSeconds={publicConfig.trendingSlideshowInterval} opacity={1} />
+                            </div>
+                            <div className="absolute inset-0 bg-gradient-to-t from-card via-card/50 to-transparent" />
+                            <div className="absolute inset-0 bg-gradient-to-r from-card via-card/20 to-transparent" />
+                            <div className="absolute inset-0 bg-black/10" />
+                        </>
+                    ) : dashboardData?.recentMovies?.length > 0 ? (
+                        <>
+                            <div className="absolute -inset-[50%] opacity-40 transform -rotate-12 scale-110 flex gap-4 overflow-hidden pointer-events-none justify-center">
+                                {[...Array(6)].map((_, colIdx) => (
+                                    <div key={colIdx} className={`flex flex-col gap-4 ${colIdx % 2 === 0 ? 'animate-[scrollVertical_40s_linear_infinite]' : 'animate-[scrollVertical_50s_linear_infinite_reverse]'}`}>
+                                        {[...dashboardData.recentMovies, ...dashboardData.recentMovies].sort(() => 0.5 - Math.random()).map((m: any, i: number) => (m.thumb || m.thumbUrl) && (
+                                            <img key={`c${colIdx}-${i}`} src={m.thumbUrl ? resolvePortalAssetUrl(m.thumbUrl) : portalUrl(`/api/plex/image?path=${encodeURIComponent(m.thumb)}&width=200&height=300`)} className="w-32 md:w-48 rounded-xl object-cover" alt="" />
+                                        ))}
+                                    </div>
+                                ))}
+                            </div>
+                            <div className="absolute inset-0 bg-gradient-to-t from-card via-card/80 to-transparent" />
+                            <div className="absolute inset-0 bg-gradient-to-r from-card via-card/40 to-transparent" />
+                        </>
+                    ) : heroBg ? (
+                        <>
+                            <div
+                                className="absolute inset-0 bg-cover bg-center opacity-30 blur-2xl scale-110"
+                                style={{ backgroundImage: `url(${heroBg})` }}
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-card via-card/80 to-transparent" />
+                            <div className="absolute inset-0 bg-gradient-to-r from-card via-card/40 to-transparent" />
+                        </>
+                    ) : (
+                        <>
+                            <div className="absolute inset-0 bg-gradient-to-t from-card via-card/80 to-transparent" />
+                            <div className="absolute inset-0 bg-gradient-to-r from-card via-card/40 to-transparent" />
+                        </>
                     )}
-                    <div className="absolute inset-0 bg-gradient-to-t from-card via-card/80 to-transparent" />
-                    <div className="absolute inset-0 bg-gradient-to-r from-card via-card/40 to-transparent" />
                 </div>
 
-                <div className="relative pt-14 pb-5 px-4 md:pt-20 md:pb-6 md:px-10 flex flex-col items-center md:items-start text-center md:text-left z-10">
+                <div className="relative pt-14 pb-5 px-4 md:pt-32 md:pb-12 md:px-12 flex flex-col items-center md:items-start text-center md:text-left z-10">
                     <div className="flex flex-col md:flex-row items-center md:items-end gap-4 md:gap-6">
                         {/* Avatar */}
                         {(() => {
@@ -4307,7 +4728,7 @@ export const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onL
                                 return (
                                     <div className="relative">
                                         <img
-                                            src={thumbUrl.startsWith('http') ? thumbUrl : portalUrl(`/api/plex/image?path=${encodeURIComponent(thumbUrl)}&width=256&height=256`)}
+                                            src={resolveHomeImage(thumbUrl)}
                                             alt={sessionInfo.session.username}
                                             className="relative w-28 h-28 md:w-32 md:h-32 rounded-full object-cover border-4 border-plex shadow-2xl bg-card"
                                             onError={(e) => {
@@ -4332,8 +4753,16 @@ export const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onL
                         })()}
 
                         <div className="pb-2">
-                            <p className="text-plex text-sm uppercase tracking-[4px] font-bold mb-1 drop-shadow-md">Welcome Back</p>
-                            <h1 className="text-4xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-b from-white to-gray-400 leading-tight drop-shadow-lg truncate max-w-[280px] md:max-w-md">
+                            <p className="text-plex text-sm uppercase tracking-[4px] font-bold mb-1 drop-shadow-md">
+                                {(() => {
+                                    const hour = new Date().getHours();
+                                    if (hour >= 5 && hour < 12) return 'Good Morning';
+                                    if (hour >= 12 && hour < 17) return 'Good Afternoon';
+                                    if (hour >= 17 && hour < 22) return 'Good Evening';
+                                    return 'Good Night';
+                                })()}
+                            </p>
+                            <h1 className="text-4xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-b from-white to-gray-400 leading-tight drop-shadow-lg" style={{ fontSize: 'clamp(1.6rem, 8vw, 3rem)', wordBreak: 'break-word' }}>
                                 {sessionInfo.session.username}
                             </h1>
                             {sessionInfo.session.isAdmin && (
@@ -4709,13 +5138,16 @@ export const StatusDashboard: React.FC<{ onBack: () => void, isAdmin: boolean, i
                                 <div key={group.id} className="mb-8">
                                     <h3 className="text-lg font-bold text-muted uppercase tracking-[2px] mb-6 border-b border-white/10 pb-2">{group.name}</h3>
                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                        {groupServices.map((service: any) => {
+                                        {groupServices.map((service: any, index: number) => {
                                             const health = healthData[service.id] || { currentStatus: 'unknown', uptimePercentage: 100, dailyHistory: {} };
                                             return (
-                                                <div key={service.id} className="bg-card rounded-xl p-4 md:p-6 border border-white/5 shadow-lg flex flex-col gap-4">
+                                                <div key={service.id} className="bg-card rounded-xl p-4 md:p-6 border border-white/5 shadow-lg flex flex-col gap-4 animate-fade-in hover:-translate-y-1 hover:shadow-plex/10 hover:shadow-2xl hover:border-plex/30 transition-all duration-300" style={{ animationFillMode: 'both', animationDelay: `${index * 75}ms` }}>
                                                     <div className="flex justify-between items-start mb-2 gap-4">
                                                         <h4 className="font-bold text-text text-lg">{service.name}</h4>
-                                                        <span className={`px-3 py-1 rounded-full text-[0.65rem] uppercase tracking-wider font-bold border flex items-center gap-1.5 shadow-lg ${health.currentStatus === 'online' ? 'bg-status-active/10 text-status-active border-status-active/30 shadow-[0_0_10px_rgba(35,134,54,0.3)]' : health.currentStatus === 'offline' ? 'bg-status-expired/10 text-[#D32F2F] border-[#D32F2F]/30 shadow-[0_0_10px_rgba(211,47,47,0.3)] animate-pulse' : 'bg-status-expiring/10 text-status-expiring border-status-expiring/30 shadow-[0_0_10px_rgba(210,153,34,0.3)]'}`}>
+                                                        <span className={`px-3 py-1 rounded-full text-[0.65rem] uppercase tracking-wider font-bold border flex items-center gap-1.5 shadow-lg transition-all duration-300 ${health.currentStatus === 'online' ? 'bg-status-active/10 text-status-active border-status-active/30 shadow-[0_0_10px_rgba(35,134,54,0.3)]' : health.currentStatus === 'offline' ? 'bg-status-expired/10 text-[#D32F2F] border-[#D32F2F]/30 shadow-[0_0_10px_rgba(211,47,47,0.3)] animate-pulse' : 'bg-status-expiring/10 text-status-expiring border-status-expiring/30 shadow-[0_0_10px_rgba(210,153,34,0.3)]'}`}>
+                                                            {health.currentStatus === 'online' && <span className="w-1.5 h-1.5 rounded-full bg-status-active animate-pulse shadow-[0_0_5px_rgba(35,134,54,0.8)]" />}
+                                                            {health.currentStatus === 'offline' && <span className="w-1.5 h-1.5 rounded-full bg-[#D32F2F] animate-ping" />}
+                                                            {health.currentStatus === 'degraded' && <span className="w-1.5 h-1.5 rounded-full bg-status-expiring animate-pulse shadow-[0_0_5px_rgba(210,153,34,0.8)]" />}
                                                             {health.currentStatus.toUpperCase()}
                                                         </span>
                                                     </div>
@@ -4744,7 +5176,8 @@ export const StatusDashboard: React.FC<{ onBack: () => void, isAdmin: boolean, i
                                                             return (
                                                                 <div
                                                                     key={i}
-                                                                    className={`flex-1 rounded-sm transition-all duration-300 hover:opacity-100 opacity-60 hover:opacity-100 cursor-pointer ${barClass === 'online' ? 'bg-status-active hover:shadow-[0_0_8px_rgba(35,134,54,0.6)]' : barClass === 'offline' ? 'bg-status-expired hover:shadow-[0_0_8px_rgba(218,54,51,0.6)]' : barClass === 'degraded' ? 'bg-status-expiring hover:shadow-[0_0_8px_rgba(210,153,34,0.6)]' : 'bg-border'} ${hClass}`}
+                                                                    className={`flex-1 rounded-sm transition-all duration-300 hover:opacity-100 opacity-60 cursor-pointer animate-fade-in ${barClass === 'online' ? 'bg-status-active hover:shadow-[0_0_8px_rgba(35,134,54,0.6)]' : barClass === 'offline' ? 'bg-status-expired hover:shadow-[0_0_8px_rgba(218,54,51,0.6)]' : barClass === 'degraded' ? 'bg-status-expiring hover:shadow-[0_0_8px_rgba(210,153,34,0.6)]' : 'bg-border'} ${hClass}`}
+                                                                    style={{ animationFillMode: 'both', animationDelay: `${i * 10}ms` }}
                                                                     title={title}
                                                                 />
                                                             );
@@ -4766,17 +5199,12 @@ export const StatusDashboard: React.FC<{ onBack: () => void, isAdmin: boolean, i
                 )}
 
                 {activeTab === 'history' && (
-                    <div className="flex flex-col gap-6 animate-fade-in">
-                        <div className="flex flex-col md:flex-row md:items-center gap-4">
-                            <label className="font-bold text-muted uppercase tracking-widest text-sm">Select Service</label>
-                            <ServiceCustomSelect
-                                value={selectedServiceId || ''}
-                                onChange={setSelectedServiceId}
-                                options={services.map((s: any) => ({ id: s.id, name: s.name }))}
-                            />
-                        </div>
-                        {selectedServiceId && (
-                            <div className="bg-card border border-white/5 shadow-2xl rounded-2xl overflow-hidden mt-4">
+                    <div className="flex flex-col gap-8 animate-fade-in">
+                        {services.map((service: any) => (
+                            <div key={service.id} className="bg-card border border-white/5 shadow-2xl rounded-2xl overflow-hidden mt-4">
+                                <div className="p-4 bg-black/20 border-b border-border/50">
+                                    <h3 className="text-lg font-bold text-plex uppercase tracking-wider">{service.name}</h3>
+                                </div>
                                 <div className="overflow-x-auto">
                                     <table className="w-full text-left border-collapse">
                                         <thead className="bg-black/40 border-b border-border text-muted text-xs uppercase tracking-wider">
@@ -4788,7 +5216,7 @@ export const StatusDashboard: React.FC<{ onBack: () => void, isAdmin: boolean, i
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-border/50">
-                                            {Object.entries(healthData[selectedServiceId]?.dailyHistory || {})
+                                            {Object.entries(healthData[service.id]?.dailyHistory || {})
                                                 .sort((a, b) => new Date(b[0]).getTime() - new Date(a[0]).getTime())
                                                 .map(([dateStr, stat]: [string, any]) => {
                                                     const pct = stat.total > 0 ? (stat.up / stat.total) * 100 : 0;
@@ -4809,23 +5237,15 @@ export const StatusDashboard: React.FC<{ onBack: () => void, isAdmin: boolean, i
                                     </table>
                                 </div>
                             </div>
-                        )}
+                        ))}
                     </div>
                 )}
 
                 {activeTab === 'analytics' && (
-                    <div className="flex flex-col gap-6 animate-fade-in">
-                        <div className="flex flex-col md:flex-row md:items-center gap-4">
-                            <label className="font-bold text-muted uppercase tracking-widest text-sm">Select Service</label>
-                            <ServiceCustomSelect
-                                value={selectedServiceId || ''}
-                                onChange={setSelectedServiceId}
-                                options={services.map((s: any) => ({ id: s.id, name: s.name }))}
-                            />
-                        </div>
-                        {selectedServiceId && (
-                            <div className="bg-card border border-white/5 shadow-2xl rounded-2xl p-6 md:p-10 mt-4">
-                                <h3 className="text-xl font-bold mb-10 text-center text-muted tracking-widest uppercase">90-Day Uptime Trend</h3>
+                    <div className="flex flex-col gap-8 animate-fade-in">
+                        {services.map((service: any) => (
+                            <div key={service.id} className="bg-card border border-white/5 shadow-2xl rounded-2xl p-6 md:p-10 mt-4">
+                                <h3 className="text-xl font-bold mb-10 text-center text-muted tracking-widest uppercase">{service.name} - 90-Day Uptime Trend</h3>
                                 <div className="relative h-64 md:h-80 flex items-end gap-1 w-full pl-12 pr-4 md:pr-8">
                                     {/* Grid lines */}
                                     <div className="absolute inset-0 pl-12 pr-4 md:pr-8 flex flex-col justify-between pointer-events-none pb-8">
@@ -4852,7 +5272,7 @@ export const StatusDashboard: React.FC<{ onBack: () => void, isAdmin: boolean, i
                                             const d = new Date();
                                             d.setDate(d.getDate() - (89 - i));
                                             const dateStr = d.toISOString().split('T')[0];
-                                            const stat = healthData[selectedServiceId]?.dailyHistory?.[dateStr];
+                                            const stat = healthData[service.id]?.dailyHistory?.[dateStr];
                                             const pct = stat && stat.total > 0 ? (stat.up / stat.total) * 100 : 0;
 
                                             return (
@@ -4878,17 +5298,21 @@ export const StatusDashboard: React.FC<{ onBack: () => void, isAdmin: boolean, i
                                     <span>Today</span>
                                 </div>
                             </div>
-                        )}
+                        ))}
                     </div>
                 )}
             </main>
         </div>
     );
 };
-const StreamDetailsModal: React.FC<{ session: any, onClose: () => void, isAdmin?: boolean, onKilled?: () => void }> = ({ session, onClose, isAdmin, onKilled }) => {
+const StreamDetailsModal: React.FC<{ session: any, onClose: () => void, isAdmin?: boolean, onKilled?: () => void, providerLabel?: string }> = ({ session, onClose, isAdmin, onKilled, providerLabel = 'Plex' }) => {
     const [killReason, setKillReason] = useState('');
     const [isKilling, setIsKilling] = useState(false);
     const [showKillConfirm, setShowKillConfirm] = useState(false);
+    const sessionPosterSrc = session.thumbUrl
+        ? resolvePortalAssetUrl(session.thumbUrl)
+        : portalUrl(`/api/plex/image?path=${encodeURIComponent(session.thumb)}&width=400&height=600`);
+    const sessionUserThumbSrc = session.userThumb ? resolvePortalAssetUrl(session.userThumb) : 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y';
 
     const handleKill = async () => {
         setIsKilling(true);
@@ -4916,13 +5340,13 @@ const StreamDetailsModal: React.FC<{ session: any, onClose: () => void, isAdmin?
                 {/* Poster Side */}
                 <div className="w-full md:w-1/3 relative bg-black flex-shrink-0">
                     <div className="w-full pb-[150%] md:pb-0 md:h-full relative">
-                        <img src={portalUrl(`/api/plex/image?path=${encodeURIComponent(session.thumb)}&width=400&height=600`)} alt={session.title} className="absolute inset-0 w-full h-full object-cover opacity-80" />
+                        <img src={sessionPosterSrc} alt={session.title} className="absolute inset-0 w-full h-full object-cover opacity-80" />
                         <div className="absolute inset-0 bg-gradient-to-t from-card to-transparent md:bg-gradient-to-r"></div>
                     </div>
                     {/* User Avatar Badge */}
                     {session.user && (
                         <div className="absolute top-4 left-4 flex items-center gap-2 bg-black/60 backdrop-blur-md rounded-full pr-4 p-1.5 shadow-lg border border-white/10 z-10">
-                            <img src={session.userThumb ? session.userThumb : 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'} className="w-8 h-8 rounded-full object-cover" onError={(e) => { e.currentTarget.src = 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'; }} />
+                            <img src={sessionUserThumbSrc} className="w-8 h-8 rounded-full object-cover" onError={(e) => { e.currentTarget.src = 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'; }} />
                             <span className="text-xs font-bold text-white truncate max-w-[120px]">{session.user}</span>
                         </div>
                     )}
@@ -4988,7 +5412,7 @@ const StreamDetailsModal: React.FC<{ session: any, onClose: () => void, isAdmin?
                             )
                         )}
                         <a href={session.plexUrl} target="_blank" rel="noreferrer" className="flex-1 bg-plex text-background font-bold text-center py-3 rounded-lg hover:bg-plex-hover transition-colors shadow-lg">
-                            Open in Plex
+                            Open in {providerLabel}
                         </a>
                     </div>
                 </div>
@@ -4997,7 +5421,7 @@ const StreamDetailsModal: React.FC<{ session: any, onClose: () => void, isAdmin?
     );
 };
 
-export const LibraryDashboard: React.FC<{ onBack: () => void, isAdmin?: boolean, publicConfig?: any }> = ({ onBack, isAdmin, publicConfig }) => {
+export const LibraryDashboard: React.FC<{ onBack: () => void, isAdmin?: boolean, publicConfig?: any, mediaServerType?: string }> = ({ onBack, isAdmin, publicConfig, mediaServerType }) => {
     const [dashboardData, setDashboardData] = useState<{ activeSessions: any[], recentMovies: any[], recentShows: any[], recentMusic: any[] } | null>(null);
     const [trendingStats, setTrendingStats] = useState<{ trending7Days: any[], movies30Days: any[], shows30Days: any[], top365Days: any[], allTime: any[], weekendWarriors: any[], nightOwls: any[], retroHits: any[], cultClassics: any[] } | null>(null);
     const [dashboardLoading, setDashboardLoading] = useState(true);
@@ -5016,6 +5440,7 @@ export const LibraryDashboard: React.FC<{ onBack: () => void, isAdmin?: boolean,
     const recentLimit = recentLimitOverride ?? responsiveRecentLimit;
     const [selectedSession, setSelectedSession] = useState<any | null>(null);
     const showQualityBadges = publicConfig?.showPosterQualityBadges !== false;
+    const isJellyfinPortal = String(publicConfig?.mediaServerType || mediaServerType || 'plex').toLowerCase() === 'jellyfin';
     const hasLoadedDashboard = useRef(false);
     const hasLoadedTrending = useRef(false);
 
@@ -5026,6 +5451,16 @@ export const LibraryDashboard: React.FC<{ onBack: () => void, isAdmin?: boolean,
         return () => mq.removeEventListener('change', onChange);
     }, []);
 
+    useEffect(() => {
+        if (!isJellyfinPortal) return;
+        setDashboardData({ activeSessions: [], recentMovies: [], recentShows: [], recentMusic: [] });
+        setTrendingStats(null);
+        setError(null);
+        setPollError(null);
+        setDashboardLoading(false);
+        setTrendingLoading(false);
+    }, [isJellyfinPortal]);
+
     const handleRecentLimitChange = useCallback((value: string) => {
         const next = Number(value);
         setRecentLimitOverride(next);
@@ -5035,7 +5470,7 @@ export const LibraryDashboard: React.FC<{ onBack: () => void, isAdmin?: boolean,
 
     const fetchDashboardOnly = useCallback(async () => {
         try {
-            const res = await apiFetch(`/api/plex/dashboard?limit=${recentLimit}`);
+            const res = await apiFetch(`${isJellyfinPortal ? '/api/jellyfin/dashboard' : '/api/plex/dashboard'}?limit=${recentLimit}`);
             if (res.error) {
                 setPollError(res.error);
                 return;
@@ -5045,14 +5480,14 @@ export const LibraryDashboard: React.FC<{ onBack: () => void, isAdmin?: boolean,
         } catch (err: any) {
             setPollError(err?.message || 'Live dashboard update failed');
         }
-    }, [recentLimit]);
+    }, [recentLimit, isJellyfinPortal]);
 
     const fetchData = useCallback(async () => {
         setError(null);
         if (!hasLoadedDashboard.current) setDashboardLoading(true);
-        if (!hasLoadedTrending.current) setTrendingLoading(true);
+        if (!isJellyfinPortal && !hasLoadedTrending.current) setTrendingLoading(true);
         try {
-            const res = await apiFetch(`/api/plex/dashboard?limit=${recentLimit}`);
+            const res = await apiFetch(`${isJellyfinPortal ? '/api/jellyfin/dashboard' : '/api/plex/dashboard'}?limit=${recentLimit}`);
             if (res.error) throw new Error(res.error);
             setDashboardData(res);
         } catch (err: any) {
@@ -5060,6 +5495,13 @@ export const LibraryDashboard: React.FC<{ onBack: () => void, isAdmin?: boolean,
         } finally {
             hasLoadedDashboard.current = true;
             setDashboardLoading(false);
+        }
+
+        if (isJellyfinPortal) {
+            setTrendingStats(null);
+            hasLoadedTrending.current = true;
+            setTrendingLoading(false);
+            return;
         }
 
         try {
@@ -5073,7 +5515,7 @@ export const LibraryDashboard: React.FC<{ onBack: () => void, isAdmin?: boolean,
             hasLoadedTrending.current = true;
             setTrendingLoading(false);
         }
-    }, [recentLimit]);
+    }, [recentLimit, isJellyfinPortal]);
 
     useEffect(() => {
         fetchData();
@@ -5128,16 +5570,20 @@ export const LibraryDashboard: React.FC<{ onBack: () => void, isAdmin?: boolean,
                             <div className={activityStreamGridClass(isWidePortalLayout, dashboardData.activeSessions.length)}>
                                 {dashboardData.activeSessions.map((session, i) => {
                                     const activityCols = activityStreamColumnCount(isWidePortalLayout, dashboardData.activeSessions.length);
+                                    const sessionPosterSrc = session.thumbUrl
+                                        ? resolvePortalAssetUrl(session.thumbUrl)
+                                        : portalUrl(`/api/plex/image?path=${encodeURIComponent(session.thumb)}&width=300&height=500`);
+                                    const sessionUserThumbSrc = session.userThumb ? resolvePortalAssetUrl(session.userThumb) : 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y';
                                     return (
                                         <div key={session.sessionId ?? i} onClick={() => setSelectedSession(session)} className="bg-card rounded-xl border border-border flex flex-col overflow-hidden shadow-lg hover:border-plex/50 hover:shadow-plex/20 transition-all cursor-pointer select-none h-full min-h-[11.5rem] md:min-h-[14.5rem]">
                                             <div className="flex flex-row flex-1 items-stretch min-h-0">
                                                 <div className={`${activityCols === 4 ? 'w-28 md:w-32' : 'w-32 md:w-40'} flex-shrink-0 relative overflow-hidden bg-card self-stretch`}>
-                                                    <img src={portalUrl(`/api/plex/image?path=${encodeURIComponent(session.thumb)}&width=300&height=500`)} alt={session.title} loading="lazy" className="absolute inset-0 w-full h-full object-cover object-top drop-shadow-2xl" />
+                                                    <img src={sessionPosterSrc} alt={session.title} loading="lazy" className="absolute inset-0 w-full h-full object-cover object-top drop-shadow-2xl" />
                                                 </div>
                                                 <div className="p-2 md:p-3 flex flex-col flex-1 min-w-0 relative">
                                                     {session.user && (
                                                         <div className="absolute top-2 right-2 flex items-center gap-1.5 bg-black/50 backdrop-blur-md rounded-full pr-2.5 p-0.5 shadow-md border border-white/5">
-                                                            <img src={session.userThumb ? session.userThumb : 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'} alt={session.user} className="w-5 h-5 rounded-full object-cover" onError={(e) => { e.currentTarget.src = 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'; }} />
+                                                            <img src={sessionUserThumbSrc} alt={session.user} className="w-5 h-5 rounded-full object-cover" onError={(e) => { e.currentTarget.src = 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'; }} />
                                                             <span className="text-[10px] font-bold text-white/90 truncate max-w-[80px] md:max-w-[100px]">{session.user}</span>
                                                         </div>
                                                     )}
@@ -5243,7 +5689,7 @@ export const LibraryDashboard: React.FC<{ onBack: () => void, isAdmin?: boolean,
 
                 <div className="flex flex-col gap-12 w-full">
                     {/* RECENT MOVIES */}
-                    <div className="flex flex-col">
+                    <ScrollReveal enabled={!!publicConfig?.useScrollRevealAnimations} className="flex flex-col">
                         <h2 className="text-plex text-sm uppercase tracking-[2px] mb-6 font-bold border-b border-white/10 pb-2">RECENTLY ADDED MOVIES</h2>
                         <div className={discoverPosterGridClass}>
                             {dashboardData && dashboardData.recentMovies.slice(0, recentLimit).map((item, i) => (
@@ -5251,21 +5697,21 @@ export const LibraryDashboard: React.FC<{ onBack: () => void, isAdmin?: boolean,
                             ))}
                             {(!dashboardData || dashboardData.recentMovies.length === 0) && <div className="text-center text-muted p-8 border border-dashed border-border rounded-xl mt-4 w-full col-span-full">No recent movies</div>}
                         </div>
-                    </div>
+                    </ScrollReveal>
 
                     {/* RECENT TV SHOWS */}
-                    <div className="flex flex-col">
-                        <h2 className="text-plex text-sm uppercase tracking-[2px] mb-6 font-bold border-b border-white/10 pb-2">RECENTLY ADDED TV SHOWS</h2>
+                    <ScrollReveal enabled={!!publicConfig?.useScrollRevealAnimations} className="flex flex-col">
+                        <h2 className="text-plex text-sm uppercase tracking-[2px] mb-6 font-bold border-b border-white/10 pb-2">{isJellyfinPortal ? 'RECENTLY ADDED EPISODES' : 'RECENTLY ADDED TV SHOWS'}</h2>
                         <div className={discoverPosterGridClass}>
                             {dashboardData && dashboardData.recentShows.slice(0, recentLimit).map((item, i) => (
                                 <DiscoverPosterCard key={i} item={item} showQualityBadges={showQualityBadges} />
                             ))}
-                            {(!dashboardData || dashboardData.recentShows.length === 0) && <div className="text-center text-muted p-8 border border-dashed border-border rounded-xl mt-4 w-full col-span-full">No recent TV shows</div>}
+                            {(!dashboardData || dashboardData.recentShows.length === 0) && <div className="text-center text-muted p-8 border border-dashed border-border rounded-xl mt-4 w-full col-span-full">{isJellyfinPortal ? 'No recent episodes' : 'No recent TV shows'}</div>}
                         </div>
-                    </div>
+                    </ScrollReveal>
 
                     {/* RECENT MUSIC */}
-                    <div className="flex flex-col">
+                    <ScrollReveal enabled={!!publicConfig?.useScrollRevealAnimations} className="flex flex-col">
                         <h2 className="text-plex text-sm uppercase tracking-[2px] mb-6 font-bold border-b border-white/10 pb-2">RECENTLY ADDED MUSIC</h2>
                         <div className={discoverPosterGridClass}>
                             {dashboardData && dashboardData.recentMusic.slice(0, recentLimit).map((item, i) => (
@@ -5273,34 +5719,34 @@ export const LibraryDashboard: React.FC<{ onBack: () => void, isAdmin?: boolean,
                             ))}
                             {(!dashboardData || dashboardData.recentMusic.length === 0) && <div className="text-center text-muted p-8 border border-dashed border-border rounded-xl mt-4 w-full col-span-full">No recent music</div>}
                         </div>
-                    </div>
+                    </ScrollReveal>
                 </div>
 
                 {/* SERVER WIDE STATS SECTION */}
-                {trendingLoading && !trendingStats ? (
+                {!isJellyfinPortal && trendingLoading && !trendingStats ? (
                     <TrendingSectionsSkeleton count={trendingCount} sections={3} />
-                ) : trendingStats && (
+                ) : !isJellyfinPortal && trendingStats && (
                     <div className="mt-16 w-full flex flex-col gap-12">
                         <div className="flex flex-col gap-2 items-center text-center mb-4">
                             <h2 className="text-3xl md:text-4xl font-extrabold text-white tracking-tight">Other things happening on {publicConfig?.serverIdentifier || 'this server'}</h2>
                             <p className="text-muted text-sm max-w-xl">A look at what the community is currently watching across the entire server.</p>
                         </div>
 
-                        <TrendingDiscoverSection title="🔥 Trending This Week" items={trendingStats.trending7Days} limit={recentLimit} showQualityBadges={showQualityBadges} />
-                        <TrendingDiscoverSection title="🍿 Most Watched Movies (This Month)" items={trendingStats.movies30Days} limit={recentLimit} showQualityBadges={showQualityBadges} />
-                        <TrendingDiscoverSection title="📺 Most Watched Shows (This Month)" items={trendingStats.shows30Days} limit={recentLimit} showQualityBadges={showQualityBadges} />
-                        <TrendingDiscoverSection title="🏆 Top of the Year" items={trendingStats.top365Days} limit={recentLimit} showQualityBadges={showQualityBadges} />
-                        <TrendingDiscoverSection title="🌟 All Time Favorites" items={trendingStats.allTime} limit={recentLimit} showQualityBadges={showQualityBadges} />
-                        <TrendingDiscoverSection title="🍿 Weekend Warriors" items={trendingStats.weekendWarriors} limit={recentLimit} showQualityBadges={showQualityBadges} />
-                        <TrendingDiscoverSection title="🦇 Night Owl Club" items={trendingStats.nightOwls} limit={recentLimit} showQualityBadges={showQualityBadges} />
-                        <TrendingDiscoverSection title="📼 Blast from the Past" items={trendingStats.retroHits} limit={recentLimit} showQualityBadges={showQualityBadges} />
-                        <TrendingDiscoverSection title="💎 Cult Classics" items={trendingStats.cultClassics} limit={recentLimit} showQualityBadges={showQualityBadges} />
+                        <TrendingDiscoverSection useScrollRevealAnimations={publicConfig?.useScrollRevealAnimations} title="🔥 Trending This Week" items={trendingStats.trending7Days} limit={recentLimit} showQualityBadges={showQualityBadges} />
+                        <TrendingDiscoverSection useScrollRevealAnimations={publicConfig?.useScrollRevealAnimations} title="🍿 Most Watched Movies (This Month)" items={trendingStats.movies30Days} limit={recentLimit} showQualityBadges={showQualityBadges} />
+                        <TrendingDiscoverSection useScrollRevealAnimations={publicConfig?.useScrollRevealAnimations} title="📺 Most Watched Shows (This Month)" items={trendingStats.shows30Days} limit={recentLimit} showQualityBadges={showQualityBadges} />
+                        <TrendingDiscoverSection useScrollRevealAnimations={publicConfig?.useScrollRevealAnimations} title="🏆 Top of the Year" items={trendingStats.top365Days} limit={recentLimit} showQualityBadges={showQualityBadges} />
+                        <TrendingDiscoverSection useScrollRevealAnimations={publicConfig?.useScrollRevealAnimations} title="🌟 All Time Favorites" items={trendingStats.allTime} limit={recentLimit} showQualityBadges={showQualityBadges} />
+                        <TrendingDiscoverSection useScrollRevealAnimations={publicConfig?.useScrollRevealAnimations} title="🍿 Weekend Warriors" items={trendingStats.weekendWarriors} limit={recentLimit} showQualityBadges={showQualityBadges} />
+                        <TrendingDiscoverSection useScrollRevealAnimations={publicConfig?.useScrollRevealAnimations} title="🦇 Night Owl Club" items={trendingStats.nightOwls} limit={recentLimit} showQualityBadges={showQualityBadges} />
+                        <TrendingDiscoverSection useScrollRevealAnimations={publicConfig?.useScrollRevealAnimations} title="📼 Blast from the Past" items={trendingStats.retroHits} limit={recentLimit} showQualityBadges={showQualityBadges} />
+                        <TrendingDiscoverSection useScrollRevealAnimations={publicConfig?.useScrollRevealAnimations} title="💎 Cult Classics" items={trendingStats.cultClassics} limit={recentLimit} showQualityBadges={showQualityBadges} />
                     </div>
                 )}
             </main>
 
             {/* Stream Details Modal */}
-            {selectedSession && <StreamDetailsModal session={selectedSession} onClose={() => setSelectedSession(null)} isAdmin={isAdmin} onKilled={fetchData} />}
+            {selectedSession && <StreamDetailsModal session={selectedSession} onClose={() => setSelectedSession(null)} isAdmin={isAdmin} onKilled={fetchData} providerLabel={isJellyfinPortal ? 'Jellyfin' : 'Plex'} />}
         </div>
     );
 };
@@ -5375,7 +5821,7 @@ export const MaintenanceDashboard: React.FC = () => {
         { id: 'calendar', label: 'Calendar' },
         { id: 'storage', label: 'Storage Metrics' },
         { id: 'library', label: 'Rule Library' },
-        { id: 'settings', label: 'Maintenance Settings' },
+        { id: 'settings', label: 'Cleaner Settings' },
         { id: 'runs', label: 'Logs' }
     ];
 
@@ -5454,7 +5900,7 @@ export const MaintenanceDashboard: React.FC = () => {
                 setMaintenanceFeatureEnabled(false);
                 return;
             }
-            addToast(e.message || 'Failed to load maintenance overview', 'error');
+            addToast(e.message || 'Failed to load cleaner overview', 'error');
         } finally {
             if (!silent) setLoading(false);
         }
@@ -5739,7 +6185,7 @@ export const MaintenanceDashboard: React.FC = () => {
             <Loader isLoading={loading} />
             <ToastContainer toasts={toasts} setToasts={setToasts} />
             <header className="page-header">
-                <h1 className="page-title">Maintenance</h1>
+                <h1 className="page-title">Cleaner</h1>
             </header>
             <div className="w-full flex flex-col p-0 md:p-8 bg-transparent md:glass-card rounded-none md:rounded-2xl border-0 md:border shadow-none">
                 <div className="md:hidden mb-3">
@@ -5771,8 +6217,8 @@ export const MaintenanceDashboard: React.FC = () => {
                     <div className="overflow-y-auto flex-grow mb-4 custom-scrollbar space-y-4 md:pr-2">
                         {!maintenanceFeatureEnabled && (
                             <div className="glass-card-sm border-yellow-500/30 p-5">
-                                <h3 className="text-xl font-bold text-plex mb-2">Maintenance Disabled</h3>
-                                <p className="text-sm text-muted mb-3">Experimental Maintenance Mode is currently OFF.</p>
+                                <h3 className="text-xl font-bold text-plex mb-2">Cleaner Disabled</h3>
+                                <p className="text-sm text-muted mb-3">Experimental Cleaner Mode is currently OFF.</p>
                                 <p className="text-xs text-muted">Enable it in `Settings` → `System` under `Maintenance Experimental Mode`, then click Save Settings.</p>
                                 <button
                                     type="button"
@@ -5788,7 +6234,7 @@ export const MaintenanceDashboard: React.FC = () => {
                                 {activeSection === 'overview' && (
                                     <div className="space-y-4">
                                         <div className="glass-card-sm p-5">
-                                            <h3 className="text-xl font-bold text-plex mb-2">Maintenance Control Center</h3>
+                                            <h3 className="text-xl font-bold text-plex mb-2">Cleaner Control Center</h3>
                                             <p className="text-sm text-muted mb-4">Dedicated module for library maintenance automation: rules, collections, candidates, execution timeline, calendar, storage, and governance.</p>
                                             <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
                                                 <div className="bg-background/30 rounded-lg p-3 border border-white/5">
@@ -6512,7 +6958,7 @@ export const MaintenanceDashboard: React.FC = () => {
                                 )}
                                 {activeSection === 'settings' && (
                                     <div className="glass-card-sm p-5 space-y-4">
-                                        <h3 className="text-xl font-bold text-plex">Maintenance Settings</h3>
+                                        <h3 className="text-xl font-bold text-plex">Cleaner Settings</h3>
                                         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                                             <div className="bg-background/30 border border-white/5 rounded-lg p-3">
                                                 <label className="text-xs text-muted font-bold uppercase block mb-2">Default Dry-run</label>
@@ -6534,7 +6980,7 @@ export const MaintenanceDashboard: React.FC = () => {
                                             </div>
                                         </div>
                                         <button type="button" className="px-3 py-2 bg-plex text-background rounded-md text-sm font-semibold" onClick={async () => { await savePreferences(preferences); addToast('Maintenance settings saved.'); }}>
-                                            Save Maintenance Settings
+                                            Save Cleaner Settings
                                         </button>
                                     </div>
                                 )}
@@ -6555,15 +7001,42 @@ interface NavigationProps {
     isAdmin: boolean;
     serverName: string;
     adminThumb?: string | null;
+    customLogoUrl?: string | null;
     requestUrl: string;
     navOrder: string[];
     appVersion?: string;
+    activeTheme: string;
+    setActiveTheme: (theme: string) => void;
 }
 
-export const Navigation: React.FC<NavigationProps> = ({ currentRoute, onNavigate, onLogout, isAdmin, serverName, adminThumb, requestUrl, navOrder, appVersion }) => {
+export const Navigation: React.FC<NavigationProps> = ({ currentRoute, onNavigate, onLogout, isAdmin, serverName, adminThumb, customLogoUrl, requestUrl, navOrder, appVersion, activeTheme, setActiveTheme }) => {
+    const serverIcon = customLogoUrl ? resolvePortalAssetUrl(customLogoUrl) : (adminThumb ? (adminThumb.startsWith('http') ? adminThumb : portalUrl(`/api/plex/image?path=${encodeURIComponent(adminThumb)}&width=256&height=256`)) : logoUrl());
     useEffect(() => {
-        updateFavicon(adminThumb);
-    }, [adminThumb]);
+        updateFavicon(serverIcon);
+    }, [serverIcon]);
+
+    const [mobileThemeOpen, setMobileThemeOpen] = useState(false);
+    const mobileThemeRef = useRef<HTMLDivElement>(null);
+    const [mobileThemePos, setMobileThemePos] = useState<{ top: number; right: number } | null>(null);
+
+    useEffect(() => {
+        if (!mobileThemeOpen) { setMobileThemePos(null); return; }
+        if (mobileThemeRef.current) {
+            const rect = mobileThemeRef.current.getBoundingClientRect();
+            setMobileThemePos({ top: rect.bottom + 6, right: window.innerWidth - rect.right });
+        }
+    }, [mobileThemeOpen]);
+
+    useEffect(() => {
+        if (!mobileThemeOpen) return;
+        const handler = (e: MouseEvent) => {
+            if (mobileThemeRef.current && !mobileThemeRef.current.contains(e.target as Node)) {
+                setMobileThemeOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, [mobileThemeOpen]);
 
     const navItemsConfig: Record<string, { label: string; icon: React.FC<any>; route: string; adminOnly: boolean; href?: string; onClick?: (e: any) => void }> = {
         'home': { label: 'Home', icon: Home, route: 'user', adminOnly: false },
@@ -6573,7 +7046,7 @@ export const Navigation: React.FC<NavigationProps> = ({ currentRoute, onNavigate
         'logs': { label: 'Logs', icon: FileText, route: 'logs', adminOnly: true },
         'analytics': { label: 'Analytics', icon: BarChart3, route: 'analytics', adminOnly: false },
         'mediastack': { label: 'Calendar', icon: Layers, route: 'mediastack', adminOnly: false },
-        'maintenance': { label: 'Maintenance', icon: Shield, route: 'maintenance', adminOnly: true },
+        'maintenance': { label: 'Cleaner', icon: Shield, route: 'maintenance', adminOnly: true },
         'request': { label: 'Request Content', icon: Sparkles, route: '', adminOnly: false, href: requestUrl },
         'settings': { label: 'Settings', icon: Settings, route: 'settings', adminOnly: true },
         'logout': { label: 'Logout', icon: LogOut, route: '', adminOnly: false, onClick: onLogout }
@@ -6595,9 +7068,9 @@ export const Navigation: React.FC<NavigationProps> = ({ currentRoute, onNavigate
             <div className="md:hidden fixed top-0 left-0 right-0 h-16 nav-shell border-b z-50 flex items-center justify-between px-4 shadow-lg">
                 <div className="flex items-center gap-3">
                     <img
-                        src={adminThumb ? (adminThumb.startsWith('http') ? adminThumb : portalUrl(`/api/plex/image?path=${encodeURIComponent(adminThumb)}&width=64&height=64`)) : logoUrl()}
+                        src={serverIcon}
                         alt="Logo"
-                        className="w-8 h-8 rounded-full object-cover"
+                        className={`w-8 h-8 ${customLogoUrl ? 'object-contain' : 'rounded-full object-cover'}`}
                         onError={(e) => {
                             (e.target as HTMLImageElement).src = logoUrl();
                         }}
@@ -6605,6 +7078,39 @@ export const Navigation: React.FC<NavigationProps> = ({ currentRoute, onNavigate
                     <span className="font-bold text-text uppercase tracking-widest text-sm">{serverName}</span>
                 </div>
                 <div className="flex items-center gap-4">
+                    <div className="relative" ref={mobileThemeRef}>
+                        <button
+                            onClick={() => setMobileThemeOpen(v => !v)}
+                            className={`w-8 h-8 flex items-center justify-center rounded-lg border transition-all ${mobileThemeOpen ? 'border-plex text-plex ring-1 ring-plex' : 'border-border text-muted hover:border-plex/50 hover:text-text'}`}
+                            title="Change theme"
+                        >
+                            <Palette className="w-4 h-4" />
+                        </button>
+                        {mobileThemeOpen && mobileThemePos && ReactDOM.createPortal(
+                            <div
+                                style={{ position: 'fixed', top: mobileThemePos.top, right: mobileThemePos.right, zIndex: 99999 }}
+                                className="bg-card border border-border rounded-lg shadow-2xl py-1 min-w-[140px]"
+                            >
+                                {[
+                                    { label: 'Plex Dark', value: 'plex' },
+                                    { label: 'Sleek Slate', value: 'slate' },
+                                    { label: 'Nordic Frost', value: 'nordic' },
+                                    { label: 'Jellyfin Purple', value: 'jellyfin' },
+                                    { label: 'Emerald Green', value: 'emerald' },
+                                    { label: 'Neon Midnight', value: 'midnight' },
+                                ].map(opt => (
+                                    <div
+                                        key={opt.value}
+                                        className={`px-4 py-2.5 cursor-pointer text-sm whitespace-nowrap transition-colors ${activeTheme === opt.value ? 'bg-plex/10 text-plex font-bold' : 'text-text hover:bg-border/40'}`}
+                                        onMouseDown={e => { e.preventDefault(); setActiveTheme(opt.value); setMobileThemeOpen(false); }}
+                                    >
+                                        {opt.label}
+                                    </div>
+                                ))}
+                            </div>,
+                            document.body
+                        )}
+                    </div>
                     {isAdmin && (
                         <button onClick={(e) => { e.preventDefault(); onNavigate('logs'); }} className={`text-muted hover:text-text transition-colors ${currentRoute === 'logs' ? 'text-plex' : ''}`}>
                             <FileText className="w-5 h-5" />
@@ -6644,8 +7150,19 @@ export const Navigation: React.FC<NavigationProps> = ({ currentRoute, onNavigate
                     })}
                 </div>
 
-                <div className="flex flex-col items-center mt-auto pt-10 pb-4 group cursor-default">
-                    <div className="relative mb-6">
+                <div className="flex flex-col items-center w-full mt-auto pt-10 pb-4 group cursor-default">
+                    <div className={`relative mb-6 ${customLogoUrl ? 'w-32 flex items-center justify-center' : ''}`}>
+                        {customLogoUrl ? (
+                            <img
+                                src={serverIcon}
+                                alt="Server Logo"
+                                className="max-w-32 max-h-32 object-contain drop-shadow-[0_0_24px_rgba(0,0,0,0.75)] group-hover:scale-105 transition-transform duration-700 ease-out"
+                                onError={(e) => {
+                                    (e.target as HTMLImageElement).src = logoUrl();
+                                }}
+                            />
+                        ) : (
+                            <>
                         {/* Soft ambient background glow */}
                         <div className="absolute inset-0 bg-plex blur-[25px] opacity-20 group-hover:opacity-40 transition-opacity duration-700 rounded-full"></div>
                         {/* Spinning gradient border */}
@@ -6654,15 +7171,17 @@ export const Navigation: React.FC<NavigationProps> = ({ currentRoute, onNavigate
                         <div className="relative w-28 h-28 rounded-full p-[4px] shadow-2xl bg-card">
                             <div className="w-full h-full rounded-full overflow-hidden bg-background">
                                 <img
-                                    src={adminThumb ? (adminThumb.startsWith('http') ? adminThumb : portalUrl(`/api/plex/image?path=${encodeURIComponent(adminThumb)}&width=256&height=256`)) : logoUrl()}
+                                    src={serverIcon}
                                     alt="Server Logo"
-                                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-out"
+                                    className={`w-full h-full group-hover:scale-110 transition-transform duration-700 ease-out ${customLogoUrl ? 'object-contain p-3' : 'object-cover'}`}
                                     onError={(e) => {
                                         (e.target as HTMLImageElement).src = logoUrl();
                                     }}
                                 />
                             </div>
                         </div>
+                            </>
+                        )}
                     </div>
 
                     <div className="flex flex-col items-center text-center px-2">
@@ -6675,6 +7194,23 @@ export const Navigation: React.FC<NavigationProps> = ({ currentRoute, onNavigate
                                 Portal
                             </span>
                             <div className="h-px w-6 bg-gradient-to-l from-transparent to-plex/50"></div>
+                        </div>
+                        <div className="mt-4 mb-2 relative w-full px-2">
+                            <Palette className="w-4 h-4 text-muted absolute left-5 top-1/2 -translate-y-1/2 pointer-events-none z-10" />
+                            <CustomSelect
+                                value={activeTheme}
+                                onChange={setActiveTheme}
+                                compact={true}
+                                className="w-full [&_div]:pl-9"
+                                options={[
+                                    { label: 'Plex Dark', value: 'plex' },
+                                    { label: 'Sleek Slate', value: 'slate' },
+                                    { label: 'Nordic Frost', value: 'nordic' },
+                                    { label: 'Jellyfin Purple', value: 'jellyfin' },
+                                    { label: 'Emerald Green', value: 'emerald' },
+                                    { label: 'Neon Midnight', value: 'midnight' },
+                                ]}
+                            />
                         </div>
                         {appVersion && (
                             <div className="mt-2 text-[10px] text-white/50 font-mono tracking-wider opacity-80 hover:opacity-100 transition-opacity">

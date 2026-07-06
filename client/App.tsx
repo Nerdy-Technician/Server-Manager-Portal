@@ -2,8 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { SettingsDashboard } from './settings/SettingsDashboard';
 import { bindAppConfirm } from './shared/confirm';
 import { apiFetch } from './shared/api';
-import { getPublicOrigin, portalUrl, stripBasePath } from './shared/basePath';
-import { hexToRgb } from './shared/format';
+import { getPublicOrigin, portalUrl, resolvePortalAssetUrl, stripBasePath } from './shared/basePath';
+import { accentHoverRgb, hexToRgb } from './shared/format';
 import { ConfirmModal } from './shared/ui';
 import { Loader } from './shared/toast';
 import { AppAmbientBackground } from './shared/theme';
@@ -26,6 +26,12 @@ import {
 export const MainApp: React.FC = () => {
     const [confirmState, setConfirmState] = useState<{ isOpen: boolean, message: string, onConfirm: () => void }>({ isOpen: false, message: '', onConfirm: () => { } });
     const [contentMaxWidth, setContentMaxWidth] = useState<string>('100%');
+    const [activeTheme, setActiveTheme] = useState(() => {
+        if (typeof window !== 'undefined') {
+            return localStorage.getItem('portal-theme') || 'plex';
+        }
+        return 'plex';
+    });
 
     useEffect(() => {
         bindAppConfirm((message, onConfirm) => {
@@ -68,14 +74,38 @@ export const MainApp: React.FC = () => {
                 window.__BASE_PATH__ = data.basePath;
             }
             setPublicConfig(data);
-            if (data.primaryColor) {
-                document.documentElement.style.setProperty('--color-plex', hexToRgb(data.primaryColor));
-            }
+
             if (data.customLogoUrl) {
                 updateFavicon(data.customLogoUrl);
             }
         } catch (e) { }
     }, []);
+
+    useEffect(() => {
+        const theme = localStorage.getItem('portal-theme') || publicConfig.brandingTheme || 'plex';
+        setActiveTheme(theme);
+    }, [publicConfig.brandingTheme]);
+
+    useEffect(() => {
+        document.documentElement.setAttribute('data-theme', activeTheme);
+        localStorage.setItem('portal-theme', activeTheme);
+
+        if ((activeTheme === 'plex' || activeTheme === 'light') && publicConfig.primaryColor) {
+            document.documentElement.style.setProperty('--color-plex', hexToRgb(publicConfig.primaryColor));
+            document.documentElement.style.setProperty('--color-plex-hover', accentHoverRgb(publicConfig.primaryColor));
+        } else {
+            document.documentElement.style.removeProperty('--color-plex');
+            document.documentElement.style.removeProperty('--color-plex-hover');
+        }
+    }, [activeTheme, publicConfig.primaryColor]);
+
+    useEffect(() => {
+        if (publicConfig?.useBrandedSkeleton !== false) {
+            document.documentElement.classList.add('branded-skeleton');
+        } else {
+            document.documentElement.classList.remove('branded-skeleton');
+        }
+    }, [publicConfig?.useBrandedSkeleton]);
 
     useEffect(() => {
         fetchPublicConfig();
@@ -175,7 +205,7 @@ export const MainApp: React.FC = () => {
         setRoute('login');
     };
 
-    if (currentRoute === 'loading') return <Loader isLoading={true} />;
+    if (currentRoute === 'loading') return <Loader isLoading={true} isCinematic={!!publicConfig?.useCinematicLoading} />;
     if (currentRoute === 'login') {
         const initialLoginError = typeof window !== 'undefined'
             ? new URLSearchParams(window.location.search).get('loginError')
@@ -195,7 +225,7 @@ export const MainApp: React.FC = () => {
             return <PublicInviteClaim code={code} />;
         }
         if (currentRoute === 'status') return <StatusDashboard onBack={() => isPublicStatus ? setRoute('login') : setRoute('user')} isAdmin={isAdmin} isPublic={isPublicStatus} />;
-        if (currentRoute === 'dashboard') return <LibraryDashboard onBack={() => setRoute('user')} isAdmin={isAdmin} publicConfig={publicConfig} />;
+        if (currentRoute === 'dashboard') return <LibraryDashboard onBack={() => setRoute('user')} isAdmin={isAdmin} publicConfig={publicConfig} mediaServerType={sessionInfo?.mediaServerType} />;
         if (currentRoute === 'settings' && isAdmin) return <SettingsDashboard />;
         if (currentRoute === 'maintenance' && isAdmin) return <MaintenanceDashboard />;
         if (currentRoute === 'logs' && isAdmin) return <LogsDashboard onLogout={handleLogout} />;
@@ -207,9 +237,9 @@ export const MainApp: React.FC = () => {
 
     return (
         <div className="relative flex w-full min-h-screen overflow-x-clip">
-            <AppAmbientBackground />
+            <AppAmbientBackground backgroundImageUrl={publicConfig?.backgroundImageUrl} />
             <ConfirmModal isOpen={confirmState.isOpen} message={confirmState.message} onConfirm={handleConfirm} onCancel={closeConfirm} />
-            {!isPublicView && <Navigation currentRoute={currentRoute} onNavigate={setRoute as any} onLogout={handleLogout} isAdmin={isAdmin} serverName={sessionInfo?.serverName || 'Server Portal'} adminThumb={sessionInfo?.adminThumb} requestUrl={sessionInfo?.requestUrl || 'https://yourdomain.com'} navOrder={sessionInfo?.navOrder || ['home', 'discover', 'status', 'analytics', 'mediastack', 'maintenance', 'request', 'settings', 'logout']} appVersion={publicConfig.appVersion} />}
+            {!isPublicView && <Navigation currentRoute={currentRoute} onNavigate={setRoute as any} onLogout={handleLogout} isAdmin={isAdmin} serverName={sessionInfo?.serverName || 'Server Portal'} adminThumb={sessionInfo?.adminThumb} customLogoUrl={publicConfig?.customLogoUrl} requestUrl={sessionInfo?.requestUrl || 'https://yourdomain.com'} navOrder={sessionInfo?.navOrder || ['home', 'discover', 'status', 'analytics', 'mediastack', 'maintenance', 'request', 'settings', 'logout']} appVersion={publicConfig.appVersion} activeTheme={activeTheme} setActiveTheme={setActiveTheme} />}
             <div className={`relative z-10 flex-1 min-w-0 flex flex-col items-center px-4 pt-20 pb-[80px] md:p-8 md:pt-8 md:pb-8 overflow-x-visible ${isPublicView ? '!pt-8 !pb-8' : ''}`}>
                 <div className="w-full min-w-0" style={{ maxWidth: contentMaxWidth }}>
                     {renderView()}

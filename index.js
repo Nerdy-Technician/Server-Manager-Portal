@@ -136,6 +136,7 @@ const createRateLimiter = (windowMs, maxRequests) => {
 };
 const authRateLimit = createRateLimiter(15 * 60 * 1000, 10); // Reduced from 20 — tighter brute-force window
 const authCallbackRateLimit = createRateLimiter(15 * 60 * 1000, 40);
+const jellyfinQuickConnectPollRateLimit = createRateLimiter(5 * 60 * 1000, 140);
 const publicReadRateLimit = createRateLimiter(60 * 1000, 120);
 const speedtestRateLimit = createRateLimiter(60 * 1000, 12);
 const setupRateLimit = createRateLimiter(15 * 60 * 1000, 30);
@@ -287,6 +288,40 @@ let healthData = {};
 const SPEED_TEST_CHUNK_SIZE = 1024 * 1024;
 const SPEED_TEST_BUFFER = Buffer.alloc(SPEED_TEST_CHUNK_SIZE, 'x');
 
+const createDefaultStatusConfig = (config = {}) => {
+    const groups = [
+        { id: 'core', name: 'Core Infrastructure', order: 0 },
+        { id: 'media', name: 'Media Stack', order: 1 },
+        { id: 'downloads', name: 'Download Clients', order: 2 },
+        { id: 'external', name: 'External Services', order: 3 },
+    ];
+    const services = [];
+    const addService = (id, name, url, groupId, description = '') => {
+        if (!url) return;
+        services.push({ id, name, url, type: 'web', groupId, description });
+    };
+
+    const publicDomain = String(config.publicDomain || '').trim();
+    if (publicDomain) addService('portal', 'Server Portal', `${publicDomain.replace(/\/+$/, '')}/api/health`, 'core', 'Portal API health');
+
+    const mediaServerType = String(config.mediaServerType || 'plex').toLowerCase();
+    if (mediaServerType === 'jellyfin') {
+        addService('jellyfin', 'Jellyfin', config.jellyfinUrl, 'media', 'Jellyfin media server');
+        addService('jellystat', 'Jellystat', config.jellystatUrl, 'media', 'Jellyfin analytics');
+    } else {
+        addService('plex', 'Plex', config.plexServerUrl || config.publicDomain, 'media', 'Plex Media Server');
+        addService('tautulli', 'Tautulli', config.tautulliUrl, 'media', 'Plex analytics');
+    }
+
+    addService('sonarr', 'Sonarr', config.sonarrUrl, 'downloads', 'TV automation');
+    addService('radarr', 'Radarr', config.radarrUrl, 'downloads', 'Movie automation');
+    if (config.requestAppType && config.requestAppType !== 'none') {
+        addService(config.requestAppType, config.requestAppType === 'jellyseerr' ? 'Jellyseerr' : 'Seerr', config.requestAppUrl, 'external', 'Requests portal');
+    }
+
+    return { groups, services, announcement: null };
+};
+
 // --- Helper Functions ---
 const log = (message) => console.log(`[${new Date().toISOString()}] ${message}`);
 
@@ -353,7 +388,8 @@ const withCache = async (key, ttlMs, fetcher) => {
 const isDeletedUser = (deletedUsers, user) => {
     const ids = [
         normalized(user.id),
-        normalized(user.plexId)
+        normalized(user.plexId),
+        normalized(user.jellyfinId)
     ].filter(Boolean);
     const email = normalized(user.email);
     const username = normalized(user.username);
@@ -361,7 +397,8 @@ const isDeletedUser = (deletedUsers, user) => {
     return deletedUsers.some(deletedUser => {
         const deletedIds = [
             normalized(deletedUser.id),
-            normalized(deletedUser.plexId)
+            normalized(deletedUser.plexId),
+            normalized(deletedUser.jellyfinId)
         ].filter(Boolean);
 
         return (
@@ -379,6 +416,7 @@ const rememberDeletedUser = async (user, deletedBy) => {
             blockId: randomUUID(),
             id: user.id,
             plexId: user.plexId || user.id,
+            jellyfinId: user.jellyfinId || null,
             username: user.username,
             email: user.email,
             deletedAt: new Date().toISOString(),
@@ -639,6 +677,24 @@ const apiFetch = (url, token, options = {}) => {
     return fetch(url, { ...options, headers });
 };
 
+const jellyfinAuthorizationHeader = (token = '') => {
+    const parts = [
+        'MediaBrowser Client="Server Manager Portal"',
+        'Device="Web"',
+        `DeviceId="${CLIENT_ID}"`,
+        `Version="${appVersion}"`,
+    ];
+    if (token) parts.push(`Token="${token}"`);
+    return parts.join(', ');
+};
+
+const jellyfinHeaders = (token = '', extra = {}) => ({
+    Accept: 'application/json',
+    'X-Emby-Authorization': jellyfinAuthorizationHeader(token),
+    ...(token ? { 'X-Emby-Token': token } : {}),
+    ...extra,
+});
+
 let cachedAdminId = null;
 
 const syncAdminPlexIdFromConfigToken = async (config, { persist = false } = {}) => {
@@ -681,16 +737,20 @@ const findLocalUserForSession = (users, sessionUser) => {
     if (!sessionUser || !Array.isArray(users)) return null;
     const sessionId = normalized(sessionUser.id);
     const sessionPlexId = normalized(sessionUser.plexId);
+    const sessionJellyfinId = normalized(sessionUser.jellyfinId);
     const sessionEmail = normalized(sessionUser.email);
     const sessionUsername = normalized(sessionUser.username);
     return users.find((user) => {
         const userId = normalized(user.id);
         const userPlexId = normalized(user.plexId);
+        const userJellyfinId = normalized(user.jellyfinId);
         const userEmail = normalized(user.email);
         const userUsername = normalized(user.username);
         return (
             (sessionPlexId && (sessionPlexId === userPlexId || sessionPlexId === userId)) ||
+            (sessionJellyfinId && (sessionJellyfinId === userJellyfinId || sessionJellyfinId === userId)) ||
             (sessionId && (sessionId === userId || sessionId === userPlexId)) ||
+            (sessionId && (sessionId === userJellyfinId || sessionId === `jellyfin:${userJellyfinId}`)) ||
             (sessionEmail && sessionEmail === userEmail) ||
             (sessionUsername && sessionUsername === userUsername)
         );
@@ -698,11 +758,36 @@ const findLocalUserForSession = (users, sessionUser) => {
 };
 
 const resolveCurrentAdmin = async (sessionUser, config = null) => {
-    if (!sessionUser?.plexId) return false;
     const loadedConfig = config || await loadFile(CONFIG_PATH, {});
+    if (String(loadedConfig?.mediaServerType || '').toLowerCase() === 'jellyfin') {
+        if (sessionUser?.authProvider !== 'jellyfin' || !sessionUser?.jellyfinId) return false;
+        if (loadedConfig?.jellyfinUrl && loadedConfig?.jellyfinApiKey) {
+            try {
+                const baseUrl = resolveIntegrationUrlForFetch(loadedConfig.jellyfinUrl);
+                const userRes = await fetch(`${baseUrl}/Users/${encodeURIComponent(sessionUser.jellyfinId)}`, {
+                    headers: jellyfinHeaders(loadedConfig.jellyfinApiKey),
+                });
+                if (userRes.ok) {
+                    const jellyfinUser = await userRes.json();
+                    return jellyfinUser?.Policy?.IsAdministrator === true;
+                }
+            } catch (e) {
+                log(`Jellyfin admin policy check failed for ${sessionUser.username || sessionUser.jellyfinId}: ${e.message}`);
+            }
+        }
+        return sessionUser?.jellyfinIsAdmin === true || sessionUser?.isAdmin === true;
+    }
+    if (!sessionUser?.plexId) return false;
     const adminId = await getAdminId(loadedConfig);
     return !!(adminId && String(sessionUser.plexId) === String(adminId));
 };
+
+const isPlexConfigured = (config = {}) => !!(config && config.plexToken && config.serverIdentifier);
+const isJellyfinConfigured = (config = {}) => (
+    String(config?.mediaServerType || '').toLowerCase() === 'jellyfin'
+    && !!(config?.jellyfinUrl && config?.jellyfinApiKey)
+);
+const isPortalConfigured = (config = {}) => isPlexConfigured(config) || isJellyfinConfigured(config);
 
 const requireAuth = (req, res, next) => {
     const token = req.cookies.session;
@@ -747,7 +832,7 @@ const requireAdmin = async (req, res, next) => {
     }
 
     const config = await loadFile(CONFIG_PATH, {});
-    if (!config?.plexToken || !config?.serverIdentifier) {
+    if (!isPortalConfigured(config)) {
         return res.status(403).json({ error: 'Forbidden: App not configured' });
     }
 
@@ -854,6 +939,104 @@ const syncUsers = async (config) => {
     const message = `Sync complete. Synced ${plexUsers.length} users.`;
     log(message);
     return { message, count: plexUsers.length };
+};
+
+const syncJellyfinUsers = async (config) => {
+    log('Starting user sync from Jellyfin...');
+    if (!isJellyfinConfigured(config)) {
+        throw new Error('Jellyfin is not configured.');
+    }
+
+    const baseUrl = resolveIntegrationUrlForFetch(config.jellyfinUrl);
+    const response = await fetchWithTimeout(`${baseUrl}/Users`, {
+        headers: jellyfinHeaders(config.jellyfinApiKey),
+    }, 15000);
+    if (!response.ok) {
+        const detail = await response.text().catch(() => '');
+        log(`Error fetching Jellyfin users. Status: ${response.status}. Response: ${detail}`);
+        throw new Error(`Failed to fetch Jellyfin users. Status: ${response.status}`);
+    }
+
+    const jellyfinUsers = (await response.json())
+        .filter((user) => user?.Id && user?.Name)
+        .map((user) => ({
+            id: `jellyfin:${user.Id}`,
+            jellyfinId: user.Id,
+            username: user.Name,
+            email: '',
+            thumb: user.PrimaryImageTag ? withBasePath(`/api/jellyfin/user-image?userId=${encodeURIComponent(user.Id)}`) : null,
+            isDisabled: user.Policy?.IsDisabled === true,
+            isAdmin: user.Policy?.IsAdministrator === true,
+        }));
+
+    const localUsers = await loadFile(USERS_PATH, []);
+    const deletedUsers = await loadFile(DELETED_USERS_PATH, []);
+    const existingUserMap = new Map(localUsers.map((user) => [String(user.id), user]));
+    const jellyfinIdUserMap = new Map(localUsers.filter((user) => user.jellyfinId).map((user) => [String(user.jellyfinId), user]));
+    const usernameUserMap = new Map(localUsers.filter((user) => user.username).map((user) => [user.username.toLowerCase(), user]));
+    const matchedLocalUserIds = new Set();
+
+    const syncedUsers = jellyfinUsers.map((jUser) => {
+        const deletedLookup = { id: jUser.id, jellyfinId: jUser.jellyfinId, username: jUser.username, email: jUser.email };
+        if (isDeletedUser(deletedUsers, deletedLookup)) {
+            log(`Skipping deleted Jellyfin user during sync: ${jUser.username}`);
+            return null;
+        }
+
+        const existingUser =
+            existingUserMap.get(String(jUser.id)) ||
+            jellyfinIdUserMap.get(String(jUser.jellyfinId)) ||
+            usernameUserMap.get(jUser.username.toLowerCase());
+
+        const accessStatus = jUser.isDisabled ? 'revoked' : 'active';
+        if (existingUser) {
+            matchedLocalUserIds.add(existingUser.id);
+            return {
+                ...existingUser,
+                id: jUser.id,
+                jellyfinId: jUser.jellyfinId,
+                username: jUser.username,
+                email: existingUser.email || '',
+                thumb: jUser.thumb,
+                authProvider: 'jellyfin',
+                plexAccessStatus: accessStatus,
+            };
+        }
+
+        log(`New Jellyfin user found: ${jUser.username}. Setting default 1-day expiry.`);
+        appendAuditLog('jellyfin_sync_new_user_added', null, jUser).catch(() => { });
+        return {
+            id: jUser.id,
+            jellyfinId: jUser.jellyfinId,
+            authProvider: 'jellyfin',
+            username: jUser.username,
+            email: '',
+            thumb: jUser.thumb,
+            joiningDate: new Date().toISOString(),
+            expiryDate: jUser.isAdmin ? null : addDays(new Date(), 1).toISOString(),
+            plexAccessStatus: accessStatus,
+            isTrial: false,
+        };
+    }).filter(Boolean);
+
+    for (const localUser of localUsers) {
+        const belongsToJellyfin = localUser.authProvider === 'jellyfin' || localUser.jellyfinId || String(localUser.id || '').startsWith('jellyfin:');
+        if (!belongsToJellyfin) {
+            syncedUsers.push(localUser);
+            continue;
+        }
+        if (!matchedLocalUserIds.has(localUser.id)) {
+            if (localUser.plexAccessStatus !== 'pending') {
+                localUser.plexAccessStatus = 'revoked';
+            }
+            syncedUsers.push(localUser);
+        }
+    }
+
+    await saveFile(USERS_PATH, syncedUsers);
+    const message = `Sync complete. Synced ${jellyfinUsers.length} Jellyfin users.`;
+    log(message);
+    return { message, count: jellyfinUsers.length };
 };
 
 const revokePlexAccess = async (user, config) => {
@@ -1304,6 +1487,193 @@ app.post('/api/auth/plex/login', authRateLimit, async (req, res) => {
     }
 });
 
+const jellyfinQuickConnectSessions = new Map();
+
+const pruneJellyfinQuickConnectSessions = () => {
+    const now = Date.now();
+    jellyfinQuickConnectSessions.forEach((session, id) => {
+        if (!session?.expiresAt || session.expiresAt <= now) {
+            jellyfinQuickConnectSessions.delete(id);
+        }
+    });
+};
+
+const completeJellyfinPortalLogin = async (req, res, config, authData, source = 'password') => {
+    const jellyfinUser = authData?.User || authData?.user || {};
+    const accessToken = authData?.AccessToken || authData?.accessToken || '';
+    const userId = jellyfinUser.Id || jellyfinUser.Id || jellyfinUser.id || '';
+    const username = jellyfinUser.Name || jellyfinUser.name || 'Jellyfin User';
+    const isAdmin = jellyfinUser?.Policy?.IsAdministrator === true || jellyfinUser?.policy?.isAdministrator === true;
+    const sessionUser = {
+        id: userId ? `jellyfin:${userId}` : `jellyfin:${username}`,
+        jellyfinId: userId,
+        authProvider: 'jellyfin',
+        username,
+        email: '',
+        thumb: userId ? withBasePath(`/api/jellyfin/user-image?userId=${encodeURIComponent(userId)}`) : null,
+        jellyfinIsAdmin: isAdmin,
+        isAdmin,
+    };
+
+    const deletedUsers = await loadFile(DELETED_USERS_PATH, []);
+    if (!isAdmin && isDeletedUser(deletedUsers, sessionUser)) {
+        await appendAuditLog('login_blocked_deleted_user', sessionUser, sessionUser);
+        clearSessionCookie(req, res);
+        return res.status(403).json({ error: 'Your portal session has expired. Please contact the admin for access.' });
+    }
+
+    const users = await loadFile(USERS_PATH, []);
+    const knownUser = findLocalUserForSession(users, sessionUser);
+    if (!isAdmin && !knownUser) {
+        await appendAuditLog('login_blocked_non_member', sessionUser, sessionUser);
+        clearSessionCookie(req, res);
+        log(`Jellyfin ${source} login blocked for ${sessionUser.username}: not a portal member`);
+        return res.status(403).json({ error: 'Your account is not registered for this portal.' });
+    }
+
+    if (!isAdmin && knownUser) {
+        knownUser.lastLogin = new Date().toISOString();
+        if (!knownUser.jellyfinId && sessionUser.jellyfinId) knownUser.jellyfinId = sessionUser.jellyfinId;
+        await saveFile(USERS_PATH, users);
+    }
+
+    const token = jwt.sign(sessionUser, JWT_SECRET, { expiresIn: '7d' });
+    setSessionCookie(req, res, token);
+    await appendAuditLog('user_login', sessionUser, sessionUser);
+    log(`Jellyfin ${source} login success for ${sessionUser.username} (admin=${isAdmin}, secureCookie=${FORCE_SECURE_COOKIES}, token=${accessToken ? 'received' : 'missing'})`);
+    return res.json({ success: true, user: { username: sessionUser.username, jellyfinId: sessionUser.jellyfinId, isAdmin } });
+};
+
+app.post('/api/auth/jellyfin/login', authRateLimit, async (req, res) => {
+    const { username, password } = req.body || {};
+    if (!username || !password) {
+        return res.status(400).json({ error: 'Username and password are required' });
+    }
+
+    try {
+        const config = await loadFile(CONFIG_PATH, {});
+        if (!isJellyfinConfigured(config)) {
+            return res.status(400).json({ error: 'Jellyfin authentication is not configured' });
+        }
+
+        const baseUrl = resolveIntegrationUrlForFetch(config.jellyfinUrl);
+        const response = await fetch(`${baseUrl}/Users/AuthenticateByName`, {
+            method: 'POST',
+            headers: jellyfinHeaders('', { 'Content-Type': 'application/json' }),
+            body: JSON.stringify({ Username: username, Pw: password }),
+        });
+
+        if (!response.ok) {
+            const detail = await response.text().catch(() => '');
+            log(`Jellyfin login failed for ${username}: ${response.status} ${detail.slice(0, 120)}`);
+            return res.status(401).json({ error: 'Invalid Jellyfin username or password' });
+        }
+
+        return completeJellyfinPortalLogin(req, res, config, await response.json(), 'password');
+    } catch (err) {
+        log('Error in jellyfin login: ' + err.message);
+        res.status(500).json({ error: 'Failed to authenticate with Jellyfin' });
+    }
+});
+
+app.post('/api/auth/jellyfin/quick-connect/initiate', authRateLimit, async (req, res) => {
+    try {
+        pruneJellyfinQuickConnectSessions();
+        const config = await loadFile(CONFIG_PATH, {});
+        if (!isJellyfinConfigured(config)) {
+            return res.status(400).json({ error: 'Jellyfin authentication is not configured' });
+        }
+
+        const baseUrl = resolveIntegrationUrlForFetch(config.jellyfinUrl);
+        const enabledRes = await fetch(`${baseUrl}/QuickConnect/Enabled`, {
+            headers: jellyfinHeaders(''),
+        });
+        if (enabledRes.ok) {
+            const enabledText = await enabledRes.text();
+            if (String(enabledText).trim().toLowerCase() === 'false') {
+                return res.status(400).json({ error: 'Quick Connect is disabled on your Jellyfin server.' });
+            }
+        }
+
+        const initiateRes = await fetch(`${baseUrl}/QuickConnect/Initiate`, {
+            method: 'POST',
+            headers: jellyfinHeaders(''),
+        });
+        if (!initiateRes.ok) {
+            const detail = await initiateRes.text().catch(() => '');
+            log(`Jellyfin Quick Connect initiate failed: ${initiateRes.status} ${detail.slice(0, 160)}`);
+            return res.status(502).json({ error: 'Failed to start Jellyfin Quick Connect.' });
+        }
+
+        const state = await initiateRes.json();
+        const secret = state.Secret || state.secret;
+        const code = state.Code || state.code;
+        if (!secret || !code) {
+            return res.status(502).json({ error: 'Jellyfin did not return a Quick Connect code.' });
+        }
+
+        const sessionId = randomUUID();
+        jellyfinQuickConnectSessions.set(sessionId, {
+            secret,
+            baseUrl,
+            expiresAt: Date.now() + 5 * 60 * 1000,
+        });
+        res.json({ sessionId, code, jellyfinUrl: config.jellyfinUrl });
+    } catch (err) {
+        log('Error starting jellyfin quick connect: ' + err.message);
+        res.status(500).json({ error: 'Failed to start Jellyfin Quick Connect' });
+    }
+});
+
+app.post('/api/auth/jellyfin/quick-connect/poll', jellyfinQuickConnectPollRateLimit, async (req, res) => {
+    const { sessionId } = req.body || {};
+    if (!sessionId) return res.status(400).json({ error: 'sessionId is required' });
+
+    try {
+        pruneJellyfinQuickConnectSessions();
+        const quickSession = jellyfinQuickConnectSessions.get(sessionId);
+        if (!quickSession) {
+            return res.status(404).json({ error: 'Quick Connect session expired. Please try again.' });
+        }
+
+        const config = await loadFile(CONFIG_PATH, {});
+        if (!isJellyfinConfigured(config)) {
+            return res.status(400).json({ error: 'Jellyfin authentication is not configured' });
+        }
+
+        const stateRes = await fetch(`${quickSession.baseUrl}/QuickConnect/Connect?secret=${encodeURIComponent(quickSession.secret)}`, {
+            headers: jellyfinHeaders(''),
+        });
+        if (!stateRes.ok) {
+            const detail = await stateRes.text().catch(() => '');
+            log(`Jellyfin Quick Connect poll failed: ${stateRes.status} ${detail.slice(0, 160)}`);
+            return res.status(502).json({ error: 'Failed to check Jellyfin Quick Connect status.' });
+        }
+        const state = await stateRes.json();
+        const authenticated = state.Authenticated === true || state.authenticated === true;
+        if (!authenticated) {
+            return res.json({ authenticated: false });
+        }
+
+        const authRes = await fetch(`${quickSession.baseUrl}/Users/AuthenticateWithQuickConnect`, {
+            method: 'POST',
+            headers: jellyfinHeaders('', { 'Content-Type': 'application/json' }),
+            body: JSON.stringify({ Secret: quickSession.secret }),
+        });
+        if (!authRes.ok) {
+            const detail = await authRes.text().catch(() => '');
+            log(`Jellyfin Quick Connect token exchange failed: ${authRes.status} ${detail.slice(0, 160)}`);
+            return res.status(502).json({ error: 'Jellyfin approved the code, but token exchange failed.' });
+        }
+
+        jellyfinQuickConnectSessions.delete(sessionId);
+        return completeJellyfinPortalLogin(req, res, config, await authRes.json(), 'quick-connect');
+    } catch (err) {
+        log('Error polling jellyfin quick connect: ' + err.message);
+        res.status(500).json({ error: 'Failed to finish Jellyfin Quick Connect' });
+    }
+});
+
 const fetchPlexPinAuthToken = async (pinId, { attempts = 10, delayMs = 800 } = {}) => {
     let lastData = null;
     for (let attempt = 1; attempt <= attempts; attempt++) {
@@ -1441,7 +1811,7 @@ app.get('/api/auth/diagnostics', publicReadRateLimit, async (req, res) => {
     res.json({
         appVersion,
         forceSecureCookies: FORCE_SECURE_COOKIES,
-        configured: !!(config?.plexToken && config?.serverIdentifier),
+        configured: isPortalConfigured(config),
         hasAdminPlexId: !!config?.adminPlexId,
         plexServerUrlConfigured: !!resolveConfiguredPlexServerUrl(config),
         dockerRuntime: fsSync.existsSync('/.dockerenv'),
@@ -1461,6 +1831,8 @@ app.get('/api/auth/session', publicReadRateLimit, async (req, res) => {
             user: {
                 username: user.username,
                 plexId: user.plexId,
+                jellyfinId: user.jellyfinId,
+                authProvider: user.authProvider || 'plex',
                 isAdmin,
             },
         });
@@ -1496,7 +1868,7 @@ app.get('/api/auth/plex/callback', authCallbackRateLimit, async (req, res) => {
 
 const assertInitialSetupAccess = async (req, res, options = {}) => {
     const existingConfig = await loadFile(CONFIG_PATH, {});
-    const isConfigured = !!(existingConfig?.plexToken && existingConfig?.serverIdentifier);
+    const isConfigured = isPortalConfigured(existingConfig);
     if (isConfigured) {
         res.status(403).json({ error: 'Portal is already configured.' });
         return false;
@@ -1591,18 +1963,20 @@ app.get('/api/users/me', requireAuth, async (req, res) => {
         return res.status(403).json({ error: 'Your portal session has expired. Please contact the admin for access.' });
     }
 
-    let serverName = 'Plex Server';
+    const isJellyfinPortal = String(config?.mediaServerType || '').toLowerCase() === 'jellyfin';
+    let serverName = isJellyfinPortal ? 'Jellyfin Server' : 'Plex Server';
     let adminThumb = null;
     let sessionThumb = req.user.thumb || null;
-    let requestUrl = 'https://yourdomain.com';
-    let navOrder = ['home', 'discover', 'users', 'status', 'analytics', 'mediastack', 'maintenance', 'request', 'settings', 'logout'];
+    let requestUrl = config.requestUrl || 'https://yourdomain.com';
+    let navOrder = config.navOrder || ['home', 'discover', 'users', 'status', 'analytics', 'mediastack', 'maintenance', 'request', 'settings', 'logout'];
     try {
-        if (config && config.plexToken && config.serverIdentifier) {
+        if (isJellyfinPortal && config?.jellyfinUrl && config?.jellyfinApiKey) {
+            const profile = await getAdminProfile(config);
+            serverName = profile.serverName || 'Jellyfin Server';
+        } else if (config && config.plexToken && config.serverIdentifier) {
             const profile = await getAdminProfile(config);
             serverName = profile.serverName || 'Plex Server';
             adminThumb = profile.thumb;
-            requestUrl = config.requestUrl || 'https://yourdomain.com';
-            if (config.navOrder) navOrder = config.navOrder;
 
             if (!sessionThumb) {
                 const uri = await getPlexConnectionUri(config);
@@ -1622,6 +1996,7 @@ app.get('/api/users/me', requireAuth, async (req, res) => {
         account: localUser || null,
         serverName,
         adminThumb,
+        mediaServerType: config.mediaServerType || 'plex',
         requestUrl,
         navOrder
     });
@@ -1679,7 +2054,7 @@ const normalizeSectionLayout = (raw) => {
 // Config endpoints
 app.get('/api/config', requireAdmin, async (req, res) => {
     const config = await loadFile(CONFIG_PATH, {});
-    const isConfigured = !!(config && config.plexToken && config.serverIdentifier);
+    const isConfigured = isPortalConfigured(config);
         const contactWhatsApp = config.contactWhatsApp || '';
         const contactEmail = config.contactEmail || '';
 
@@ -1688,8 +2063,11 @@ app.get('/api/config', requireAdmin, async (req, res) => {
             configured: true,
             settings: {
                 token: config.plexToken ? SECRET_MASK : '',
+                mediaServerType: config.mediaServerType || 'plex',
                 serverIdentifier: config.serverIdentifier,
                 plexServerUrl: config.plexServerUrl || '',
+                jellyfinUrl: config.jellyfinUrl || '',
+                jellyfinApiKey: config.jellyfinApiKey ? SECRET_MASK : '',
                 checkIntervalMinutes: config.checkIntervalMinutes || 60,
                 smtpHost: config.smtpHost || '',
                 smtpPort: config.smtpPort || 587,
@@ -1713,11 +2091,21 @@ app.get('/api/config', requireAdmin, async (req, res) => {
                 radarrApiKey: config.radarrApiKey ? SECRET_MASK : '',
                 tautulliUrl: config.tautulliUrl || '',
                 tautulliApiKey: config.tautulliApiKey ? SECRET_MASK : '',
-                requestAppType: config.requestAppType || 'none',
+                jellystatUrl: config.jellystatUrl || '',
+                jellystatApiKey: config.jellystatApiKey ? SECRET_MASK : '',
+                requestAppType: config.requestAppType === 'overseerr' ? 'seerr' : (config.requestAppType || 'none'),
                 requestAppUrl: config.requestAppUrl || '',
                 requestAppApiKey: config.requestAppApiKey ? SECRET_MASK : '',
-                primaryColor: config.primaryColor || '#E5A00D',
+                primaryColor: config.primaryColor || '#F7C600',
                 customLogoUrl: config.customLogoUrl || '',
+                brandingTheme: config.brandingTheme || 'plex',
+                backgroundImageUrl: config.backgroundImageUrl || '',
+                useScrollRevealAnimations: !!config.useScrollRevealAnimations,
+                useCinematicLoading: !!config.useCinematicLoading,
+                useBrandedSkeleton: config.useBrandedSkeleton !== false,
+                useTrendingSlideshow: !!config.useTrendingSlideshow,
+                trendingSlideshowInterval: config.trendingSlideshowInterval || 30,
+                tmdbApiKey: config.tmdbApiKey ? SECRET_MASK : '',
                 referralEnabled: !!config.referralEnabled,
                 referralTrialDays: config.referralTrialDays || 3,
                 referralRewardDays: config.referralRewardDays || 7,
@@ -1740,8 +2128,11 @@ app.get('/api/config', requireAdmin, async (req, res) => {
             configured: false,
             settings: {
                 token: '',
+                mediaServerType: 'plex',
                 serverIdentifier: '',
                 plexServerUrl: '',
+                jellyfinUrl: '',
+                jellyfinApiKey: '',
                 checkIntervalMinutes: 60,
                 smtpHost: '',
                 smtpPort: 587,
@@ -1763,11 +2154,21 @@ app.get('/api/config', requireAdmin, async (req, res) => {
                 radarrApiKey: '',
                 tautulliUrl: '',
                 tautulliApiKey: '',
+                jellystatUrl: '',
+                jellystatApiKey: '',
                 requestAppType: 'none',
                 requestAppUrl: '',
                 requestAppApiKey: '',
-                primaryColor: '#E5A00D',
+                primaryColor: '#F7C600',
                 customLogoUrl: '',
+                brandingTheme: 'plex',
+                backgroundImageUrl: '',
+                useScrollRevealAnimations: false,
+                useCinematicLoading: false,
+                useBrandedSkeleton: true,
+                useTrendingSlideshow: false,
+                trendingSlideshowInterval: 30,
+                tmdbApiKey: '',
                 referralEnabled: false,
                 referralTrialDays: 3,
                 referralRewardDays: 7,
@@ -1790,27 +2191,32 @@ app.get('/api/config', requireAdmin, async (req, res) => {
 
 app.post('/api/config', setupRateLimit, async (req, res) => {
     const {
-        token, serverIdentifier, checkIntervalMinutes,
-        plexServerUrl: plexServerUrlFromBody,
+        token, mediaServerType, serverIdentifier, checkIntervalMinutes,
+        plexServerUrl: plexServerUrlFromBody, jellyfinUrl, jellyfinApiKey,
         smtpHost, smtpPort, smtpUser, smtpPass, smtpFrom, smtpSecure, emailDaysBefore,
         newsletterFrequency, newsletterDay, publicDomain, requestUrl, contactUrl, contactWhatsApp, contactEmail,
-        sonarrUrl, sonarrApiKey, radarrUrl, radarrApiKey, tautulliUrl, tautulliApiKey,
+        sonarrUrl, sonarrApiKey, radarrUrl, radarrApiKey, tautulliUrl, tautulliApiKey, jellystatUrl, jellystatApiKey,
         requestAppType, requestAppUrl, requestAppApiKey,
         inactiveCleanupEnabled, inactiveCleanupDays,
-        primaryColor, customLogoUrl, referralEnabled, referralTrialDays, referralRewardDays, announcement, navOrder, hideStreamUsers, defaultLibraryIds, use24HourClock, allowTemporaryAccess, showPosterQualityBadges,
+        primaryColor, customLogoUrl, brandingTheme, backgroundImageUrl, useScrollRevealAnimations, useCinematicLoading, useBrandedSkeleton, useTrendingSlideshow, trendingSlideshowInterval, tmdbApiKey, referralEnabled, referralTrialDays, referralRewardDays, announcement, navOrder, hideStreamUsers, defaultLibraryIds, use24HourClock, allowTemporaryAccess, showPosterQualityBadges,
         autoBackupEnabled, autoBackupIntervalDays, autoBackupRetentionCount, maintenanceExperimentalEnabled, dashboardLayout
     } = req.body;
 
-    if (!token || !serverIdentifier) {
-        return res.status(400).json({ error: 'Token and serverIdentifier are required.' });
-    }
-
+    const existingConfig = await loadFile(CONFIG_PATH, {});
+    const normalizedMediaServerType = ['plex', 'jellyfin'].includes(String(mediaServerType || '').toLowerCase())
+        ? String(mediaServerType || '').toLowerCase()
+        : (existingConfig.mediaServerType || 'plex');
     const normalizedToken = normalizePlexToken(token);
     const normalizedServerIdentifier = String(serverIdentifier).trim();
-
-    const existingConfig = await loadFile(CONFIG_PATH, {});
-    const isConfigured = !!(existingConfig && existingConfig.plexToken && existingConfig.serverIdentifier);
+    const isConfigured = isPortalConfigured(existingConfig);
     const wasMaintenanceEnabled = !!existingConfig.maintenanceExperimentalEnabled;
+
+    if (normalizedMediaServerType === 'plex' && (!normalizedToken || !normalizedServerIdentifier)) {
+        return res.status(400).json({ error: 'Plex token and serverIdentifier are required.' });
+    }
+    if (normalizedMediaServerType === 'jellyfin' && (!jellyfinUrl || !jellyfinApiKey)) {
+        return res.status(400).json({ error: 'Jellyfin URL and API key are required.' });
+    }
 
     if (isConfigured) {
         const sessionToken = req.cookies && req.cookies.session;
@@ -1828,6 +2234,9 @@ app.post('/api/config', setupRateLimit, async (req, res) => {
             return res.status(403).json({ error: 'Forbidden: Invalid or expired session. Please log in again.' });
         }
     } else if (!canRunInitialSetup(req)) {
+        if (normalizedMediaServerType === 'jellyfin') {
+            return res.status(403).json({ error: 'Initial setup is restricted. Configure SETUP_TOKEN or run setup from localhost.' });
+        }
         const candidatePlexServerUrl = (plexServerUrlFromBody !== undefined
             ? String(plexServerUrlFromBody || '').trim()
             : String(existingConfig.plexServerUrl || '').trim()) || resolveConfiguredPlexServerUrl(existingConfig);
@@ -1843,7 +2252,9 @@ app.post('/api/config', setupRateLimit, async (req, res) => {
     let safeSonarrUrl = '';
     let safeRadarrUrl = '';
     let safeTautulliUrl = '';
+    let safeJellystatUrl = '';
     let safeRequestAppUrl = '';
+    let safeJellyfinUrl = '';
     const resolveConfigIntegrationUrl = (incoming, existing) => {
         const existingValue = typeof existing === 'string' ? existing : '';
         // Keep existing URL as-is when caller did not change the value.
@@ -1857,7 +2268,9 @@ app.post('/api/config', setupRateLimit, async (req, res) => {
         safeSonarrUrl = resolveConfigIntegrationUrl(sonarrUrl, existingConfig.sonarrUrl || '');
         safeRadarrUrl = resolveConfigIntegrationUrl(radarrUrl, existingConfig.radarrUrl || '');
         safeTautulliUrl = resolveConfigIntegrationUrl(tautulliUrl, existingConfig.tautulliUrl || '');
+        safeJellystatUrl = resolveConfigIntegrationUrl(jellystatUrl, existingConfig.jellystatUrl || '');
         safeRequestAppUrl = resolveConfigIntegrationUrl(requestAppUrl, existingConfig.requestAppUrl || '');
+        safeJellyfinUrl = resolveConfigIntegrationUrl(jellyfinUrl, existingConfig.jellyfinUrl || '');
     } catch (e) {
         return res.status(400).json({ error: `Invalid integration URL: ${e.message}` });
     }
@@ -1872,9 +2285,12 @@ app.post('/api/config', setupRateLimit, async (req, res) => {
 
     const config = {
         ...existingConfig,
-        plexToken: resolveSecret(normalizedToken, existingConfig.plexToken),
-        serverIdentifier: normalizedServerIdentifier,
+        mediaServerType: normalizedMediaServerType,
+        plexToken: normalizedMediaServerType === 'jellyfin' ? resolveSecret(token, existingConfig.plexToken) : resolveSecret(normalizedToken, existingConfig.plexToken),
+        serverIdentifier: normalizedMediaServerType === 'jellyfin' ? (normalizedServerIdentifier || existingConfig.serverIdentifier || '') : normalizedServerIdentifier,
         plexServerUrl: (plexServerUrlFromBody !== undefined ? String(plexServerUrlFromBody || '').trim() : existingConfig.plexServerUrl) || '',
+        jellyfinUrl: safeJellyfinUrl,
+        jellyfinApiKey: resolveSecret(jellyfinApiKey, existingConfig.jellyfinApiKey),
         checkIntervalMinutes: (interval > 0 ? interval : 60),
         smtpHost: smtpHost || '',
         smtpPort: parseInt(smtpPort, 10) || 587,
@@ -1898,11 +2314,21 @@ app.post('/api/config', setupRateLimit, async (req, res) => {
         radarrApiKey: resolveSecret(radarrApiKey, existingConfig.radarrApiKey),
         tautulliUrl: safeTautulliUrl,
         tautulliApiKey: resolveSecret(tautulliApiKey, existingConfig.tautulliApiKey),
-        requestAppType: ['none', 'overseerr', 'jellyseerr', 'ombi'].includes(String(requestAppType || '').toLowerCase()) ? String(requestAppType).toLowerCase() : (existingConfig.requestAppType || 'none'),
+        jellystatUrl: safeJellystatUrl,
+        jellystatApiKey: resolveSecret(jellystatApiKey, existingConfig.jellystatApiKey),
+        requestAppType: ['none', 'seerr', 'overseerr', 'jellyseerr', 'ombi'].includes(String(requestAppType || '').toLowerCase()) ? (String(requestAppType).toLowerCase() === 'overseerr' ? 'seerr' : String(requestAppType).toLowerCase()) : (existingConfig.requestAppType || 'none'),
         requestAppUrl: safeRequestAppUrl,
         requestAppApiKey: resolveSecret(requestAppApiKey, existingConfig.requestAppApiKey),
-        primaryColor: primaryColor || '#E5A00D',
+        primaryColor: primaryColor || '#F7C600',
         customLogoUrl: customLogoUrl || '',
+        brandingTheme: ['plex', 'slate', 'nordic'].includes(String(brandingTheme || '').toLowerCase()) ? String(brandingTheme).toLowerCase() : (existingConfig.brandingTheme || 'plex'),
+        backgroundImageUrl: backgroundImageUrl || '',
+        useScrollRevealAnimations: !!useScrollRevealAnimations,
+        useCinematicLoading: !!useCinematicLoading,
+        useBrandedSkeleton: useBrandedSkeleton !== false,
+        useTrendingSlideshow: !!useTrendingSlideshow,
+        trendingSlideshowInterval: parseInt(trendingSlideshowInterval, 10) || 30,
+        tmdbApiKey: resolveSecret(tmdbApiKey, existingConfig.tmdbApiKey),
         referralEnabled: !!referralEnabled,
         referralTrialDays: parseInt(referralTrialDays, 10) || 3,
         referralRewardDays: parseInt(referralRewardDays, 10) || 7,
@@ -1935,7 +2361,7 @@ app.post('/api/config', setupRateLimit, async (req, res) => {
     systemJobs.autoBackup.nextRun = config.autoBackupEnabled ? computeNextBackupRun(config) : null;
     log('Configuration saved successfully.');
     startBackgroundService(); // (Re)start service with new config
-    const becameConfigured = !isConfigured && !!config.plexToken && !!config.serverIdentifier;
+    const becameConfigured = !isConfigured && isPortalConfigured(config);
     const maintenanceJustEnabled = !wasMaintenanceEnabled && !!config.maintenanceExperimentalEnabled;
     if ((becameConfigured || maintenanceJustEnabled) && !!config.maintenanceExperimentalEnabled) {
         // Kick an immediate index build after setup/enablement so rules are usable right away.
@@ -1951,12 +2377,51 @@ app.post('/api/config', setupRateLimit, async (req, res) => {
     res.json({ message: 'Configuration saved.' });
 });
 
+let tmdbCache = { data: null, lastFetch: 0 };
+async function fetchTmdbTrendingBackgrounds(apiKey) {
+    if (!apiKey) return [];
+    if (tmdbCache.data && Date.now() - tmdbCache.lastFetch < 12 * 60 * 60 * 1000) {
+        return tmdbCache.data;
+    }
+    try {
+        let allResults = [];
+        for (let page = 1; page <= 10; page++) {
+            const res = await fetch(`https://api.themoviedb.org/3/trending/all/week?api_key=${apiKey}&page=${page}`);
+            if (!res.ok) continue;
+            const json = await res.json();
+            if (json && json.results) {
+                allResults = allResults.concat(json.results);
+            }
+        }
+        if (allResults.length > 0) {
+            const bgs = allResults
+                .filter(i => i.backdrop_path)
+                .map(i => `https://image.tmdb.org/t/p/original${i.backdrop_path}`);
+            tmdbCache.data = [...new Set(bgs)].slice(0, 100);
+            tmdbCache.lastFetch = Date.now();
+            return tmdbCache.data;
+        }
+    } catch (e) {
+        log(`Failed to fetch TMDB trending: ${e.message}`);
+    }
+    return tmdbCache.data || [];
+}
+
 app.get('/api/config/public', async (req, res) => {
     try {
         const config = (await loadFile(CONFIG_PATH, {})) || {};
         res.json({
-            primaryColor: config.primaryColor || '#E5A00D',
+            mediaServerType: config.mediaServerType || 'plex',
+            primaryColor: config.primaryColor || '#F7C600',
             customLogoUrl: config.customLogoUrl || '',
+            brandingTheme: config.brandingTheme || 'plex',
+            backgroundImageUrl: config.backgroundImageUrl || '',
+            useScrollRevealAnimations: !!config.useScrollRevealAnimations,
+            useCinematicLoading: !!config.useCinematicLoading,
+            useBrandedSkeleton: config.useBrandedSkeleton !== false,
+            useTrendingSlideshow: !!config.useTrendingSlideshow,
+            trendingSlideshowInterval: parseInt(config.trendingSlideshowInterval, 10) || 30,
+            trendingBackgrounds: !!config.useTrendingSlideshow ? await fetchTmdbTrendingBackgrounds(config.tmdbApiKey) : [],
             announcement: config.announcement || '',
             referralEnabled: !!config.referralEnabled,
             appVersion: appVersion,
@@ -1968,8 +2433,17 @@ app.get('/api/config/public', async (req, res) => {
         });
     } catch (error) {
         res.json({
-            primaryColor: '#E5A00D',
+            mediaServerType: 'plex',
+            primaryColor: '#F7C600',
             customLogoUrl: '',
+            brandingTheme: 'plex',
+            backgroundImageUrl: '',
+            useScrollRevealAnimations: false,
+            useCinematicLoading: false,
+            useBrandedSkeleton: true,
+            useTrendingSlideshow: false,
+            trendingSlideshowInterval: 30,
+            trendingBackgrounds: [],
             announcement: '',
             referralEnabled: false,
             appVersion: appVersion,
@@ -2104,7 +2578,7 @@ const testSeerrFamilyConnection = async (baseUrl, apiKey) => {
 
 const assertIntegrationTestAccess = async (req, res) => {
     const stored = await loadFile(CONFIG_PATH, {});
-    const isConfigured = !!(stored.plexToken && stored.serverIdentifier);
+    const isConfigured = isPortalConfigured(stored);
     if (isConfigured) {
         const sessionToken = req.cookies && req.cookies.session;
         if (!sessionToken) {
@@ -2133,9 +2607,11 @@ app.post('/api/config/test-integration', setupRateLimit, async (req, res) => {
     const {
         type,
         token, serverIdentifier, plexServerUrl,
+        jellyfinUrl, jellyfinApiKey,
         sonarrUrl, sonarrApiKey,
         radarrUrl, radarrApiKey,
         tautulliUrl, tautulliApiKey,
+        jellystatUrl, jellystatApiKey,
         requestAppType, requestAppUrl, requestAppApiKey,
     } = req.body || {};
 
@@ -2162,6 +2638,19 @@ app.post('/api/config/test-integration', setupRateLimit, async (req, res) => {
                 ? `Connected to Plex Media Server (v${version})`
                 : 'Connected to Plex Media Server';
             return res.json({ ok: true, message, details: { version: version || null, machineIdentifier: container.machineIdentifier || serverId, uri } });
+        }
+
+        if (type === 'jellyfin') {
+            const url = resolveIntegrationUrlForFetch(resolveTestCredential(jellyfinUrl, stored.jellyfinUrl));
+            const apiKey = resolveTestCredential(jellyfinApiKey, stored.jellyfinApiKey);
+            if (!url || !apiKey) return res.status(400).json({ error: 'Jellyfin URL and API key are required.' });
+            const infoRes = await fetchWithTimeout(`${url}/System/Info`, {
+                headers: { Accept: 'application/json', 'X-Emby-Token': apiKey },
+            }, 12000);
+            if (!infoRes.ok) throw new Error(`Jellyfin returned HTTP ${infoRes.status}`);
+            const data = await infoRes.json().catch(() => ({}));
+            const version = data.Version || data.version || '?';
+            return res.json({ ok: true, message: `Jellyfin v${version} connected`, details: { version, serverName: data.ServerName || data.LocalAddress || null } });
         }
 
         if (type === 'sonarr') {
@@ -2200,6 +2689,18 @@ app.post('/api/config/test-integration', setupRateLimit, async (req, res) => {
             if (payload?.response?.result !== 'success') throw new Error(payload?.response?.message || 'Tautulli API error');
             const info = payload.response.data || {};
             return res.json({ ok: true, message: `Tautulli connected (${info.pms_name || 'Plex'})`, details: { pmsVersion: info.pms_version, pmsPlatform: info.pms_platform } });
+        }
+
+        if (type === 'jellystat') {
+            const url = resolveIntegrationUrlForFetch(resolveTestCredential(jellystatUrl, stored.jellystatUrl));
+            const apiKey = resolveTestCredential(jellystatApiKey, stored.jellystatApiKey);
+            if (!url || !apiKey) return res.status(400).json({ error: 'Jellystat URL and API key are required.' });
+            const statsRes = await fetchWithTimeout(`${url}/stats/getViewsByLibraryType?days=30`, {
+                headers: { Accept: 'application/json', 'X-API-Token': apiKey },
+            }, 12000);
+            if (!statsRes.ok) throw new Error(`Jellystat returned HTTP ${statsRes.status}`);
+            const data = await statsRes.json().catch(() => null);
+            return res.json({ ok: true, message: 'Jellystat connected', details: { sample: data ? true : false } });
         }
 
         if (type === 'requestApp') {
@@ -2676,6 +3177,17 @@ const buildPlexStatsCache = async () => {
         const totalVideoTitles = totalMoviesCount + totalShowsCount;
         const total4kTitles = total4kMovies + fourKShows.size;
         const existingStats = await loadFile(PLEX_STATS_CACHE_PATH, {});
+
+        const deltas = existingStats.deltas || {};
+        if (existingStats.movies !== undefined) {
+            deltas.movies = totalMoviesCount - (existingStats.movies || 0);
+            deltas.shows = totalShowsCount - (existingStats.shows || 0);
+            deltas.episodes = totalEpisodesCount - (existingStats.episodes || 0);
+            deltas.artists = totalArtistsCount - (existingStats.artists || 0);
+            deltas.albums = totalAlbumsCount - (existingStats.albums || 0);
+            deltas.tracks = totalTracksCount - (existingStats.tracks || 0);
+        }
+
         const stats = {
             movies: totalMoviesCount, shows: totalShowsCount, music: totalMusicCount,
             episodes: totalEpisodesCount, artists: totalArtistsCount, albums: totalAlbumsCount, tracks: totalTracksCount,
@@ -2684,6 +3196,7 @@ const buildPlexStatsCache = async () => {
             maxConcurrentStreams: existingStats.maxConcurrentStreams || 0,
             maxDirectPlays: existingStats.maxDirectPlays || 0,
             maxTranscodes: existingStats.maxTranscodes || 0,
+            deltas,
             generatedAt: Date.now()
         };
         cachedPlexStats = stats;
@@ -3107,7 +3620,7 @@ app.post('/api/plex/servers', setupRateLimit, async (req, res) => {
 
     try {
         const existingConfig = await loadFile(CONFIG_PATH, {});
-        const isConfigured = !!(existingConfig && existingConfig.plexToken && existingConfig.serverIdentifier);
+        const isConfigured = isPortalConfigured(existingConfig);
         if (isConfigured) {
             const sessionToken = req.cookies && req.cookies.session;
             if (!sessionToken) {
@@ -3184,12 +3697,13 @@ app.post('/api/plex/servers', setupRateLimit, async (req, res) => {
 app.post('/api/sync', requireAdmin, async (req, res) => {
     const config = await loadFile(CONFIG_PATH, null);
     if (!config) return res.status(400).json({ error: 'App not configured.' });
+    const isJellyfinPortal = String(config.mediaServerType || '').toLowerCase() === 'jellyfin';
     try {
-        const result = await syncUsers(config);
-        await appendAuditLog('plex_sync_completed', req.user || null, null, { count: result.count });
+        const result = isJellyfinPortal ? await syncJellyfinUsers(config) : await syncUsers(config);
+        await appendAuditLog(isJellyfinPortal ? 'jellyfin_sync_completed' : 'plex_sync_completed', req.user || null, null, { count: result.count });
         res.json(result);
     } catch (error) {
-        await appendAuditLog('plex_sync_failed', req.user || null, null, { error: error.message });
+        await appendAuditLog(isJellyfinPortal ? 'jellyfin_sync_failed' : 'plex_sync_failed', req.user || null, null, { error: error.message });
         res.status(500).json({ error: error.message });
     }
 });
@@ -3430,10 +3944,40 @@ app.get('/api/deleted-users', requireAdmin, async (req, res) => {
     res.json(deletedUsers.map(user => ({ ...user, blockId: getDeletedUserKey(user) })));
 });
 
-const getTasksSnapshot = () => [
-    ...tasksInfo.map(task => ({ ...task })),
-    ...Object.values(systemJobs).map(job => ({ ...job }))
-];
+const decorateTaskForConfig = (task, config = {}) => {
+    const mediaServerType = String(config.mediaServerType || 'plex').toLowerCase();
+    const next = { ...task };
+    if (next.id === 'syncPlexUsers') {
+        if (mediaServerType === 'jellyfin') {
+            next.name = 'Sync Jellyfin Users';
+            next.description = 'Fetches latest user data and profile images from Jellyfin.';
+        } else {
+            next.name = 'Sync Plex Users';
+            next.description = 'Fetches latest user data from Plex.';
+        }
+    }
+    if (next.id === 'checkAndRevoke') {
+        next.description = mediaServerType === 'jellyfin'
+            ? 'Revokes expired portal access for Jellyfin users.'
+            : 'Removes Plex access for expired users.';
+    }
+    if (next.id === 'checkAndCleanupInactive') {
+        next.description = mediaServerType === 'jellyfin'
+            ? 'Revokes portal access for Jellyfin users who have not watched anything recently.'
+            : 'Revokes access for users who have not watched anything recently.';
+    }
+    return next;
+};
+
+const getTasksSnapshot = (config = {}) => {
+    const mediaServerType = String(config.mediaServerType || 'plex').toLowerCase();
+    const systemJobList = Object.values(systemJobs)
+        .filter(job => !(mediaServerType === 'jellyfin' && job.id === 'plexStats'));
+    return [
+        ...tasksInfo.map(task => decorateTaskForConfig(task, config)),
+        ...systemJobList.map(job => ({ ...job }))
+    ];
+};
 
 const findRunnableTask = (taskId) => {
     const scheduled = tasksInfo.find(t => t.id === taskId);
@@ -3443,8 +3987,9 @@ const findRunnableTask = (taskId) => {
     return null;
 };
 
-app.get('/api/tasks', requireAdmin, (req, res) => {
-    res.json(getTasksSnapshot());
+app.get('/api/tasks', requireAdmin, async (req, res) => {
+    const config = await loadFile(CONFIG_PATH, {});
+    res.json(getTasksSnapshot(config));
 });
 
 app.post('/api/tasks/run/:taskId', requireAdmin, async (req, res) => {
@@ -3535,11 +4080,14 @@ app.get('/api/admin/diagnostics', requireAdmin, async (req, res) => {
                 configDataDir: CONFIG_DIR
             },
             integrations: {
+                mediaServerType: config.mediaServerType || 'plex',
                 plexConfigured: !!(config.plexToken && config.serverIdentifier),
+                jellyfinConfigured: !!(config.jellyfinUrl && config.jellyfinApiKey),
                 smtpConfigured: !!(config.smtpHost && config.smtpUser && config.smtpPass),
                 sonarrConfigured: !!(config.sonarrUrl && config.sonarrApiKey),
                 radarrConfigured: !!(config.radarrUrl && config.radarrApiKey),
                 tautulliConfigured: !!(config.tautulliUrl && config.tautulliApiKey),
+                jellystatConfigured: !!(config.jellystatUrl && config.jellystatApiKey),
                 requestAppEnabled: !!(config.requestAppType && config.requestAppType !== 'none'),
                 requestAppConfigured: !!(config.requestAppType && config.requestAppType !== 'none' && config.requestAppUrl && config.requestAppApiKey)
             },
@@ -3564,7 +4112,7 @@ app.get('/api/admin/diagnostics', requireAdmin, async (req, res) => {
                 lastRunAt: config.autoBackupLastRunAt || null,
                 availableBackups: backups.length
             },
-            jobs: getTasksSnapshot(),
+            jobs: getTasksSnapshot(config),
             checkedAt: new Date(now).toISOString()
         });
     } catch (e) {
@@ -4032,6 +4580,25 @@ let cachedAdminProfile = null;
 let lastAdminProfileFetch = 0;
 
 async function getAdminProfile(config) {
+    if (String(config?.mediaServerType || '').toLowerCase() === 'jellyfin') {
+        let serverName = 'Jellyfin Server';
+        try {
+            if (config?.jellyfinUrl && config?.jellyfinApiKey) {
+                const baseUrl = resolveIntegrationUrlForFetch(config.jellyfinUrl);
+                const infoRes = await fetch(`${baseUrl}/System/Info`, {
+                    headers: jellyfinHeaders(config.jellyfinApiKey),
+                });
+                if (infoRes.ok) {
+                    const info = await infoRes.json();
+                    serverName = info.ServerName || info.LocalAddress || serverName;
+                }
+            }
+        } catch (e) {
+            log(`Failed to fetch Jellyfin server info: ${e.message}`);
+        }
+        return { thumb: null, serverName };
+    }
+
     if (!config || !config.plexToken) return { thumb: null, serverName: 'Server Portal' };
 
     if (cachedAdminProfile && Date.now() - lastAdminProfileFetch < 3600000) {
@@ -4062,12 +4629,12 @@ app.get('/api/public/info', publicReadRateLimit, async (req, res) => {
     try {
         const config = await loadFile(CONFIG_PATH, {});
         const profile = await getAdminProfile(config);
-        const isConfigured = !!(config && config.plexToken && config.serverIdentifier);
+        const isConfigured = isPortalConfigured(config);
         const contactWhatsApp = config.contactWhatsApp || '';
         const contactEmail = config.contactEmail || '';
-        res.json({ ...profile, isConfigured, requestUrl: config.requestUrl || 'https://yourdomain.com', contactWhatsApp, contactEmail });
+        res.json({ ...profile, isConfigured, mediaServerType: config.mediaServerType || 'plex', requestUrl: config.requestUrl || 'https://yourdomain.com', contactWhatsApp, contactEmail });
     } catch (e) {
-        res.json({ thumb: null, serverName: 'Server Portal', isConfigured: false, requestUrl: 'https://yourdomain.com' });
+        res.json({ thumb: null, serverName: 'Server Portal', isConfigured: false, mediaServerType: 'plex', requestUrl: 'https://yourdomain.com' });
     }
 });
 
@@ -4118,7 +4685,7 @@ app.post('/api/status/config', requireAuth, requireAdmin, async (req, res) => {
             let normalizedUrl = '';
             if (service.url) {
                 try {
-                    normalizedUrl = normalizeExternalBaseUrl(service.url, { allowPrivate: ALLOW_PRIVATE_INTEGRATION_URLS, allowHttp: true });
+                    normalizedUrl = normalizeExternalBaseUrl(service.url, { allowPrivate: true, allowHttp: true });
                 } catch (e) {
                     return res.status(400).json({ error: `Invalid service URL for "${service.name || service.id || 'unknown'}": ${e.message}` });
                 }
@@ -4410,6 +4977,216 @@ app.get('/api/plex/dashboard', requireAuth, requireMember, async (req, res) => {
     } catch (e) {
         log(`Error fetching Plex dashboard: ${e.message}`);
         res.status(500).json({ error: 'Failed to fetch dashboard data' });
+    }
+});
+
+const jellyfinItemUrl = (config, itemId) => {
+    const baseUrl = String(config?.jellyfinUrl || '').replace(/\/+$/, '');
+    return baseUrl && itemId ? `${baseUrl}/web/#/details?id=${encodeURIComponent(itemId)}` : baseUrl;
+};
+
+const mapJellyfinItemForDiscover = (config, item = {}, type = '') => {
+    const id = item.Id || '';
+    const posterId = type === 'episode' && item.SeriesId ? item.SeriesId : id;
+    const title = type === 'episode'
+        ? (item.SeriesName ? `${item.SeriesName} - ${item.Name}` : item.Name)
+        : (item.Name || 'Untitled');
+    const tags = [];
+    const width = Number(item.Width || item.MediaStreams?.find?.((s) => s.Type === 'Video')?.Width || 0);
+    const height = Number(item.Height || item.MediaStreams?.find?.((s) => s.Type === 'Video')?.Height || 0);
+    if (width >= 3800 || height >= 2000) tags.push('4K');
+    else if (height >= 1000) tags.push('1080p');
+    else if (height >= 700) tags.push('720p');
+    const videoCodec = item.MediaStreams?.find?.((s) => s.Type === 'Video')?.Codec || item.MediaSources?.[0]?.VideoCodec;
+    if (videoCodec) tags.push(String(videoCodec).toUpperCase());
+
+    return {
+        ratingKey: id,
+        sourceRatingKey: id,
+        title,
+        parentTitle: item.Album || item.SeriesName || null,
+        type: item.Type,
+        year: item.ProductionYear,
+        thumb: posterId,
+        thumbUrl: posterId ? withBasePath(`/api/jellyfin/image?itemId=${encodeURIComponent(posterId)}&width=300&height=${type === 'music' ? 300 : 450}`) : '',
+        addedAt: item.DateCreated ? Date.parse(item.DateCreated) / 1000 : 0,
+        tags: [...new Set(tags)].slice(0, 4),
+        plexUrl: jellyfinItemUrl(config, id),
+    };
+};
+
+const fetchJellyfinItems = async (config, includeItemTypes, limit) => {
+    const baseUrl = resolveIntegrationUrlForFetch(config.jellyfinUrl);
+    const params = new URLSearchParams({
+        Recursive: 'true',
+        IncludeItemTypes: includeItemTypes,
+        SortBy: 'DateCreated',
+        SortOrder: 'Descending',
+        Limit: String(limit),
+        Fields: 'DateCreated,PrimaryImageAspectRatio,ProductionYear,SeriesName,Album,MediaSources,MediaStreams',
+        ImageTypeLimit: '1',
+        EnableImageTypes: 'Primary,Thumb,Backdrop',
+    });
+    const response = await fetchWithTimeout(`${baseUrl}/Items?${params.toString()}`, {
+        headers: jellyfinHeaders(config.jellyfinApiKey),
+    }, 15000);
+    if (!response.ok) throw new Error(`Jellyfin Items returned HTTP ${response.status}`);
+    const data = await response.json();
+    return Array.isArray(data.Items) ? data.Items : [];
+};
+
+app.get('/api/jellyfin/image', requireAuth, requireMember, async (req, res) => {
+    const itemId = String(req.query.itemId || '').trim();
+    const width = Math.min(Math.max(parseInt(req.query.width, 10) || 300, 64), 1200);
+    const height = Math.min(Math.max(parseInt(req.query.height, 10) || 450, 64), 1600);
+    if (!itemId || !/^[A-Za-z0-9_-]+$/.test(itemId)) return res.status(400).send('Invalid itemId');
+    try {
+        const config = await loadFile(CONFIG_PATH, {});
+        if (!isJellyfinConfigured(config)) return res.status(503).send('');
+        const baseUrl = resolveIntegrationUrlForFetch(config.jellyfinUrl);
+        const imageUrl = `${baseUrl}/Items/${encodeURIComponent(itemId)}/Images/Primary?fillWidth=${width}&fillHeight=${height}&quality=90`;
+        const response = await fetchWithTimeout(imageUrl, {
+            headers: jellyfinHeaders(config.jellyfinApiKey),
+        }, 15000);
+        if (!response.ok) throw new Error(`image HTTP ${response.status}`);
+        const buffer = Buffer.from(await response.arrayBuffer());
+        res.setHeader('Content-Type', response.headers.get('content-type') || 'image/jpeg');
+        res.setHeader('Cache-Control', 'public, max-age=86400');
+        res.send(buffer);
+    } catch (e) {
+        res.status(500).send('');
+    }
+});
+
+app.get('/api/jellyfin/user-image', requireAuth, requireMember, async (req, res) => {
+    const userId = String(req.query.userId || '').trim();
+    if (!userId || !/^[A-Za-z0-9_-]+$/.test(userId)) return res.status(400).send('Invalid userId');
+    try {
+        const config = await loadFile(CONFIG_PATH, {});
+        if (!isJellyfinConfigured(config)) return res.status(503).send('');
+        const baseUrl = resolveIntegrationUrlForFetch(config.jellyfinUrl);
+        const imageUrl = `${baseUrl}/Users/${encodeURIComponent(userId)}/Images/Primary?fillWidth=128&fillHeight=128&quality=90`;
+        const response = await fetchWithTimeout(imageUrl, {
+            headers: jellyfinHeaders(config.jellyfinApiKey),
+        }, 15000);
+        if (!response.ok) return res.status(404).send('');
+        const buffer = Buffer.from(await response.arrayBuffer());
+        res.setHeader('Content-Type', response.headers.get('content-type') || 'image/jpeg');
+        res.setHeader('Cache-Control', 'public, max-age=86400');
+        res.send(buffer);
+    } catch (e) {
+        res.status(500).send('');
+    }
+});
+
+const proxyJellyfinBrandingAsset = async (res, paths, fallbackContentType = 'image/png') => {
+    const config = await loadFile(CONFIG_PATH, {});
+    if (!isJellyfinConfigured(config)) return res.status(503).send('');
+    const baseUrl = resolveIntegrationUrlForFetch(config.jellyfinUrl);
+    for (const path of paths) {
+        const response = await fetchWithTimeout(`${baseUrl}${path}`, {
+            headers: jellyfinHeaders(config.jellyfinApiKey, { Accept: 'image/*,*/*;q=0.8' }),
+        }, 15000).catch(() => null);
+        if (!response || !response.ok) continue;
+        const buffer = Buffer.from(await response.arrayBuffer());
+        if (!buffer.length) continue;
+        res.setHeader('Content-Type', response.headers.get('content-type') || fallbackContentType);
+        res.setHeader('Cache-Control', 'public, max-age=3600');
+        return res.send(buffer);
+    }
+    return res.status(404).send('');
+};
+
+app.get('/api/jellyfin/branding/splash', publicReadRateLimit, async (req, res) => {
+    try {
+        await proxyJellyfinBrandingAsset(res, ['/Branding/Splashscreen'], 'image/jpeg');
+    } catch (e) {
+        res.status(500).send('');
+    }
+});
+
+app.get('/api/jellyfin/branding/icon', publicReadRateLimit, async (req, res) => {
+    try {
+        await proxyJellyfinBrandingAsset(res, ['/web/icon-transparent.png', '/web/assets/img/icon-transparent.png', '/web/favicon.ico'], 'image/png');
+    } catch (e) {
+        res.status(500).send('');
+    }
+});
+
+app.get('/api/jellyfin/branding/favicon', publicReadRateLimit, async (req, res) => {
+    try {
+        await proxyJellyfinBrandingAsset(res, ['/web/favicon.ico', '/web/icon-transparent.png', '/web/assets/img/icon-transparent.png'], 'image/x-icon');
+    } catch (e) {
+        res.status(500).send('');
+    }
+});
+
+app.get('/api/jellyfin/dashboard', requireAuth, requireMember, async (req, res) => {
+    try {
+        const config = await loadFile(CONFIG_PATH, {});
+        if (!isJellyfinConfigured(config)) {
+            return res.status(503).json({ error: 'Jellyfin not configured' });
+        }
+
+        const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 100, 1), 250);
+        const baseUrl = resolveIntegrationUrlForFetch(config.jellyfinUrl);
+        const [sessions, movies, episodes, music] = await Promise.all([
+            fetchWithTimeout(`${baseUrl}/Sessions`, { headers: jellyfinHeaders(config.jellyfinApiKey) }, 15000).then((r) => r.ok ? r.json() : []).catch(() => []),
+            fetchJellyfinItems(config, 'Movie', limit).catch((e) => { log(`Jellyfin movies fetch failed: ${e.message}`); return []; }),
+            fetchJellyfinItems(config, 'Episode', limit).catch((e) => { log(`Jellyfin episodes fetch failed: ${e.message}`); return []; }),
+            fetchJellyfinItems(config, 'MusicAlbum,Audio', limit).catch((e) => { log(`Jellyfin music fetch failed: ${e.message}`); return []; }),
+        ]);
+
+        const hideConfig = config.hideStreamUsers === true ? 'anonymous' : (config.hideStreamUsers || 'false');
+        const activeSessions = (Array.isArray(sessions) ? sessions : [])
+            .filter((session) => session.NowPlayingItem)
+            .map((session) => {
+                const item = session.NowPlayingItem || {};
+                const playState = session.PlayState || {};
+                const runtime = Number(item.RunTimeTicks || 0) / 10000;
+                const position = Number(playState.PositionTicks || 0) / 10000;
+                const streamBitrate = (Array.isArray(item.MediaStreams) ? item.MediaStreams : [])
+                    .filter((stream) => stream.Type === 'Video' || stream.Type === 'Audio')
+                    .reduce((total, stream) => total + Number(stream.BitRate || stream.Bitrate || 0), 0);
+                const mediaSourceBitrate = (Array.isArray(item.MediaSources) ? item.MediaSources : [])
+                    .reduce((max, source) => Math.max(max, Number(source.Bitrate || source.VideoBitrate || 0) + Number(source.AudioBitrate || 0)), 0);
+                const reportedBitrate = Number(session.TranscodingInfo?.Bitrate || item.Bitrate || streamBitrate || mediaSourceBitrate || 0);
+                const isHidden = !req.user.isAdmin && (hideConfig === 'anonymous' || hideConfig === 'hidden');
+                return {
+                    sessionId: session.Id,
+                    title: item.Name,
+                    type: item.Type,
+                    grandparentTitle: item.SeriesName || item.Album || null,
+                    year: item.ProductionYear,
+                    thumb: item.Id,
+                    thumbUrl: item.Id ? withBasePath(`/api/jellyfin/image?itemId=${encodeURIComponent(item.Id)}&width=300&height=450`) : '',
+                    user: (isHidden && hideConfig === 'hidden') ? null : (isHidden ? 'Anonymous' : (session.UserName || 'Unknown User')),
+                    userThumb: (!isHidden && session.UserId) ? withBasePath(`/api/jellyfin/user-image?userId=${encodeURIComponent(session.UserId)}`) : null,
+                    playerProduct: session.Client || 'Jellyfin',
+                    playerTitle: session.DeviceName || session.Client || 'Jellyfin Player',
+                    playerAddress: session.RemoteEndPoint || 'Unknown IP',
+                    sessionLocation: 'remote',
+                    state: playState.IsPaused ? 'paused' : 'playing',
+                    isTranscoding: !!session.TranscodingInfo,
+                    videoCodec: session.TranscodingInfo?.VideoCodec || null,
+                    audioCodec: session.TranscodingInfo?.AudioCodec || null,
+                    resolution: item.Height ? `${item.Height}p` : null,
+                    progress: runtime > 0 ? Math.min(100, Math.max(0, (position / runtime) * 100)) : 0,
+                    timeRemaining: Math.max(0, runtime - position),
+                    bandwidth: Math.round(reportedBitrate / 1000),
+                    plexUrl: jellyfinItemUrl(config, item.Id),
+                };
+            });
+
+        res.json({
+            activeSessions,
+            recentMovies: movies.map((item) => mapJellyfinItemForDiscover(config, item, 'movie')),
+            recentShows: episodes.map((item) => mapJellyfinItemForDiscover(config, item, 'episode')),
+            recentMusic: music.map((item) => mapJellyfinItemForDiscover(config, item, 'music')),
+        });
+    } catch (e) {
+        log(`Error fetching Jellyfin dashboard: ${e.message}`);
+        res.status(500).json({ error: 'Failed to fetch Jellyfin dashboard data' });
     }
 });
 
@@ -4867,6 +5644,86 @@ const calculateDelta = (current, previous) => {
 
 const sumLibraryPlays = (libraries = []) => (libraries || []).reduce((sum, lib) => sum + toNumber(lib.plays, 0), 0);
 
+const normalizeAnalyticsDaysForJellystat = (days) => {
+    if (String(days) === 'all') return 36500;
+    return Math.min(Math.max(parseInt(days, 10) || 30, 1), 36500);
+};
+
+const jellystatHeaders = (apiKey) => ({
+    Accept: 'application/json',
+    'Content-Type': 'application/json',
+    'X-API-Token': apiKey,
+});
+
+const fetchJellystatJson = async (config, endpoint, { method = 'GET', body = null, query = null } = {}) => {
+    if (!config?.jellystatUrl || !config?.jellystatApiKey) {
+        throw new Error('Jellystat is not configured');
+    }
+    const baseUrl = resolveIntegrationUrlForFetch(config.jellystatUrl);
+    const params = query ? `?${new URLSearchParams(query).toString()}` : '';
+    const response = await fetchWithTimeout(`${baseUrl}${endpoint}${params}`, {
+        method,
+        headers: jellystatHeaders(config.jellystatApiKey),
+        ...(body ? { body: JSON.stringify(body) } : {}),
+    }, 15000);
+    if (!response.ok) throw new Error(`Jellystat returned HTTP ${response.status} for ${endpoint}`);
+    return response.json().catch(() => null);
+};
+
+const sumJellystatRowCounts = (row = {}) => Object.entries(row)
+    .filter(([key]) => key !== 'Key')
+    .reduce((sum, [, value]) => sum + toNumber(value?.count, 0), 0);
+
+const buildJellystatLibraryHealth = (topLibraries = [], overview = [], metadata = [], libraryTypeTotals = {}) => {
+    const metadataById = new Map((Array.isArray(metadata) ? metadata : []).map((item) => [String(item.Id), item]));
+    const libraries = Array.isArray(overview) ? overview : [];
+    const totalCatalogBytes = libraries.reduce((sum, lib) => sum + toNumber(metadataById.get(String(lib.Id))?.Size, 0), 0);
+    const movies = libraries
+        .filter((lib) => String(lib.CollectionType || '').toLowerCase() === 'movies')
+        .reduce((sum, lib) => sum + toNumber(lib.Library_Count, 0), 0);
+    const shows = libraries
+        .filter((lib) => String(lib.CollectionType || '').toLowerCase() === 'tvshows')
+        .reduce((sum, lib) => sum + toNumber(lib.Library_Count, 0), 0);
+    const episodes = libraries.reduce((sum, lib) => sum + toNumber(lib.Episode_Count, 0), 0);
+    const libraryPlays = sumLibraryPlays(topLibraries);
+    const leadingLibraryPlays = toNumber(topLibraries?.[0]?.plays, 0);
+    const concentrationPct = libraryPlays > 0 ? Number(((leadingLibraryPlays / libraryPlays) * 100).toFixed(1)) : 0;
+    const activeLibraries = topLibraries.filter((lib) => toNumber(lib.plays, 0) > 0).length;
+    const watchedItemsEstimate = toNumber(libraryTypeTotals.Movie, 0) + toNumber(libraryTypeTotals.Series, 0) + toNumber(libraryTypeTotals.Audio, 0);
+    const totalPlayableItems = movies + episodes;
+    const catalogWatchedPct = totalPlayableItems > 0 ? Number(((watchedItemsEstimate / totalPlayableItems) * 100).toFixed(1)) : 0;
+    let healthLabel = 'Concentrated';
+    if (activeLibraries >= 5 && concentrationPct <= 55) healthLabel = 'Balanced';
+    if (activeLibraries >= 8 && concentrationPct <= 40) healthLabel = 'Excellent';
+
+    return {
+        activeLibraries,
+        concentrationPct,
+        totalCatalogItems: movies + shows,
+        totalCatalogBytes,
+        sizeGB: Number((totalCatalogBytes / (1024 * 1024 * 1024)).toFixed(1)),
+        fourKPercent: 0,
+        healthLabel,
+        catalogWatchedPct,
+        movies,
+        shows,
+        episodes,
+        artists: 0,
+        albums: 0,
+        tracks: 0,
+    };
+};
+
+const mapJellystatContent = (config, items = [], type = 'movie') => (Array.isArray(items) ? items : []).slice(0, 10).map((item) => ({
+    key: item.Id || item.Name,
+    title: item.Name || 'Untitled',
+    type,
+    thumb: item.Id || null,
+    thumbUrl: item.Id ? withBasePath(`/api/jellyfin/image?itemId=${encodeURIComponent(item.Id)}&width=300&height=450`) : '',
+    plays: toNumber(item.Plays ?? item.times_played ?? item.unique_viewers, 0),
+    plexUrl: jellyfinItemUrl(config, item.Id),
+}));
+
 const aggregateAnalyticsWindow = (historyItems, { afterTs = 0, beforeTs = null }, ctx, { includePortalUsers = false } = {}) => {
     const { accountsMap, sectionsMap, devicesMap, users, config } = ctx;
     const userCounts = {};
@@ -5009,11 +5866,122 @@ const summarizeLibraryHealth = (topLibraries = [], stats = {}, cachedData = {}) 
         episodes: toNumber(stats.episodes, 0),
         artists: toNumber(stats.artists || stats.music, 0),
         albums: toNumber(stats.albums, 0),
-        tracks: toNumber(stats.tracks, 0)
+        tracks: toNumber(stats.tracks, 0),
+        deltas: stats.deltas || {}
     };
 };
 
 const getUniqueActiveViewers = (users = []) => (users || []).filter(u => toNumber(u.plays, 0) > 0).length;
+
+app.get('/api/jellystat/analytics', requireAuth, requireMember, async (req, res) => {
+    try {
+        const config = await loadFile(CONFIG_PATH, {});
+        if (!isJellyfinConfigured(config)) {
+            return res.status(503).json({ error: 'Jellyfin not configured' });
+        }
+        if (!config.jellystatUrl || !config.jellystatApiKey) {
+            return res.status(503).json({ error: 'Jellystat is not configured' });
+        }
+
+        const requestedDays = req.query.days || 30;
+        const days = normalizeAnalyticsDaysForJellystat(requestedDays);
+        const postBody = { days };
+        const [
+            libraryTypeTotals,
+            viewsByHour,
+            libraryOverview,
+            libraryMetadata,
+            mostViewedLibraries,
+            mostActiveUsers,
+            mostUsedClients,
+            mostViewedMovies,
+            mostViewedShows,
+            mostViewedMusic,
+            playbackMethods,
+        ] = await Promise.all([
+            fetchJellystatJson(config, '/stats/getViewsByLibraryType', { query: { days } }).catch((e) => { log(e.message); return {}; }),
+            fetchJellystatJson(config, '/stats/getViewsByHour', { query: { days } }).catch((e) => { log(e.message); return {}; }),
+            fetchJellystatJson(config, '/stats/getLibraryOverview', { query: { days } }).catch((e) => { log(e.message); return []; }),
+            fetchJellystatJson(config, '/stats/getLibraryMetadata').catch((e) => { log(e.message); return []; }),
+            fetchJellystatJson(config, '/stats/getMostViewedLibraries', { method: 'POST', body: postBody }).catch((e) => { log(e.message); return []; }),
+            fetchJellystatJson(config, '/stats/getMostActiveUsers', { method: 'POST', body: postBody }).catch((e) => { log(e.message); return []; }),
+            fetchJellystatJson(config, '/stats/getMostUsedClient', { method: 'POST', body: postBody }).catch((e) => { log(e.message); return []; }),
+            fetchJellystatJson(config, '/stats/getMostViewedByType', { method: 'POST', body: { ...postBody, type: 'Movie' } }).catch((e) => { log(e.message); return []; }),
+            fetchJellystatJson(config, '/stats/getMostViewedByType', { method: 'POST', body: { ...postBody, type: 'Series' } }).catch((e) => { log(e.message); return []; }),
+            fetchJellystatJson(config, '/stats/getMostViewedByType', { method: 'POST', body: { ...postBody, type: 'Audio' } }).catch((e) => { log(e.message); return []; }),
+            fetchJellystatJson(config, '/stats/getPlaybackMethodStats', { method: 'POST', body: postBody }).catch((e) => { log(e.message); return []; }),
+        ]);
+
+        const peakHours = new Array(24).fill(0);
+        if (Array.isArray(viewsByHour?.stats)) {
+            viewsByHour.stats.forEach((row) => {
+                const hour = parseInt(row.Key, 10);
+                if (hour >= 0 && hour < 24) peakHours[hour] = sumJellystatRowCounts(row);
+            });
+        }
+
+        const shouldObfuscateUsernames = !req.user?.isAdmin;
+        const topUsers = (Array.isArray(mostActiveUsers) ? mostActiveUsers : []).map((user, index) => ({
+            id: user.UserId || user.Id || user.Name || `user-${index}`,
+            username: shouldObfuscateUsernames ? `Viewer ${index + 1}` : (user.Name || user.UserName || `User ${index + 1}`),
+            thumb: user.UserId ? withBasePath(`/api/jellyfin/user-image?userId=${encodeURIComponent(user.UserId)}`) : null,
+            plays: toNumber(user.Plays ?? user.TotalPlays, 0),
+        }));
+
+        const topLibraries = (Array.isArray(mostViewedLibraries) ? mostViewedLibraries : []).map((library, index) => ({
+            id: library.Id || library.Name || `library-${index}`,
+            title: library.Name || `Library ${index + 1}`,
+            plays: toNumber(library.Plays ?? library.Count, 0),
+        })).sort((a, b) => b.plays - a.plays).slice(0, 10);
+
+        const topDevices = (Array.isArray(mostUsedClients) ? mostUsedClients : []).map((device, index) => ({
+            name: device.Client || device.Name || `Client ${index + 1}`,
+            plays: toNumber(device.Plays ?? device.Count, 0),
+        })).sort((a, b) => b.plays - a.plays).slice(0, 10);
+
+        const playbackCounts = {};
+        (Array.isArray(playbackMethods) ? playbackMethods : []).forEach((method) => {
+            playbackCounts[String(method.Name || '').toLowerCase()] = Math.max(playbackCounts[String(method.Name || '').toLowerCase()] || 0, toNumber(method.Count, 0));
+        });
+
+        const totalPlaybacks = sumLibraryPlays(topLibraries) || Object.values(libraryTypeTotals || {}).reduce((sum, value) => sum + toNumber(value, 0), 0);
+        const libraryHealth = buildJellystatLibraryHealth(topLibraries, libraryOverview, libraryMetadata, libraryTypeTotals);
+
+        res.json({
+            topUsers,
+            topLibraries,
+            topMovies: mapJellystatContent(config, mostViewedMovies, 'movie'),
+            topShows: mapJellystatContent(config, mostViewedShows, 'show'),
+            topMusic: mapJellystatContent(config, mostViewedMusic, 'track'),
+            topDevices,
+            peakHours,
+            totalPlaybacks,
+            maxConcurrentStreams: 0,
+            maxDirectPlays: toNumber(playbackCounts.directplay, 0),
+            maxTranscodes: toNumber(playbackCounts.transcode, 0),
+            compare: null,
+            libraryHealth,
+            requestedPeriodDays: requestedDays,
+            cachePeriodDays: requestedDays,
+            cacheFallback: false,
+            source: 'jellystat',
+            jellystatInsights: {
+                streamsRecord: 0,
+                transcodeRecord: toNumber(playbackCounts.transcode, 0),
+                directPlayRecord: toNumber(playbackCounts.directplay, 0),
+                directStreamRecord: toNumber(playbackCounts.directstream, 0),
+                totalPlays: totalPlaybacks,
+                tvPlays: toNumber(libraryTypeTotals.Series, 0),
+                moviePlays: toNumber(libraryTypeTotals.Movie, 0),
+                musicPlays: toNumber(libraryTypeTotals.Audio, 0),
+                totalTimeStr: '',
+            },
+        });
+    } catch (e) {
+        log(`Jellystat analytics error: ${e.message}`);
+        res.status(500).json({ error: 'Failed to fetch Jellystat analytics' });
+    }
+});
 
 const fetchPlexAccountHistory = async (uri, config, accountID, { maxItems = 250000 } = {}) => {
     const pageSize = 5000;
@@ -6110,6 +7078,14 @@ async function loadStatusState() {
         const configData = await fs.readFile(STATUS_CONFIG_PATH, 'utf-8');
         statusConfig = JSON.parse(configData);
     } catch (e) {
+        const appConfig = await loadFile(CONFIG_PATH, {});
+        statusConfig = createDefaultStatusConfig(appConfig);
+        await saveFile(STATUS_CONFIG_PATH, statusConfig);
+    }
+
+    if (!Array.isArray(statusConfig.services) || statusConfig.services.length === 0) {
+        const appConfig = await loadFile(CONFIG_PATH, {});
+        statusConfig = createDefaultStatusConfig(appConfig);
         await saveFile(STATUS_CONFIG_PATH, statusConfig);
     }
 
@@ -6134,7 +7110,7 @@ function performSingleProbe(service) {
 
         let targetUrl = rawUrl;
         try {
-            targetUrl = normalizeExternalBaseUrl(rawUrl, { allowPrivate: ALLOW_PRIVATE_INTEGRATION_URLS, allowHttp: true });
+            targetUrl = normalizeExternalBaseUrl(rawUrl, { allowPrivate: true, allowHttp: true });
         } catch (e) {
             return resolve({ status: 'offline', latency: 0, httpCode: 0 });
         }
@@ -7412,7 +8388,7 @@ const fetchRequestIndex = async (config) => {
     const headers = { Accept: 'application/json', 'Content-Type': 'application/json', 'X-Api-Key': apiKey };
     const items = [];
 
-    if (requestAppType === 'overseerr' || requestAppType === 'jellyseerr') {
+    if (requestAppType === 'seerr' || requestAppType === 'overseerr' || requestAppType === 'jellyseerr') {
         let page = 1;
         let totalPages = 1;
         while (page <= totalPages && page <= 20) {

@@ -71,12 +71,12 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({ id, value, onChange,
         <div
             ref={dropRef}
             style={{ position: 'fixed', top: dropPos.top, left: dropPos.left, minWidth: dropPos.width, zIndex: 99999 }}
-            className="bg-[#1e2329] border border-border rounded-lg shadow-2xl py-1 max-h-64 overflow-y-auto custom-scrollbar"
+            className="bg-card border border-border rounded-lg shadow-2xl py-1 max-h-64 overflow-y-auto custom-scrollbar"
         >
             {options.map(opt => (
                 <div
                     key={String(opt.value)}
-                    className={`px-4 py-2.5 cursor-pointer hover:bg-white/10 transition-colors whitespace-nowrap text-sm ${String(value) === String(opt.value) ? 'bg-plex/10 text-plex font-bold' : 'text-text'}`}
+                    className={`px-4 py-2.5 cursor-pointer hover:bg-border/40 transition-colors whitespace-nowrap text-sm ${String(value) === String(opt.value) ? 'bg-plex/10 text-plex font-bold' : 'text-text'}`}
                     onMouseDown={e => { e.preventDefault(); onChange(String(opt.value)); setIsOpen(false); }}
                 >
                     {opt.label}
@@ -128,6 +128,35 @@ export const ConfirmModal: React.FC<{ isOpen: boolean; message: string; onConfir
                     <button type="button" className="btn-primary px-4 py-2.5 text-sm" onClick={onConfirm}>Confirm</button>
                 </div>
             </div>
+        </div>
+    );
+};
+
+export const ScrollReveal: React.FC<{ children: React.ReactNode; enabled?: boolean; delay?: number; className?: string }> = ({ children, enabled = true, delay = 0, className = '' }) => {
+    const [isVisible, setIsVisible] = useState(!enabled);
+    const ref = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        if (!enabled) {
+            setIsVisible(true);
+            return;
+        }
+        const observer = new IntersectionObserver(
+            ([entry]) => {
+                if (entry.isIntersecting) {
+                    setIsVisible(true);
+                    observer.disconnect();
+                }
+            },
+            { threshold: 0.1, rootMargin: '50px' }
+        );
+        if (ref.current) observer.observe(ref.current);
+        return () => observer.disconnect();
+    }, [enabled]);
+
+    return (
+        <div ref={ref} className={`${className} transition-all duration-700 ease-out ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'}`} style={{ transitionDelay: `${delay}ms` }}>
+            {children}
         </div>
     );
 };
