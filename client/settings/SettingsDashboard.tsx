@@ -68,13 +68,12 @@ const IntegrationHeading: React.FC<{ app: string; title: string; subtitle?: stri
 
 const BRAND_THEME_OPTIONS = [
     { label: 'Theme Default', value: 'default' },
-    { label: 'Plex Dark (Gold)', value: 'plex' },
-    { label: 'Plex Light (Gold)', value: 'light' },
-    { label: 'Sleek Slate (Light Blue)', value: 'slate' },
-    { label: 'Nordic Frost (Indigo)', value: 'nordic' },
-    { label: 'Neon Midnight (Cyan)', value: 'midnight' },
-    { label: 'Emerald City (Green)', value: 'emerald' },
-    { label: 'Jellyfin (Purple)', value: 'jellyfin' },
+    { label: 'Plex Dark', value: 'plex' },
+    { label: 'Sleek Slate', value: 'slate' },
+    { label: 'Nordic Frost', value: 'nordic' },
+    { label: 'Neon Midnight', value: 'midnight' },
+    { label: 'Emerald Green', value: 'emerald' },
+    { label: 'Jellyfin Purple', value: 'jellyfin' },
     { label: 'Custom', value: 'custom' },
 ];
 
@@ -1751,10 +1750,9 @@ export const SettingsDashboard: React.FC = () => {
                                         { label: 'Plex Dark', value: 'plex' },
                                         { label: 'Sleek Slate', value: 'slate' },
                                         { label: 'Nordic Frost', value: 'nordic' },
+                                        { label: 'Jellyfin Purple', value: 'jellyfin' },
+                                        { label: 'Emerald Green', value: 'emerald' },
                                         { label: 'Neon Midnight', value: 'midnight' },
-                                        { label: 'Emerald City', value: 'emerald' },
-                                        { label: 'Jellyfin', value: 'jellyfin' },
-                                        { label: 'Plex Light', value: 'light' },
                                     ]}
                                 />
                                 <div className="mt-2">
