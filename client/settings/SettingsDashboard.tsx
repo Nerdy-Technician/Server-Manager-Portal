@@ -146,6 +146,7 @@ export const SettingsDashboard: React.FC = () => {
     const [checkInterval, setCheckInterval] = useState(60);
     const [hideStreamUsers, setHideStreamUsers] = useState<string>('false');
     const [showUsernamesInAnalytics, setShowUsernamesInAnalytics] = useState(false);
+    const [useTrendingSlideshowOnLogin, setUseTrendingSlideshowOnLogin] = useState(false);
     const [defaultLibraryIds, setDefaultLibraryIds] = useState<string[]>([]);
     const [libraries, setLibraries] = useState<any[]>([]);
     const [activeTab, setActiveTab] = useState(() => {
@@ -760,6 +761,7 @@ export const SettingsDashboard: React.FC = () => {
             if (initialSettings.navOrder) setNavOrder(ensureMaintenanceNavOrder(initialSettings.navOrder));
             setHideStreamUsers(initialSettings.hideStreamUsers === true ? 'anonymous' : (initialSettings.hideStreamUsers || 'false'));
             setShowUsernamesInAnalytics(!!initialSettings.showUsernamesInAnalytics);
+            setUseTrendingSlideshowOnLogin(initialSettings.useTrendingSlideshowOnLogin !== false);
             if (initialSettings.defaultLibraryIds) setDefaultLibraryIds(initialSettings.defaultLibraryIds);
             if (initialSettings.use24HourClock !== undefined) setUse24HourClock(!!initialSettings.use24HourClock);
             if (initialSettings.showPosterQualityBadges !== undefined) setShowPosterQualityBadges(initialSettings.showPosterQualityBadges !== false);
@@ -892,6 +894,7 @@ export const SettingsDashboard: React.FC = () => {
             navOrder: ensureMaintenanceNavOrder(navOrder),
             hideStreamUsers,
             showUsernamesInAnalytics,
+            useTrendingSlideshowOnLogin,
             defaultLibraryIds,
             use24HourClock,
             allowTemporaryAccess,
@@ -1755,6 +1758,22 @@ export const SettingsDashboard: React.FC = () => {
                                         <option value={60}>60 Seconds</option>
                                     </select>
                                 </div>
+                            </div>
+
+                            <div className="mb-4 mt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 py-4 border-b border-border/40">
+                                <div>
+                                    <h4 className="font-bold text-text">Enable Slideshow on Login Page</h4>
+                                    <SettingHint>Display the TMDB trending slideshow background on the login and landing pages.</SettingHint>
+                                </div>
+                                <label className="relative inline-flex items-center cursor-pointer ml-4 flex-shrink-0">
+                                    <input
+                                        type="checkbox"
+                                        className="sr-only peer"
+                                        checked={useTrendingSlideshowOnLogin}
+                                        onChange={e => setUseTrendingSlideshowOnLogin(e.target.checked)}
+                                    />
+                                    <div className="w-11 h-6 bg-background peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-text after:border-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-plex"></div>
+                                </label>
                             </div>
 
                             <div className={`mb-4 transition-opacity ${useTrendingSlideshow ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>

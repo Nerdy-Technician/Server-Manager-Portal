@@ -2124,7 +2124,8 @@ app.get('/api/config', requireAdmin, async (req, res) => {
                 autoBackupRetentionCount: Number(config.autoBackupRetentionCount) > 0 ? Number(config.autoBackupRetentionCount) : 10,
                 maintenanceExperimentalEnabled: !!config.maintenanceExperimentalEnabled,
                 dashboardLayout: normalizeSectionLayout(config.dashboardLayout),
-                showUsernamesInAnalytics: !!config.showUsernamesInAnalytics
+                showUsernamesInAnalytics: !!config.showUsernamesInAnalytics,
+                useTrendingSlideshowOnLogin: config.useTrendingSlideshowOnLogin !== false
             },
         });
     } else {
@@ -2204,7 +2205,7 @@ app.post('/api/config', setupRateLimit, async (req, res) => {
         inactiveCleanupEnabled, inactiveCleanupDays,
         primaryColor, customLogoUrl, brandingTheme, backgroundImageUrl, useScrollRevealAnimations, useCinematicLoading, useBrandedSkeleton, useTrendingSlideshow, trendingSlideshowInterval, tmdbApiKey, referralEnabled, referralTrialDays, referralRewardDays, announcement, navOrder, hideStreamUsers, defaultLibraryIds, use24HourClock, allowTemporaryAccess, showPosterQualityBadges,
         autoBackupEnabled, autoBackupIntervalDays, autoBackupRetentionCount, maintenanceExperimentalEnabled, dashboardLayout,
-        showUsernamesInAnalytics
+        showUsernamesInAnalytics, useTrendingSlideshowOnLogin
     } = req.body;
 
     const existingConfig = await loadFile(CONFIG_PATH, {});
@@ -2349,6 +2350,7 @@ app.post('/api/config', setupRateLimit, async (req, res) => {
         autoBackupRetentionCount: Math.max(1, parseInt(autoBackupRetentionCount, 10) || 10),
         maintenanceExperimentalEnabled: maintenanceExperimentalEnabled !== undefined ? !!maintenanceExperimentalEnabled : !!existingConfig.maintenanceExperimentalEnabled,
         showUsernamesInAnalytics: showUsernamesInAnalytics !== undefined ? !!showUsernamesInAnalytics : !!existingConfig.showUsernamesInAnalytics,
+        useTrendingSlideshowOnLogin: useTrendingSlideshowOnLogin !== undefined ? !!useTrendingSlideshowOnLogin : (existingConfig.useTrendingSlideshowOnLogin !== false),
         dashboardLayout: ('dashboardLayout' in req.body)
             ? normalizeSectionLayout(req.body.dashboardLayout)
             : normalizeSectionLayout(existingConfig.dashboardLayout)
@@ -2426,8 +2428,9 @@ app.get('/api/config/public', async (req, res) => {
             useCinematicLoading: !!config.useCinematicLoading,
             useBrandedSkeleton: config.useBrandedSkeleton !== false,
             useTrendingSlideshow: !!config.useTrendingSlideshow,
+            useTrendingSlideshowOnLogin: config.useTrendingSlideshowOnLogin !== false,
             trendingSlideshowInterval: parseInt(config.trendingSlideshowInterval, 10) || 30,
-            trendingBackgrounds: !!config.useTrendingSlideshow ? await fetchTmdbTrendingBackgrounds(config.tmdbApiKey) : [],
+            trendingBackgrounds: (!!config.useTrendingSlideshow || config.useTrendingSlideshowOnLogin !== false) ? await fetchTmdbTrendingBackgrounds(config.tmdbApiKey) : [],
             announcement: config.announcement || '',
             referralEnabled: !!config.referralEnabled,
             appVersion: appVersion,
