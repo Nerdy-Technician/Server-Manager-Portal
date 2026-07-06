@@ -68,15 +68,16 @@ const IntegrationHeading: React.FC<{ app: string; title: string; subtitle?: stri
 
 const BRAND_THEME_OPTIONS = [
     { label: 'Theme Default', value: 'default' },
-    { label: 'Plex', value: 'plex' },
-    { label: 'Jellyfin', value: 'jellyfin' },
+    { label: 'Plex Dark (Gold)', value: 'plex' },
+    { label: 'Plex Light (Gold)', value: 'light' },
+    { label: 'Sleek Slate (Light Blue)', value: 'slate' },
+    { label: 'Nordic Frost (Indigo)', value: 'nordic' },
+    { label: 'Neon Midnight (Cyan)', value: 'midnight' },
+    { label: 'Emerald City (Green)', value: 'emerald' },
+    { label: 'Jellyfin (Purple)', value: 'jellyfin' },
     { label: 'Custom', value: 'custom' },
 ];
 
-const BRAND_THEME_COLORS: Record<string, string> = {
-    plex: '#F7C600',
-    jellyfin: '#00A4DC',
-};
 const JELLYFIN_BRAND_LOGO_URL = '/api/jellyfin/branding/icon';
 const JELLYFIN_BRAND_BACKGROUND_URL = '/api/jellyfin/branding/splash';
 
@@ -88,15 +89,20 @@ const getThemeDefaultColor = (theme: string) => {
         case 'emerald': return '#10b981';
         case 'midnight': return '#06b6d4';
         case 'light': return '#e5a00d';
+        case 'plex': return '#e5a00d';
         default: return '#e5a00d';
     }
 };
 
 const inferBrandTheme = (color = '') => {
-    const normalized = color.trim().toUpperCase();
+    const normalized = color.trim().toLowerCase();
     if (!normalized) return 'default'; // default fallback for UI
-    if (normalized === BRAND_THEME_COLORS.plex) return 'plex';
-    if (normalized === BRAND_THEME_COLORS.jellyfin) return 'jellyfin';
+    if (normalized === '#38bdf8') return 'slate';
+    if (normalized === '#818cf8') return 'nordic';
+    if (normalized === '#aa5cee') return 'jellyfin';
+    if (normalized === '#10b981') return 'emerald';
+    if (normalized === '#06b6d4') return 'midnight';
+    if (normalized === '#e5a00d') return 'plex';
     return 'custom';
 };
 
@@ -939,16 +945,18 @@ export const SettingsDashboard: React.FC = () => {
 
     const applyBrandTheme = (theme: string) => {
         setBrandTheme(theme);
-        if (theme === 'plex' || theme === 'jellyfin') {
-            setPrimaryColor(BRAND_THEME_COLORS[theme]);
-        } else if (theme === 'default') {
+        if (theme === 'default') {
             setPrimaryColor('');
+        } else if (theme !== 'custom') {
+            setPrimaryColor(getThemeDefaultColor(theme));
+        } else {
+            setPrimaryColor(''); // unset by default for custom
         }
     };
 
     const applyJellyfinBranding = () => {
         setBrandTheme('jellyfin');
-        setPrimaryColor(BRAND_THEME_COLORS.jellyfin);
+        setPrimaryColor(getThemeDefaultColor('jellyfin'));
         setCustomLogoUrl(JELLYFIN_BRAND_LOGO_URL);
         setBackgroundImageUrl(JELLYFIN_BRAND_BACKGROUND_URL);
         setLogoFile(null);
@@ -1699,30 +1707,30 @@ export const SettingsDashboard: React.FC = () => {
                                     </div>
                                 </div>
                             )}
-                            <div className="mb-4">
-                                <label>Primary Accent Color</label>
-                                <div className="flex gap-4">
-                                    <input
-                                        type="color"
-                                        className="w-16 h-12 p-1 rounded-lg border border-border cursor-pointer bg-background"
-                                        value={primaryColor || getThemeDefaultColor(brandingTheme)}
-                                        onChange={e => {
-                                            setBrandTheme('custom');
-                                            setPrimaryColor(e.target.value);
-                                        }}
-                                    />
-                                    <input
-                                        type="text"
-                                        className="flex-1 p-3 rounded-lg border border-border bg-background text-text outline-none focus:border-plex transition-all uppercase font-mono"
-                                        value={primaryColor}
-                                        placeholder={getThemeDefaultColor(brandingTheme)}
-                                        onChange={e => {
-                                            setBrandTheme('custom');
-                                            setPrimaryColor(e.target.value);
-                                        }}
-                                    />
+                            {brandTheme === 'custom' && (
+                                <div className="mb-4">
+                                    <label>Primary Accent Color</label>
+                                    <div className="flex gap-4">
+                                        <input
+                                            type="color"
+                                            className="w-16 h-12 p-1 rounded-lg border border-border cursor-pointer bg-background"
+                                            value={primaryColor || getThemeDefaultColor(brandingTheme)}
+                                            onChange={e => {
+                                                setPrimaryColor(e.target.value);
+                                            }}
+                                        />
+                                        <input
+                                            type="text"
+                                            className="flex-1 p-3 rounded-lg border border-border bg-background text-text outline-none focus:border-plex transition-all uppercase font-mono"
+                                            value={primaryColor}
+                                            placeholder={getThemeDefaultColor(brandingTheme)}
+                                            onChange={e => {
+                                                setPrimaryColor(e.target.value);
+                                            }}
+                                        />
+                                    </div>
                                 </div>
-                            </div>
+                            )}
                             <div className="mb-4">
                                 <label>Custom Logo</label>
                                 <div className="flex flex-col gap-2">
