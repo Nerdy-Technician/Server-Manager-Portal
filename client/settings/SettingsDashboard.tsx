@@ -38,15 +38,16 @@ const APP_ICONS: Record<string, string> = {
     jellyseerr: `${SELFHST_ICON_BASE}/jellyseerr.svg`,
     ombi: `${SELFHST_ICON_BASE}/ombi.svg`,
     jellystat: 'https://cdn.jsdelivr.net/gh/selfhst/icons@main/png/jellystat.png',
+    tmdb: `${SELFHST_ICON_BASE}/tmdb.svg`,
 };
 
 const ProgramIcon: React.FC<{ app: string; label: string }> = ({ app, label }) => (
-    <span className="w-9 h-9 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center overflow-hidden flex-shrink-0">
+    <span className="inline-flex w-8 h-8 rounded-lg bg-white/5 border border-white/10 items-center justify-center overflow-hidden flex-shrink-0">
         {APP_ICONS[app] ? (
             <img
                 src={APP_ICONS[app]}
                 alt=""
-                className="w-6 h-6 object-contain"
+                className="w-5 h-5 object-contain"
                 onError={(e) => { e.currentTarget.style.display = 'none'; }}
             />
         ) : (
@@ -57,11 +58,13 @@ const ProgramIcon: React.FC<{ app: string; label: string }> = ({ app, label }) =
 );
 
 const IntegrationHeading: React.FC<{ app: string; title: string; subtitle?: string; className?: string }> = ({ app, title, subtitle, className = '' }) => (
-    <div className={`flex items-center gap-3 border-b border-border pb-3 mb-4 ${className}`}>
-        <ProgramIcon app={app} label={title} />
-        <div>
-            <h3 className="text-xl font-bold text-text leading-tight">{title}</h3>
-            {subtitle && <p className="text-xs text-muted mt-0.5">{subtitle}</p>}
+    <div className={`integration-heading border-b border-border pb-3 mb-4 ${className}`}>
+        <div className="grid grid-cols-[2rem_1fr] gap-x-3 gap-y-0.5">
+            <div className="row-start-1 self-center">
+                <ProgramIcon app={app} label={title} />
+            </div>
+            <h3 className="integration-heading-title text-xl font-bold text-text leading-tight min-w-0 col-start-2 row-start-1">{title}</h3>
+            {subtitle && <p className="text-xs text-muted col-start-2 row-start-2">{subtitle}</p>}
         </div>
     </div>
 );
@@ -145,6 +148,8 @@ export const SettingsDashboard: React.FC = () => {
     const [selectedServer, setSelectedServer] = useState('');
     const [checkInterval, setCheckInterval] = useState(60);
     const [hideStreamUsers, setHideStreamUsers] = useState<string>('false');
+    const [showUsernamesInAnalytics, setShowUsernamesInAnalytics] = useState(false);
+    const [useTrendingSlideshowOnLogin, setUseTrendingSlideshowOnLogin] = useState(false);
     const [defaultLibraryIds, setDefaultLibraryIds] = useState<string[]>([]);
     const [libraries, setLibraries] = useState<any[]>([]);
     const [activeTab, setActiveTab] = useState(() => {
@@ -165,10 +170,10 @@ export const SettingsDashboard: React.FC = () => {
             ]
         },
         {
-            title: 'Integrations',
+            title: 'Media Stack',
             tabs: [
-                { id: 'plex', label: 'Media Player', keywords: ['plex', 'jellyfin', 'media', 'player', 'token', 'server', 'libraries', 'docker', 'local', 'url', 'direct'] },
-                { id: 'mediastack', label: 'Media Stack', keywords: ['sonarr', 'radarr', 'tautulli', 'jellystat', 'seerr', 'jellyseerr'] },
+                { id: 'plex', label: 'Media Player', keywords: ['plex', 'jellyfin', 'media', 'player', 'token', 'server', 'libraries', 'docker', 'local', 'url', 'direct', 'privacy', 'usernames', 'analytics'] },
+                { id: 'mediastack', label: 'Integrations', keywords: ['sonarr', 'radarr', 'tautulli', 'jellystat', 'seerr', 'jellyseerr'] },
                 { id: 'status', label: 'Status Monitor', keywords: ['uptime', 'health', 'services'] }
             ]
         },
@@ -758,6 +763,8 @@ export const SettingsDashboard: React.FC = () => {
             setAnnouncement(initialSettings.announcement || '');
             if (initialSettings.navOrder) setNavOrder(ensureMaintenanceNavOrder(initialSettings.navOrder));
             setHideStreamUsers(initialSettings.hideStreamUsers === true ? 'anonymous' : (initialSettings.hideStreamUsers || 'false'));
+            setShowUsernamesInAnalytics(!!initialSettings.showUsernamesInAnalytics);
+            setUseTrendingSlideshowOnLogin(initialSettings.useTrendingSlideshowOnLogin !== false);
             if (initialSettings.defaultLibraryIds) setDefaultLibraryIds(initialSettings.defaultLibraryIds);
             if (initialSettings.use24HourClock !== undefined) setUse24HourClock(!!initialSettings.use24HourClock);
             if (initialSettings.showPosterQualityBadges !== undefined) setShowPosterQualityBadges(initialSettings.showPosterQualityBadges !== false);
@@ -889,6 +896,8 @@ export const SettingsDashboard: React.FC = () => {
             announcement,
             navOrder: ensureMaintenanceNavOrder(navOrder),
             hideStreamUsers,
+            showUsernamesInAnalytics,
+            useTrendingSlideshowOnLogin,
             defaultLibraryIds,
             use24HourClock,
             allowTemporaryAccess,
@@ -1198,6 +1207,23 @@ export const SettingsDashboard: React.FC = () => {
                                             />
                                         </div>
                                     </div>
+
+                                <div className="mb-4 mt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 py-4 border-b border-border/40">
+                                        <div>
+                                            <h4 className="font-bold text-text">Show Usernames in Analytics</h4>
+                                            <p className="text-sm text-muted">Allow non-admin users to see real usernames on the Analytics dashboard. If disabled, usernames are shown as Viewer 1, Viewer 2, etc.</p>
+                                        </div>
+                                        <label className="relative inline-flex items-center cursor-pointer ml-4 flex-shrink-0">
+                                            <input
+                                                type="checkbox"
+                                                className="sr-only peer"
+                                                checked={showUsernamesInAnalytics}
+                                                onChange={e => setShowUsernamesInAnalytics(e.target.checked)}
+                                            />
+                                            <div className="w-11 h-6 bg-background peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-text after:border-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-plex"></div>
+                                        </label>
+                                    </div>
+
                                 <div className="mb-4" style={{ marginTop: '1rem' }}>
                                     <label htmlFor="requestUrl">Request URL</label>
                                     <input className="w-full p-3 rounded-lg border border-border bg-background text-text outline-none focus:border-plex focus:ring-1 focus:ring-plex transition-all" id="requestUrl" type="text" value={requestUrl} onChange={e => setRequestUrl(e.target.value)} placeholder="https://yourdomain.com" />
@@ -1517,7 +1543,7 @@ export const SettingsDashboard: React.FC = () => {
                             <div className="flex flex-col gap-2 max-w-md">
                                 {navOrder.map((key, index) => {
                                     const labels: Record<string, string> = {
-                                        'home': 'Home', 'discover': 'Discover', 'status': 'Status', 'logs': 'Logs (Admin Only)', 'analytics': 'Analytics', 'mediastack': 'Media Stack', 'maintenance': 'Cleaner (Admin Only)', 'request': 'Request Content', 'settings': 'Settings (Admin Only)', 'logout': 'Logout'
+                                        'home': 'Home', 'discover': 'Discover', 'status': 'Status', 'logs': 'Logs (Admin Only)', 'analytics': 'Analytics', 'mediastack': 'Integrations', 'maintenance': 'Cleaner (Admin Only)', 'request': 'Request Content', 'settings': 'Settings (Admin Only)', 'logout': 'Logout'
                                     };
                                     return (
                                         <div key={key} className="flex items-center justify-between py-3 border-b border-border/40">
@@ -1656,67 +1682,61 @@ export const SettingsDashboard: React.FC = () => {
                                 </div>
                             </div>
 
-                            <div className="mb-4">
-                                <div className="flex items-center justify-between">
-                                    <div>
-                                        <label className="mb-0">Enable Scroll Reveal Animations</label>
-                                        <SettingHint>Smoothly slide elements into place as you scroll down the dashboard.</SettingHint>
-                                    </div>
-                                    <label className="relative inline-flex items-center cursor-pointer">
-                                        <input
-                                            type="checkbox"
-                                            className="sr-only peer"
-                                            checked={useScrollRevealAnimations}
-                                            onChange={e => setUseScrollRevealAnimations(e.target.checked)}
-                                        />
-                                        <div className="w-11 h-6 bg-background peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-text after:border-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-plex"></div>
-                                    </label>
+                            <div className="mb-4 mt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 py-4 border-b border-border/40">
+                                <div>
+                                    <h4 className="font-bold text-text">Enable Scroll Reveal Animations</h4>
+                                    <SettingHint>Smoothly slide elements into place as you scroll down the dashboard.</SettingHint>
                                 </div>
+                                <label className="relative inline-flex items-center cursor-pointer ml-4 flex-shrink-0">
+                                    <input
+                                        type="checkbox"
+                                        className="sr-only peer"
+                                        checked={useScrollRevealAnimations}
+                                        onChange={e => setUseScrollRevealAnimations(e.target.checked)}
+                                    />
+                                    <div className="w-11 h-6 bg-background peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-text after:border-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-plex"></div>
+                                </label>
                             </div>
 
-                            <div className="mb-4">
-                                <div className="flex items-center justify-between">
-                                    <div>
-                                        <label className="mb-0">Enable Cinematic Loading Sequences</label>
-                                        <SettingHint>Replaces the standard loading spinner with a beautiful SVG line-drawing animation.</SettingHint>
-                                    </div>
-                                    <label className="relative inline-flex items-center cursor-pointer">
-                                        <input
-                                            type="checkbox"
-                                            className="sr-only peer"
-                                            checked={useCinematicLoading}
-                                            onChange={e => setUseCinematicLoading(e.target.checked)}
-                                        />
-                                        <div className="w-11 h-6 bg-background peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-text after:border-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-plex"></div>
-                                    </label>
+                            <div className="mb-4 mt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 py-4 border-b border-border/40">
+                                <div>
+                                    <h4 className="font-bold text-text">Enable Cinematic Loading Sequences</h4>
+                                    <SettingHint>Replaces the standard loading spinner with a beautiful SVG line-drawing animation.</SettingHint>
                                 </div>
+                                <label className="relative inline-flex items-center cursor-pointer ml-4 flex-shrink-0">
+                                    <input
+                                        type="checkbox"
+                                        className="sr-only peer"
+                                        checked={useCinematicLoading}
+                                        onChange={e => setUseCinematicLoading(e.target.checked)}
+                                    />
+                                    <div className="w-11 h-6 bg-background peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-text after:border-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-plex"></div>
+                                </label>
                             </div>
 
-                            <div className="mb-4">
-                                <div className="flex items-center justify-between">
-                                    <div>
-                                        <label className="mb-0">Enable Branded Skeleton Loading</label>
-                                        <SettingHint>Use a branded, animated shimmer effect for skeleton loaders instead of the default pulse.</SettingHint>
-                                    </div>
-                                    <label className="relative inline-flex items-center cursor-pointer">
-                                        <input
-                                            type="checkbox"
-                                            className="sr-only peer"
-                                            checked={useBrandedSkeleton}
-                                            onChange={e => setUseBrandedSkeleton(e.target.checked)}
-                                        />
-                                        <div className="w-11 h-6 bg-background peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-text after:border-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-plex"></div>
-                                    </label>
+                            <div className="mb-4 mt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 py-4 border-b border-border/40">
+                                <div>
+                                    <h4 className="font-bold text-text">Enable Branded Skeleton Loading</h4>
+                                    <SettingHint>Use a branded, animated shimmer effect for skeleton loaders instead of the default pulse.</SettingHint>
                                 </div>
+                                <label className="relative inline-flex items-center cursor-pointer ml-4 flex-shrink-0">
+                                    <input
+                                        type="checkbox"
+                                        className="sr-only peer"
+                                        checked={useBrandedSkeleton}
+                                        onChange={e => setUseBrandedSkeleton(e.target.checked)}
+                                    />
+                                    <div className="w-11 h-6 bg-background peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-text after:border-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-plex"></div>
+                                </label>
                             </div>
 
-                            <div className="mb-4">
-                                <div className="flex items-center justify-between mb-4">
+                            <div className="py-4 border-b border-border/40 mb-4">
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
                                     <div>
-                                        <label className="mb-0">Enable TMDB Trending Slideshow</label>
+                                        <h4 className="font-bold text-text">Enable TMDB Trending Slideshow</h4>
                                         <SettingHint>Replaces the static splash background with a fading slideshow of currently trending movies and shows from TMDB. Requires a TMDB API key in Integrations.</SettingHint>
                                     </div>
-                                    <label className="relative inline-flex items-center cursor-pointer">
+                                    <label className="relative inline-flex items-center cursor-pointer ml-4 flex-shrink-0">
                                         <input
                                             type="checkbox"
                                             className="sr-only peer"
@@ -1726,7 +1746,7 @@ export const SettingsDashboard: React.FC = () => {
                                         <div className="w-11 h-6 bg-background peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-text after:border-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-plex"></div>
                                     </label>
                                 </div>
-                                <div className={`transition-all overflow-hidden ${useTrendingSlideshow ? 'max-h-[100px] opacity-100' : 'max-h-0 opacity-0'}`}>
+                                <div className={`transition-all overflow-hidden ${useTrendingSlideshow ? 'max-h-[100px] opacity-100 mt-2' : 'max-h-0 opacity-0'}`}>
                                     <label>Slideshow Interval (Seconds)</label>
                                     <select
                                         className="w-full p-3 rounded-lg border border-border bg-background text-text outline-none focus:border-plex transition-all mt-1"
@@ -1741,6 +1761,22 @@ export const SettingsDashboard: React.FC = () => {
                                         <option value={60}>60 Seconds</option>
                                     </select>
                                 </div>
+                            </div>
+
+                            <div className="mb-4 mt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 py-4 border-b border-border/40">
+                                <div>
+                                    <h4 className="font-bold text-text">Enable Slideshow on Login Page</h4>
+                                    <SettingHint>Display the TMDB trending slideshow background on the login and landing pages.</SettingHint>
+                                </div>
+                                <label className="relative inline-flex items-center cursor-pointer ml-4 flex-shrink-0">
+                                    <input
+                                        type="checkbox"
+                                        className="sr-only peer"
+                                        checked={useTrendingSlideshowOnLogin}
+                                        onChange={e => setUseTrendingSlideshowOnLogin(e.target.checked)}
+                                    />
+                                    <div className="w-11 h-6 bg-background peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-text after:border-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-plex"></div>
+                                </label>
                             </div>
 
                             <div className={`mb-4 transition-opacity ${useTrendingSlideshow ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
@@ -1868,21 +1904,52 @@ export const SettingsDashboard: React.FC = () => {
                                 {tasks.map(task => (
                                     <div key={task.id} className="py-4 border-b border-border/40 flex flex-col md:flex-row md:items-center justify-between gap-4">
                                         <div>
-                                            <h4 className="font-bold text-lg mb-1">{task.name}</h4>
+                                            <div className="flex flex-wrap items-center gap-2 mb-1">
+                                                <h4 className="font-bold text-lg">{task.name}</h4>
+                                                {task.running ? (
+                                                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-500/10 text-blue-400 border border-blue-500/20 shadow-[0_0_10px_rgba(59,130,246,0.15)] animate-pulse">
+                                                        <span className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-ping" />
+                                                        Running
+                                                    </span>
+                                                ) : task.lastError ? (
+                                                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-red-500/10 text-red-400 border border-red-500/20">
+                                                        <span className="w-1.5 h-1.5 bg-red-400 rounded-full" />
+                                                        Failed
+                                                    </span>
+                                                ) : (
+                                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-500/10 text-muted border border-border">
+                                                        Idle
+                                                    </span>
+                                                )}
+                                            </div>
                                             <p className="text-sm text-muted mb-2">{task.description}</p>
                                             <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted">
                                                 <span><strong className="text-text">Last Run:</strong> {task.lastRun ? new Date(task.lastRun).toLocaleString() : 'Never'}</span>
                                                 <span><strong className="text-text">Next Run:</strong> {task.nextRun ? new Date(task.nextRun).toLocaleString() : 'Not Scheduled'}</span>
-                                                <span><strong className="text-text">Status:</strong> {task.running ? 'Running' : 'Idle'}</span>
                                                 {task.lastDurationMs !== null && <span><strong className="text-text">Duration:</strong> {Math.round(task.lastDurationMs / 1000)}s</span>}
                                                 {task.lastError && <span className="bg-red-500/20 text-red-300 px-2 py-1 rounded"><strong>Error:</strong> {task.lastError}</span>}
                                             </div>
                                         </div>
                                         <button
-                                            className="px-4 py-2 bg-plex text-background rounded-md font-bold hover:bg-plex-hover transition-colors flex items-center justify-center gap-2 whitespace-nowrap"
+                                            className={`px-4 py-2 rounded-md font-bold transition-all flex items-center justify-center gap-2 whitespace-nowrap ${
+                                                task.running
+                                                    ? 'bg-slate-800 text-muted border border-border cursor-not-allowed opacity-60'
+                                                    : 'bg-plex text-background hover:bg-plex-hover'
+                                            }`}
+                                            disabled={task.running}
                                             onClick={() => handleRunTask(task.id)}
                                         >
-                                            Run Now
+                                            {task.running ? (
+                                                <>
+                                                    <svg className="animate-spin h-4 w-4 text-muted" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                    </svg>
+                                                    <span>Running...</span>
+                                                </>
+                                            ) : (
+                                                'Run Now'
+                                            )}
                                         </button>
                                     </div>
                                 ))}
@@ -2066,18 +2133,30 @@ export const SettingsDashboard: React.FC = () => {
                                 <h4 className="font-bold text-text">Job Queue</h4>
                                 <div className="flex flex-col gap-3">
                                     {tasks.map(task => (
-                                        <div key={`system-${task.id}`} className="py-3 border-b border-border/40 last:border-b-0">
-                                            <div className="flex items-center justify-between gap-2">
+                                        <div key={`system-${task.id}`} className="py-3 border-b border-border/40 last:border-b-0 flex items-center justify-between gap-4">
+                                            <div>
                                                 <p className="font-semibold text-text">{task.name}</p>
-                                                <span className={`text-xs px-2 py-1 rounded ${task.running ? 'bg-yellow-500/20 text-yellow-300' : 'bg-green-500/20 text-green-300'}`}>
-                                                    {task.running ? 'Running' : 'Idle'}
+                                                <div className="text-xs text-muted mt-1">
+                                                    Last: {task.lastRun ? new Date(task.lastRun).toLocaleString() : 'Never'} · Next: {task.nextRun ? new Date(task.nextRun).toLocaleString() : 'Not Scheduled'}
+                                                    {task.lastDurationMs !== null ? ` · Duration: ${Math.round(task.lastDurationMs / 1000)}s` : ''}
+                                                </div>
+                                                {task.lastError && <div className="text-xs text-red-300 mt-1">Last error: {task.lastError}</div>}
+                                            </div>
+                                            {task.running ? (
+                                                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-500/10 text-blue-400 border border-blue-500/20 shadow-[0_0_10px_rgba(59,130,246,0.15)] animate-pulse whitespace-nowrap">
+                                                    <span className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-ping" />
+                                                    Running
                                                 </span>
-                                            </div>
-                                            <div className="text-xs text-muted mt-1">
-                                                Last: {task.lastRun ? new Date(task.lastRun).toLocaleString() : 'Never'} · Next: {task.nextRun ? new Date(task.nextRun).toLocaleString() : 'Not Scheduled'}
-                                                {task.lastDurationMs !== null ? ` · Duration: ${Math.round(task.lastDurationMs / 1000)}s` : ''}
-                                            </div>
-                                            {task.lastError && <div className="text-xs text-red-300 mt-1">Last error: {task.lastError}</div>}
+                                            ) : task.lastError ? (
+                                                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-red-500/10 text-red-400 border border-red-500/20 whitespace-nowrap">
+                                                    <span className="w-1.5 h-1.5 bg-red-400 rounded-full" />
+                                                    Failed
+                                                </span>
+                                            ) : (
+                                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-500/10 text-muted border border-border whitespace-nowrap">
+                                                    Idle
+                                                </span>
+                                            )}
                                         </div>
                                     ))}
                                 </div>

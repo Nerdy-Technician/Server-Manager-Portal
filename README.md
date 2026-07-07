@@ -124,6 +124,7 @@ Browse your Sonarr and Radarr activity directly inside the portal:
 - **Active Queue** - Live download queue from Sonarr and Radarr with progress and status
 - **Recent History** - Import and grab history across both services
 - **Month Navigation** - Browse releases by month with auto-advance to the next month that has content
+- **Smart ID Matching** - Uses IMDb, TMDB, and TVDB IDs to accurately map and display metadata
 
 Configure Sonarr/Radarr URLs and API keys in **Settings → Media Stack**.
 
@@ -253,9 +254,9 @@ npm start
 | Mode | Authentication | Analytics companion | Branding |
 |---|---|---|---|
 | **Plex** | Plex.tv OAuth, Plex token, selected owned server | Tautulli | Plex or custom theme |
-| **Jellyfin** | Jellyfin username/password or Quick Connect | Jellystat | Jellyfin server icon and splash screen proxy, or custom theme |
+| **Jellyfin** | Jellyfin username/password or Quick Connect | JellyStat | Jellyfin server icon and splash screen proxy, or custom theme |
 
-Plex mode keeps the original Plex OAuth and Tautulli flow. Jellyfin mode uses your Jellyfin URL/API key for user sync, session activity, Quick Connect, and server branding assets.
+Plex mode keeps the original Plex OAuth and Tautulli flow. Jellyfin mode uses your Jellyfin URL/API key for user sync, session activity, Quick Connect, and server branding assets. JellyStat provides rich analytics on par with Tautulli.
 
 ---
 
@@ -417,6 +418,8 @@ The template uses `ghcr.io/jl94x4/server-manager-portal:latest` by default.
 | Variable | Required | Description |
 |---|---|---|
 | `JWT_SECRET` | Yes | Session signing secret (min 32 characters) |
+| `PUID` | No | User ID to run the app as (default `1000`; `99` on Unraid) |
+| `PGID` | No | Group ID to run the app as (default `1000`; `100` on Unraid) |
 | `PORT` | No | Listen port inside the container (default `2121`) |
 | `BIND_HOST` | No | Bind address (default `0.0.0.0`) |
 | `CONFIG_DIR` | No | Runtime data directory (default `/app/config` in Docker) |
@@ -513,6 +516,12 @@ Runtime-generated files (stored in `config/`, not committed to git):
 - `config/trending-cache.json` - Cached leaderboard and trending data
 
 On first startup after an upgrade, any legacy JSON files still in the project root are automatically moved into `config/`.
+
+---
+
+## Release History
+
+Please see the [CHANGELOG.md](CHANGELOG.md) for a detailed history of changes, new features, and bug fixes.
 
 ---
 

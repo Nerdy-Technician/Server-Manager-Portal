@@ -905,8 +905,16 @@ export const MediaStackDashboard: React.FC<{ isAdmin: boolean }> = ({ isAdmin })
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
     const [monthOffset, setMonthOffset] = useState(0);
+    const [activeStackTab, setActiveStackTab] = useState<'sonarr' | 'radarr'>('sonarr');
     const [activeCalendarItem, setActiveCalendarItem] = useState<any>(null);
     const [autoMonthNotice, setAutoMonthNotice] = useState('');
+
+    const switchStackTab = (tab: 'sonarr' | 'radarr') => {
+        if (tab === activeStackTab) return;
+        setActiveStackTab(tab);
+        setAutoMonthNotice('');
+        setMonthOffset(0);
+    };
 
     const fetchData = useCallback(async () => {
         try {
@@ -961,60 +969,65 @@ export const MediaStackDashboard: React.FC<{ isAdmin: boolean }> = ({ isAdmin })
         return `${mb.toFixed(1)} MB`;
     };
 
-    const calendarItems = useMemo(() => {
-        if (!data) return [];
+    const sonarrCalendarItems = useMemo(() => {
+        if (!data?.sonarr?.calendar) return [];
         const items: any[] = [];
+        data.sonarr.calendar.forEach((ep: any) => {
+            const poster = ep.series?.images?.find((img: any) => img.coverType === 'poster');
+            items.push({
+                id: `sonarr-${ep.id || ep.airDateUtc || ep.airDate}-${ep.title}`,
+                type: 'tv',
+                service: 'Sonarr',
+                title: ep.series?.title || 'Unknown Series',
+                subtitle: `S${String(ep.seasonNumber).padStart(2, '0')}E${String(ep.episodeNumber).padStart(2, '0')} - ${ep.title}`,
+                date: new Date(ep.airDateUtc || ep.airDate),
+                hasFile: ep.hasFile,
+                monitored: ep.monitored,
+                imageUrl: poster ? (poster.remoteUrl || poster.url) : null,
+                network: ep.series?.network || ''
+            });
+        });
+        return items.sort((a, b) => a.date.getTime() - b.date.getTime());
+    }, [data]);
 
-        if (data.sonarr?.calendar) {
-            data.sonarr.calendar.forEach((ep: any) => {
-                const poster = ep.series?.images?.find((img: any) => img.coverType === 'poster');
+    const radarrCalendarItems = useMemo(() => {
+        if (!data?.radarr?.calendar) return [];
+        const items: any[] = [];
+        data.radarr.calendar.forEach((movie: any) => {
+            const releaseDateStr = movie.digitalRelease || movie.physicalRelease || movie.inCinemas || movie.added;
+            if (releaseDateStr) {
+                const poster = movie.images?.find((img: any) => img.coverType === 'poster');
                 items.push({
-                    id: `sonarr-${ep.id || ep.airDateUtc || ep.airDate}-${ep.title}`,
-                    type: 'tv',
-                    service: 'Sonarr',
-                    title: ep.series?.title || 'Unknown Series',
-                    subtitle: `S${String(ep.seasonNumber).padStart(2, '0')}E${String(ep.episodeNumber).padStart(2, '0')} - ${ep.title}`,
-                    date: new Date(ep.airDateUtc || ep.airDate),
-                    hasFile: ep.hasFile,
-                    monitored: ep.monitored,
+                    id: `radarr-${movie.id || releaseDateStr}-${movie.title}`,
+                    type: 'movie',
+                    service: 'Radarr',
+                    title: movie.title,
+                    subtitle: movie.studio || 'Movie Release',
+                    date: new Date(releaseDateStr),
+                    hasFile: movie.hasFile,
+                    monitored: movie.monitored,
                     imageUrl: poster ? (poster.remoteUrl || poster.url) : null,
-                    network: ep.series?.network || ''
+                    network: movie.studio || ''
                 });
-            });
-        }
-
-        if (data.radarr?.calendar) {
-            data.radarr.calendar.forEach((movie: any) => {
-                const releaseDateStr = movie.digitalRelease || movie.physicalRelease || movie.inCinemas || movie.added;
-                if (releaseDateStr) {
-                    const poster = movie.images?.find((img: any) => img.coverType === 'poster');
-                    items.push({
-                        id: `radarr-${movie.id || releaseDateStr}-${movie.title}`,
-                        type: 'movie',
-                        service: 'Radarr',
-                        title: movie.title,
-                        subtitle: movie.studio || 'Movie Release',
-                        date: new Date(releaseDateStr),
-                        hasFile: movie.hasFile,
-                        monitored: movie.monitored,
-                        imageUrl: poster ? (poster.remoteUrl || poster.url) : null,
-                        network: movie.studio || ''
-                    });
-                }
-            });
-        }
-
+            }
+        });
         return items.sort((a, b) => a.date.getTime() - b.date.getTime());
     }, [data]);
 
     const filteredCalendar = useMemo(() => {
-        return calendarItems;
-    }, [calendarItems]);
+        return activeStackTab === 'sonarr' ? sonarrCalendarItems : radarrCalendarItems;
+    }, [activeStackTab, sonarrCalendarItems, radarrCalendarItems]);
+
+    const activeStackConfigured = activeStackTab === 'sonarr'
+        ? !!data?.sonarr?.configured
+        : !!data?.radarr?.configured;
+
+    const activeStackLabel = activeStackTab === 'sonarr' ? 'Sonarr' : 'Radarr';
 
     useEffect(() => {
         let cancelled = false;
         const maybeAutoSelectMonthWithReleases = async () => {
-            if (!data || monthOffset !== 0 || calendarItems.length > 0) {
+            if (!data || monthOffset !== 0 || filteredCalendar.length > 0) {
                 if (!cancelled && monthOffset === 0) {
                     setAutoMonthNotice('');
                 }
@@ -1023,13 +1036,14 @@ export const MediaStackDashboard: React.FC<{ isAdmin: boolean }> = ({ isAdmin })
             for (let offset = 1; offset <= 6; offset += 1) {
                 try {
                     const res = await apiFetch(`/api/media-stack/summary?monthOffset=${offset}`);
-                    const sonarrCount = Array.isArray(res?.sonarr?.calendar) ? res.sonarr.calendar.length : 0;
-                    const radarrCount = Array.isArray(res?.radarr?.calendar) ? res.radarr.calendar.length : 0;
-                    if ((sonarrCount + radarrCount) > 0) {
+                    const count = activeStackTab === 'sonarr'
+                        ? (Array.isArray(res?.sonarr?.calendar) ? res.sonarr.calendar.length : 0)
+                        : (Array.isArray(res?.radarr?.calendar) ? res.radarr.calendar.length : 0);
+                    if (count > 0) {
                         if (cancelled) return;
                         setData(res);
                         setMonthOffset(offset);
-                        setAutoMonthNotice(`Showing the next month with releases (${new Date(new Date().setFullYear(new Date().getFullYear(), new Date().getMonth() + offset, 1)).toLocaleDateString('default', { month: 'long', year: 'numeric' })}).`);
+                        setAutoMonthNotice(`Showing the next month with ${activeStackTab === 'sonarr' ? 'TV' : 'movie'} releases (${new Date(new Date().setFullYear(new Date().getFullYear(), new Date().getMonth() + offset, 1)).toLocaleDateString('default', { month: 'long', year: 'numeric' })}).`);
                         return;
                     }
                 } catch {
@@ -1037,14 +1051,14 @@ export const MediaStackDashboard: React.FC<{ isAdmin: boolean }> = ({ isAdmin })
                 }
             }
             if (!cancelled) {
-                setAutoMonthNotice('No releases found in the next 6 months.');
+                setAutoMonthNotice(`No ${activeStackTab === 'sonarr' ? 'TV' : 'movie'} releases found in the next 6 months.`);
             }
         };
         maybeAutoSelectMonthWithReleases();
         return () => {
             cancelled = true;
         };
-    }, [calendarItems.length, data, monthOffset]);
+    }, [activeStackTab, filteredCalendar.length, data, monthOffset]);
 
     const groupedCalendar = useMemo(() => {
         const groups: { [dateStr: string]: typeof filteredCalendar } = {};
@@ -1067,61 +1081,65 @@ export const MediaStackDashboard: React.FC<{ isAdmin: boolean }> = ({ isAdmin })
         }
     }, [filteredCalendar]);
 
-    const activeQueue = useMemo(() => {
-        if (!data) return [];
-        const queueItems: any[] = [];
-        if (data.sonarr?.queue?.records) {
-            data.sonarr.queue.records.forEach((item: any) => {
-                queueItems.push({ ...item, service: 'Sonarr' });
-            });
-        }
-        if (data.radarr?.queue?.records) {
-            data.radarr.queue.records.forEach((item: any) => {
-                queueItems.push({ ...item, service: 'Radarr' });
-            });
-        }
-        return queueItems;
+    const sonarrQueue = useMemo(() => {
+        if (!data?.sonarr?.queue?.records) return [];
+        return data.sonarr.queue.records.map((item: any) => ({ ...item, service: 'Sonarr' }));
     }, [data]);
 
-    const combinedHistory = useMemo(() => {
-        if (!data) return [];
+    const radarrQueue = useMemo(() => {
+        if (!data?.radarr?.queue?.records) return [];
+        return data.radarr.queue.records.map((item: any) => ({ ...item, service: 'Radarr' }));
+    }, [data]);
+
+    const activeQueue = useMemo(() => {
+        return activeStackTab === 'sonarr' ? sonarrQueue : radarrQueue;
+    }, [activeStackTab, sonarrQueue, radarrQueue]);
+
+    const sonarrHistory = useMemo(() => {
+        if (!data?.sonarr?.history?.records) return [];
         const historyItems: any[] = [];
-        if (data.sonarr?.history?.records) {
-            data.sonarr.history.records.forEach((item: any) => {
-                let cleanTitle = '';
-                if (item.series?.title) {
-                    cleanTitle = item.series.title;
-                    if (item.episode?.seasonNumber !== undefined && item.episode?.episodeNumber !== undefined) {
-                        cleanTitle += ` - S${String(item.episode.seasonNumber).padStart(2, '0')}E${String(item.episode.episodeNumber).padStart(2, '0')}`;
-                        if (item.episode.title) {
-                            cleanTitle += ` - ${item.episode.title}`;
-                        }
+        data.sonarr.history.records.forEach((item: any) => {
+            let cleanTitle = '';
+            if (item.series?.title) {
+                cleanTitle = item.series.title;
+                if (item.episode?.seasonNumber !== undefined && item.episode?.episodeNumber !== undefined) {
+                    cleanTitle += ` - S${String(item.episode.seasonNumber).padStart(2, '0')}E${String(item.episode.episodeNumber).padStart(2, '0')}`;
+                    if (item.episode.title) {
+                        cleanTitle += ` - ${item.episode.title}`;
                     }
-                } else {
-                    cleanTitle = item.sourceTitle || 'Unknown TV Show';
                 }
-                historyItems.push({
-                    id: `sonarr-hist-${item.id}`,
-                    service: 'Sonarr',
-                    title: cleanTitle,
-                    date: new Date(item.date),
-                    eventType: item.eventType
-                });
+            } else {
+                cleanTitle = item.sourceTitle || 'Unknown TV Show';
+            }
+            historyItems.push({
+                id: `sonarr-hist-${item.id}`,
+                service: 'Sonarr',
+                title: cleanTitle,
+                date: new Date(item.date),
+                eventType: item.eventType
             });
-        }
-        if (data.radarr?.history?.records) {
-            data.radarr.history.records.forEach((item: any) => {
-                historyItems.push({
-                    id: `radarr-hist-${item.id}`,
-                    service: 'Radarr',
-                    title: item.movie?.title || item.sourceTitle || 'Unknown Movie',
-                    date: new Date(item.date),
-                    eventType: item.eventType
-                });
-            });
-        }
+        });
         return historyItems.sort((a, b) => b.date.getTime() - a.date.getTime()).slice(0, 8);
     }, [data]);
+
+    const radarrHistory = useMemo(() => {
+        if (!data?.radarr?.history?.records) return [];
+        const historyItems: any[] = [];
+        data.radarr.history.records.forEach((item: any) => {
+            historyItems.push({
+                id: `radarr-hist-${item.id}`,
+                service: 'Radarr',
+                title: item.movie?.title || item.sourceTitle || 'Unknown Movie',
+                date: new Date(item.date),
+                eventType: item.eventType
+            });
+        });
+        return historyItems.sort((a, b) => b.date.getTime() - a.date.getTime()).slice(0, 8);
+    }, [data]);
+
+    const activeHistory = useMemo(() => {
+        return activeStackTab === 'sonarr' ? sonarrHistory : radarrHistory;
+    }, [activeStackTab, sonarrHistory, radarrHistory]);
 
     if (isLoading) return <Loader isLoading={true} />;
     if (error) return <div className="text-center p-8 text-status-expiring">{error}</div>;
@@ -1240,13 +1258,34 @@ export const MediaStackDashboard: React.FC<{ isAdmin: boolean }> = ({ isAdmin })
 
     return (
         <div className="w-full animate-fade-in flex flex-col gap-6">
-            <div className="flex items-center justify-between gap-4 mb-2">
+            <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-2">
                 <div>
                     <h1 className="text-3xl font-bold text-text uppercase tracking-widest flex items-center gap-3">
-                        <Layers className="w-8 h-8 text-plex" />
-                        Media Stack
+                        {activeStackTab === 'sonarr' ? <Tv className="w-8 h-8 text-plex" /> : <Film className="w-8 h-8 text-plex" />}
+                        {activeStackLabel}
                     </h1>
-                    <p className="text-muted text-sm mt-1">Unified monitoring dashboard for TV & movies</p>
+                    <p className="text-muted text-sm mt-1">
+                        {activeStackTab === 'sonarr' ? 'TV series releases, downloads, and activity' : 'Movie releases, downloads, and activity'}
+                    </p>
+                </div>
+
+                <div className="flex bg-white/5 p-1 rounded-lg md:rounded-xl border border-white/10 w-fit">
+                    <button
+                        type="button"
+                        onClick={() => switchStackTab('sonarr')}
+                        className={`flex items-center gap-1.5 md:gap-2 px-3 md:px-4 py-1.5 md:py-2 rounded-md md:rounded-lg text-[11px] md:text-xs font-bold uppercase tracking-wider transition-all ${activeStackTab === 'sonarr' ? 'bg-plex text-background shadow-lg shadow-plex/20' : 'text-muted hover:text-text hover:bg-white/5'}`}
+                    >
+                        <Tv className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                        Sonarr
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => switchStackTab('radarr')}
+                        className={`flex items-center gap-1.5 md:gap-2 px-3 md:px-4 py-1.5 md:py-2 rounded-md md:rounded-lg text-[11px] md:text-xs font-bold uppercase tracking-wider transition-all ${activeStackTab === 'radarr' ? 'bg-plex text-background shadow-lg shadow-plex/20' : 'text-muted hover:text-text hover:bg-white/5'}`}
+                    >
+                        <Film className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                        Radarr
+                    </button>
                 </div>
             </div>
 
@@ -1280,7 +1319,14 @@ export const MediaStackDashboard: React.FC<{ isAdmin: boolean }> = ({ isAdmin })
                         {filteredCalendar.length === 0 ? (
                             <div className="text-center py-12 bg-background/30 rounded-xl border border-white/5 text-muted text-sm">
                                 <Calendar className="w-12 h-12 text-muted/30 mx-auto mb-3" />
-                                No upcoming releases for this month
+                                {!activeStackConfigured ? (
+                                    <>
+                                        <p>{activeStackLabel} is not configured yet.</p>
+                                        <p className="text-xs mt-2">Add the URL and API key in Settings → Integrations.</p>
+                                    </>
+                                ) : (
+                                    <p>No upcoming {activeStackTab === 'sonarr' ? 'TV' : 'movie'} releases for this month</p>
+                                )}
                             </div>
                         ) : (
                             <div className="flex items-start gap-3 md:gap-8 w-full">
@@ -1326,9 +1372,6 @@ export const MediaStackDashboard: React.FC<{ isAdmin: boolean }> = ({ isAdmin })
                                                                     <Clock className="w-3 h-3 md:w-3.5 md:h-3.5" />
                                                                     {formatTime(item.date).replace(/^0:/, '12:')}
                                                                 </span>
-                                                                <span className={`md:hidden text-[8px] font-black tracking-widest uppercase px-1 rounded ${item.service === 'Sonarr' ? 'text-blue-400' : 'text-red-400'}`}>
-                                                                    {item.service}
-                                                                </span>
                                                             </div>
                                                             <h4 className="font-bold text-xs sm:text-sm text-text line-clamp-2 md:line-clamp-3 leading-tight group-hover:text-plex transition-colors">
                                                                 {item.title}
@@ -1367,14 +1410,19 @@ export const MediaStackDashboard: React.FC<{ isAdmin: boolean }> = ({ isAdmin })
                         <div className="bg-card border border-white/5 shadow-2xl rounded-2xl p-4 md:p-6 relative flex-grow flex flex-col">
                             <h2 className="text-xl font-bold text-text mb-4 flex items-center gap-2">
                                 <Activity className="w-5 h-5 text-plex" />
-                                Active Downloads ({activeQueue.length})
+                                {activeStackLabel} Downloads ({activeQueue.length})
                             </h2>
 
                             <div className="flex flex-col gap-3 flex-grow justify-start">
-                                {activeQueue.length === 0 ? (
+                                {!activeStackConfigured ? (
                                     <div className="text-center py-8 bg-background/30 rounded-xl border border-white/5 text-muted text-sm flex-grow flex flex-col justify-center items-center">
                                         <DownloadCloud className="w-10 h-10 text-muted/30 mx-auto mb-2" />
-                                        No active downloads
+                                        <p>{activeStackLabel} is not configured.</p>
+                                    </div>
+                                ) : activeQueue.length === 0 ? (
+                                    <div className="text-center py-8 bg-background/30 rounded-xl border border-white/5 text-muted text-sm flex-grow flex flex-col justify-center items-center">
+                                        <DownloadCloud className="w-10 h-10 text-muted/30 mx-auto mb-2" />
+                                        No active {activeStackTab === 'sonarr' ? 'TV' : 'movie'} downloads
                                     </div>
                                 ) : (
                                     activeQueue.map((item: any) => {
@@ -1386,13 +1434,7 @@ export const MediaStackDashboard: React.FC<{ isAdmin: boolean }> = ({ isAdmin })
                                                 <div className="flex justify-between items-start gap-4">
                                                     <div className="flex flex-col gap-1 min-w-0">
                                                         <span className="font-bold text-sm text-text line-clamp-1 leading-snug">{item.title}</span>
-                                                        <div className="flex items-center gap-2">
-                                                            <span className={`text-[8px] uppercase font-black tracking-widest px-1.5 py-0.5 rounded ${item.service === 'Sonarr' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'
-                                                                }`}>
-                                                                {item.service}
-                                                            </span>
-                                                            <span className="text-[10px] text-muted/60 font-semibold">{item.timeleft || 'Unknown time'} left</span>
-                                                        </div>
+                                                        <span className="text-[10px] text-muted/60 font-semibold">{item.timeleft || 'Unknown time'} left</span>
                                                     </div>
                                                     <span className="text-[10px] font-bold px-2 py-0.5 bg-plex/10 text-plex rounded-md border border-plex/20 uppercase tracking-wider">{item.status}</span>
                                                 </div>
@@ -1413,32 +1455,35 @@ export const MediaStackDashboard: React.FC<{ isAdmin: boolean }> = ({ isAdmin })
 
                     <div className="flex flex-col gap-4">
                         <h2 className="text-xl font-bold text-text flex items-center gap-2 mb-1">
-                            <Layers className="w-5 h-5 text-plex" />
-                            Stack Status
+                            {activeStackTab === 'sonarr' ? <Tv className="w-5 h-5 text-plex" /> : <Film className="w-5 h-5 text-plex" />}
+                            {activeStackLabel} Status
                         </h2>
-                        {renderStatusCard('Sonarr', data.sonarr)}
-                        {renderStatusCard('Radarr', data.radarr)}
+                        {renderStatusCard(activeStackLabel, activeStackTab === 'sonarr' ? data.sonarr : data.radarr)}
                     </div>
 
                     <div className="bg-card border border-white/5 shadow-2xl rounded-2xl p-4 md:p-6 relative flex-grow flex flex-col">
                         <h2 className="text-xl font-bold text-text mb-4 flex items-center gap-2">
                             <FileText className="w-5 h-5 text-plex" />
-                            Recent History
+                            {activeStackLabel} History
                         </h2>
 
                         <div className="flex flex-col gap-3 flex-grow justify-start">
-                            {combinedHistory.length === 0 ? (
+                            {!activeStackConfigured ? (
                                 <div className="text-center py-12 bg-background/30 rounded-xl border border-white/5 text-muted text-sm flex-grow flex flex-col justify-center items-center">
-                                    No recent history records
+                                    <p>{activeStackLabel} is not configured.</p>
+                                </div>
+                            ) : activeHistory.length === 0 ? (
+                                <div className="text-center py-12 bg-background/30 rounded-xl border border-white/5 text-muted text-sm flex-grow flex flex-col justify-center items-center">
+                                    No recent {activeStackTab === 'sonarr' ? 'TV' : 'movie'} history
                                 </div>
                             ) : (
-                                combinedHistory.map((item: any) => (
+                                activeHistory.map((item: any) => (
                                     <div key={item.id} className="flex items-center gap-3 bg-background/30 rounded-xl p-3 border border-white/5 hover:bg-background/50 transition-colors">
                                         <div className={`w-1 h-8 rounded-full flex-shrink-0 ${getHistoryColor(item.eventType)}`}></div>
                                         <div className="flex-grow min-w-0">
                                             <div className="font-bold text-xs text-text line-clamp-1 leading-snug">{item.title}</div>
                                             <div className="text-[10px] text-muted flex justify-between items-center mt-0.5">
-                                                <span>{item.service} • <span>{formatEventType(item.eventType)}</span></span>
+                                                <span>{formatEventType(item.eventType)}</span>
                                                 <span>{formatRelativeAirDate(item.date)}</span>
                                             </div>
                                         </div>
@@ -2087,7 +2132,11 @@ export const AnalyticsDashboard: React.FC<{ isAdmin: boolean, sessionInfo: any }
             episodes?: number,
             artists?: number,
             albums?: number,
-            tracks?: number
+            tracks?: number,
+            resolutions?: Record<string, number> | null,
+            codecs?: Record<string, number> | null,
+            fileSizes?: Record<string, any> | null,
+            deltas?: any
         },
         requestedPeriodDays?: string | number,
         cachePeriodDays?: string | number | null,
@@ -2378,6 +2427,139 @@ export const AnalyticsDashboard: React.FC<{ isAdmin: boolean, sessionInfo: any }
                                     </div>
                                 </div>
                             </div>
+
+                            {libraryHealth.resolutions && libraryHealth.codecs && libraryHealth.fileSizes && (() => {
+                                const sortedCodecs = Object.entries(libraryHealth.codecs || {})
+                                    .map(([name, count]) => ({ name, count: count as number }))
+                                    .sort((a, b) => b.count - a.count);
+                                const totalCodecs = sortedCodecs.reduce((sum, item) => sum + item.count, 0) || 1;
+
+                                const sortedResolutions = Object.entries(libraryHealth.resolutions || {})
+                                    .map(([name, count]) => ({ name, count: count as number }))
+                                    .sort((a, b) => b.count - a.count);
+                                const totalResolutions = sortedResolutions.reduce((sum, item) => sum + item.count, 0) || 1;
+
+                                const fileSizeEntries = Object.entries(libraryHealth.fileSizes || {})
+                                    .map(([range, val]) => {
+                                        let movies = 0;
+                                        let shows = 0;
+                                        if (val && typeof val === 'object') {
+                                            movies = (val as any).movies || 0;
+                                            shows = (val as any).shows || 0;
+                                        } else if (typeof val === 'number') {
+                                            shows = val;
+                                        }
+                                        return { range, movies, shows, total: movies + shows };
+                                    });
+                                const maxFileSizeCount = Math.max(...fileSizeEntries.map(e => e.total), 1);
+
+                                return (
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        <div className="glass-card-sm p-5 flex flex-col justify-between">
+                                            <div>
+                                                <h3 className="text-muted text-xs uppercase tracking-wider font-bold mb-4">Video Codecs</h3>
+                                                <div className="flex flex-col gap-3">
+                                                    {sortedCodecs.map((item) => {
+                                                        const pct = Math.round((item.count / totalCodecs) * 100);
+                                                        return (
+                                                            <div key={item.name} className="flex flex-col gap-1">
+                                                                <div className="flex justify-between text-xs font-semibold">
+                                                                    <span className="text-text">{item.name}</span>
+                                                                    <span className="text-muted font-mono">{item.count.toLocaleString()} ({pct}%)</span>
+                                                                </div>
+                                                                <div className="w-full bg-white/5 h-2 rounded-full overflow-hidden">
+                                                                    <div className="bg-plex h-full rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="glass-card-sm p-5 flex flex-col justify-between">
+                                            <div>
+                                                <h3 className="text-muted text-xs uppercase tracking-wider font-bold mb-4">Resolutions</h3>
+                                                <div className="flex flex-col gap-3">
+                                                    {sortedResolutions.map((item) => {
+                                                        const pct = Math.round((item.count / totalResolutions) * 100);
+                                                        return (
+                                                            <div key={item.name} className="flex flex-col gap-1">
+                                                                <div className="flex justify-between text-xs font-semibold">
+                                                                    <span className="text-text">{item.name}</span>
+                                                                    <span className="text-muted font-mono">{item.count.toLocaleString()} ({pct}%)</span>
+                                                                </div>
+                                                                <div className="w-full bg-white/5 h-2 rounded-full overflow-hidden">
+                                                                    <div className="bg-plex h-full rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="glass-card-sm p-5 flex flex-col">
+                                            <div className="flex items-center justify-between mb-1">
+                                                <h3 className="text-muted text-xs uppercase tracking-wider font-bold">File Size Distribution</h3>
+                                                <div className="flex items-center gap-3 text-[10px] text-muted font-semibold">
+                                                    <span className="flex items-center gap-1">
+                                                        <span className="w-2 h-2 bg-plex rounded-sm inline-block" />
+                                                        <span>Movies</span>
+                                                    </span>
+                                                    <span className="flex items-center gap-1">
+                                                        <span className="w-2 h-2 bg-plex/30 rounded-sm inline-block border border-plex/20" />
+                                                        <span>TV Shows</span>
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-end justify-between h-40 pt-4 px-2 w-full gap-3 mt-auto">
+                                                {fileSizeEntries.map((item) => {
+                                                    const totalHeightPct = (item.total / maxFileSizeCount) * 100;
+                                                    const moviesPctOfBar = item.total > 0 ? (item.movies / item.total) * 100 : 0;
+                                                    const showsPctOfBar = item.total > 0 ? (item.shows / item.total) * 100 : 0;
+                                                    
+                                                    return (
+                                                        <div key={item.range} className="flex-1 flex flex-col items-center gap-2 h-full justify-end group relative">
+                                                            <div 
+                                                                className="w-full relative transition-all duration-500 flex flex-col justify-end" 
+                                                                style={{ height: `${Math.max(totalHeightPct, 4)}%` }}
+                                                            >
+                                                                {/* Bar container with overflow-hidden for rounded-t corners */}
+                                                                <div className="w-full h-full rounded-t overflow-hidden flex flex-col justify-end">
+                                                                    {/* Movies part (Top) */}
+                                                                    {item.movies > 0 && (
+                                                                        <div 
+                                                                            className="w-full bg-plex hover:opacity-100 transition-opacity" 
+                                                                            style={{ height: `${moviesPctOfBar}%` }} 
+                                                                        />
+                                                                    )}
+                                                                    {/* TV Shows part (Bottom) */}
+                                                                    {item.shows > 0 && (
+                                                                        <div 
+                                                                            className="w-full bg-plex/30 hover:opacity-100 transition-opacity border-t border-black/10" 
+                                                                            style={{ height: `${showsPctOfBar}%` }} 
+                                                                        />
+                                                                    )}
+                                                                </div>
+
+                                                                {/* Detailed Tooltip (Placed outside the overflow-hidden container, inside the height wrapper) */}
+                                                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 bg-black/95 text-white text-[10px] px-2.5 py-1.5 rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-20 font-mono shadow-md border border-white/5 flex flex-col gap-0.5 leading-none">
+                                                                    <span className="font-bold text-plex mb-1 text-[11px]">{item.range}</span>
+                                                                    <span className="flex justify-between gap-4"><span>Movies:</span> <span className="text-white font-bold">{item.movies.toLocaleString()}</span></span>
+                                                                    <span className="flex justify-between gap-4"><span>TV Episodes:</span> <span className="text-white font-bold">{item.shows.toLocaleString()}</span></span>
+                                                                    <span className="border-t border-white/10 mt-1 pt-1 flex justify-between gap-4"><span>Total:</span> <span className="text-plex font-bold">{item.total.toLocaleString()}</span></span>
+                                                                </div>
+                                                            </div>
+                                                            <span className="text-[9px] text-muted font-bold tracking-wider text-center line-clamp-1 w-full" title={item.range}>{item.range}</span>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })()}
                         </>
                     )}
 
@@ -3458,7 +3640,7 @@ export const Login: React.FC<{ onLoginSuccess: () => void, publicConfig?: any, i
 
     return (
         <div className="relative min-h-screen w-full flex flex-col items-center justify-center p-4 sm:p-6 md:p-8 lg:p-10 overflow-hidden">
-            <AuthPageBackground backgroundImageUrl={splashBackgroundUrl} trendingBackgrounds={publicConfig?.trendingBackgrounds} trendingSlideshowInterval={publicConfig?.trendingSlideshowInterval} />
+            <AuthPageBackground backgroundImageUrl={splashBackgroundUrl} trendingBackgrounds={publicConfig?.useTrendingSlideshowOnLogin ? publicConfig?.trendingBackgrounds : undefined} trendingSlideshowInterval={publicConfig?.trendingSlideshowInterval} />
             <Loader isLoading={isLoading} isCinematic={!!publicConfig?.useCinematicLoading} />
 
             <div className="relative z-10 w-full max-w-6xl flex flex-col gap-6">
@@ -4388,9 +4570,9 @@ export const UserDashboard: React.FC<{ sessionInfo: any; publicConfig?: any; onL
     const [isDesktopMostWatched, setIsDesktopMostWatched] = useState(
         () => typeof window !== 'undefined' && window.matchMedia('(min-width: 1024px)').matches
     );
-    const topWatchedPageSize = 12;
+    const topWatchedPageSize = (publicConfig?.dashboardLayout?.topWatchedRows || 2) * 6;
     const [recentHistoryPage, setRecentHistoryPage] = useState(0);
-    const recentHistoryPageSize = 14;
+    const recentHistoryPageSize = (publicConfig?.dashboardLayout?.recentHistoryRows || 7) * 2;
     const [analyticsDays, setAnalyticsDays] = useState<number | 'all'>(30);
     const [analyticsDaysOpen, setAnalyticsDaysOpen] = useState(false);
     const [wrapUpDaysOpen, setWrapUpDaysOpen] = useState(false);

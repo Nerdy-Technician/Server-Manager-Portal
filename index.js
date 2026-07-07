@@ -2014,7 +2014,9 @@ const DEFAULT_DASHBOARD_LAYOUT = {
     ],
     recentlyAddedOrder: ['recentMovies', 'recentShows', 'recentMusic'],
     hiddenSections: [],
-    hiddenWidgets: []
+    hiddenWidgets: [],
+    recentHistoryRows: 7,
+    topWatchedRows: 2
 };
 
 const normalizeDashboardLayout = (raw) => {
@@ -2038,7 +2040,9 @@ const normalizeDashboardLayout = (raw) => {
         mainGridOrder: [...DEFAULT_DASHBOARD_LAYOUT.mainGridOrder],
         recentlyAddedOrder: [...DEFAULT_DASHBOARD_LAYOUT.recentlyAddedOrder],
         hiddenSections: uniqueValid(input.hiddenSections, ALL_SECTIONS, []),
-        hiddenWidgets: []
+        hiddenWidgets: [],
+        recentHistoryRows: typeof input.recentHistoryRows === 'number' ? input.recentHistoryRows : DEFAULT_DASHBOARD_LAYOUT.recentHistoryRows,
+        topWatchedRows: typeof input.topWatchedRows === 'number' ? input.topWatchedRows : DEFAULT_DASHBOARD_LAYOUT.topWatchedRows
     };
 };
 
@@ -2123,7 +2127,9 @@ app.get('/api/config', requireAdmin, async (req, res) => {
                 autoBackupIntervalDays: Number(config.autoBackupIntervalDays) > 0 ? Number(config.autoBackupIntervalDays) : 2,
                 autoBackupRetentionCount: Number(config.autoBackupRetentionCount) > 0 ? Number(config.autoBackupRetentionCount) : 10,
                 maintenanceExperimentalEnabled: !!config.maintenanceExperimentalEnabled,
-                dashboardLayout: normalizeSectionLayout(config.dashboardLayout)
+                dashboardLayout: normalizeSectionLayout(config.dashboardLayout),
+                showUsernamesInAnalytics: !!config.showUsernamesInAnalytics,
+                useTrendingSlideshowOnLogin: config.useTrendingSlideshowOnLogin !== false
             },
         });
     } else {
@@ -2202,7 +2208,8 @@ app.post('/api/config', setupRateLimit, async (req, res) => {
         requestAppType, requestAppUrl, requestAppApiKey,
         inactiveCleanupEnabled, inactiveCleanupDays,
         primaryColor, customLogoUrl, brandingTheme, backgroundImageUrl, useScrollRevealAnimations, useCinematicLoading, useBrandedSkeleton, useTrendingSlideshow, trendingSlideshowInterval, tmdbApiKey, referralEnabled, referralTrialDays, referralRewardDays, announcement, navOrder, hideStreamUsers, defaultLibraryIds, use24HourClock, allowTemporaryAccess, showPosterQualityBadges,
-        autoBackupEnabled, autoBackupIntervalDays, autoBackupRetentionCount, maintenanceExperimentalEnabled, dashboardLayout
+        autoBackupEnabled, autoBackupIntervalDays, autoBackupRetentionCount, maintenanceExperimentalEnabled, dashboardLayout,
+        showUsernamesInAnalytics, useTrendingSlideshowOnLogin
     } = req.body;
 
     const existingConfig = await loadFile(CONFIG_PATH, {});
@@ -2346,6 +2353,8 @@ app.post('/api/config', setupRateLimit, async (req, res) => {
         autoBackupIntervalDays: Math.max(1, parseInt(autoBackupIntervalDays, 10) || 2),
         autoBackupRetentionCount: Math.max(1, parseInt(autoBackupRetentionCount, 10) || 10),
         maintenanceExperimentalEnabled: maintenanceExperimentalEnabled !== undefined ? !!maintenanceExperimentalEnabled : !!existingConfig.maintenanceExperimentalEnabled,
+        showUsernamesInAnalytics: showUsernamesInAnalytics !== undefined ? !!showUsernamesInAnalytics : !!existingConfig.showUsernamesInAnalytics,
+        useTrendingSlideshowOnLogin: useTrendingSlideshowOnLogin !== undefined ? !!useTrendingSlideshowOnLogin : (existingConfig.useTrendingSlideshowOnLogin !== false),
         dashboardLayout: ('dashboardLayout' in req.body)
             ? normalizeSectionLayout(req.body.dashboardLayout)
             : normalizeSectionLayout(existingConfig.dashboardLayout)
@@ -2423,8 +2432,9 @@ app.get('/api/config/public', async (req, res) => {
             useCinematicLoading: !!config.useCinematicLoading,
             useBrandedSkeleton: config.useBrandedSkeleton !== false,
             useTrendingSlideshow: !!config.useTrendingSlideshow,
+            useTrendingSlideshowOnLogin: config.useTrendingSlideshowOnLogin !== false,
             trendingSlideshowInterval: parseInt(config.trendingSlideshowInterval, 10) || 30,
-            trendingBackgrounds: !!config.useTrendingSlideshow ? await fetchTmdbTrendingBackgrounds(config.tmdbApiKey) : [],
+            trendingBackgrounds: (!!config.useTrendingSlideshow || config.useTrendingSlideshowOnLogin !== false) ? await fetchTmdbTrendingBackgrounds(config.tmdbApiKey) : [],
             announcement: config.announcement || '',
             referralEnabled: !!config.referralEnabled,
             appVersion: appVersion,
@@ -3106,6 +3116,16 @@ const buildPlexStatsCache = async () => {
         let total4kMovies = 0;
         const fourKShows = new Set();
 
+        const resolutions = { '4K': 0, '1080p': 0, '720p': 0, 'SD': 0, 'Other': 0 };
+        const codecs = { 'H.265 / HEVC': 0, 'H.264 / AVC': 0, 'AV1': 0, 'Other': 0 };
+        const fileSizes = {
+            '0 - 500 MB': { movies: 0, shows: 0 },
+            '500 MB - 1.5 GB': { movies: 0, shows: 0 },
+            '1.5 GB - 5 GB': { movies: 0, shows: 0 },
+            '5 GB - 10 GB': { movies: 0, shows: 0 },
+            '10 GB+': { movies: 0, shows: 0 }
+        };
+
         for (const dir of directories) {
             try {
                 // ── Item count (single zero-size request) ──
@@ -3157,8 +3177,43 @@ const buildPlexStatsCache = async () => {
                         let is4k = false;
                         for (const media of item.Media || []) {
                             if (media.videoResolution === '4k') is4k = true;
+
+                            if (dir.type === 'movie' || dir.type === 'show') {
+                                const res = String(media.videoResolution || '').toLowerCase();
+                                if (res === '4k' || res === '2160') resolutions['4K']++;
+                                else if (res === '1080') resolutions['1080p']++;
+                                else if (res === '720') resolutions['720p']++;
+                                else if (res === '576' || res === '480' || res === 'sd') resolutions['SD']++;
+                                else resolutions['Other']++;
+
+                                const codec = String(media.videoCodec || '').toLowerCase();
+                                if (codec === 'hevc' || codec === 'h265') codecs['H.265 / HEVC']++;
+                                else if (codec === 'h264' || codec === 'avc') codecs['H.264 / AVC']++;
+                                else if (codec === 'av1') codecs['AV1']++;
+                                else codecs['Other']++;
+                            }
+
                             for (const part of media.Part || []) {
-                                if (part.size) bytes += parseInt(part.size);
+                                if (part.size) {
+                                    const partSize = parseInt(part.size);
+                                    bytes += partSize;
+
+                                    if (dir.type === 'movie') {
+                                        const sizeMB = partSize / (1024 * 1024);
+                                        if (sizeMB < 500) fileSizes['0 - 500 MB'].movies++;
+                                        else if (sizeMB < 1500) fileSizes['500 MB - 1.5 GB'].movies++;
+                                        else if (sizeMB < 5000) fileSizes['1.5 GB - 5 GB'].movies++;
+                                        else if (sizeMB < 10000) fileSizes['5 GB - 10 GB'].movies++;
+                                        else fileSizes['10 GB+'].movies++;
+                                    } else if (dir.type === 'show') {
+                                        const sizeMB = partSize / (1024 * 1024);
+                                        if (sizeMB < 500) fileSizes['0 - 500 MB'].shows++;
+                                        else if (sizeMB < 1500) fileSizes['500 MB - 1.5 GB'].shows++;
+                                        else if (sizeMB < 5000) fileSizes['1.5 GB - 5 GB'].shows++;
+                                        else if (sizeMB < 10000) fileSizes['5 GB - 10 GB'].shows++;
+                                        else fileSizes['10 GB+'].shows++;
+                                    }
+                                }
                             }
                         }
                         if (is4k) {
@@ -3200,6 +3255,9 @@ const buildPlexStatsCache = async () => {
             maxDirectPlays: existingStats.maxDirectPlays || 0,
             maxTranscodes: existingStats.maxTranscodes || 0,
             deltas,
+            resolutions,
+            codecs,
+            fileSizes,
             generatedAt: Date.now()
         };
         cachedPlexStats = stats;
@@ -4002,49 +4060,56 @@ app.post('/api/tasks/run/:taskId', requireAdmin, async (req, res) => {
 
     const { task, kind } = match;
 
-    try {
-        const currentConfig = await loadFile(CONFIG_PATH, {});
-
-        if (kind === 'scheduled') {
-            markTaskStart(task);
-            try {
-                switch (taskId) {
-                    case 'syncPlexUsers': await syncUsers(currentConfig); break;
-                    case 'checkAndSendNotifications': await checkAndSendNotifications(currentConfig); break;
-                    case 'checkAndRevoke': await checkAndRevoke(currentConfig); break;
-                    case 'checkAndSendNewsletter': await checkAndSendNewsletter(currentConfig, true); break;
-                    case 'checkAndCleanupInactive': await checkAndCleanupInactive(currentConfig); break;
-                    case 'maintenanceRuleRun':
-                        if (!isMaintenanceExperimentalEnabled(currentConfig)) {
-                            throw new Error('Maintenance module is disabled. Enable it in Settings → System first.');
-                        }
-                        await executeMaintenanceRunBatch({ actor: req.user, dryRun: true });
-                        break;
-                    default:
-                        markTaskEnd(task, null);
-                        return res.status(400).json({ error: 'Invalid task' });
-                }
-                markTaskEnd(task, null);
-            } catch (e) {
-                markTaskEnd(task, e);
-                throw e;
-            }
-        } else {
-            switch (taskId) {
-                case 'analyticsCache': await calculateAnalyticsStats(); break;
-                case 'trendingCache': await calculateTrendingStats(); break;
-                case 'plexStats': await buildPlexStatsCache(); break;
-                case 'autoBackup': await runAutoBackupCycle('manual', { force: true }); break;
-                case 'maintenanceIndex': await buildMaintenanceMediaIndex({ actor: req.user, force: true }); break;
-                default:
-                    return res.status(400).json({ error: 'Invalid task' });
-            }
-        }
-
-        res.json({ message: `Task ${task.name} executed successfully.`, task });
-    } catch (e) {
-        res.status(500).json({ error: `Failed to execute task: ${e.message}` });
+    if (task.running) {
+        return res.status(400).json({ error: `Task "${task.name}" is already running.` });
     }
+
+    // Respond to the client immediately
+    res.json({ message: `Task "${task.name}" started in the background.`, task });
+
+    // Execute the task in the background
+    (async () => {
+        try {
+            const currentConfig = await loadFile(CONFIG_PATH, {});
+
+            if (kind === 'scheduled') {
+                markTaskStart(task);
+                try {
+                    switch (taskId) {
+                        case 'syncPlexUsers': await syncUsers(currentConfig); break;
+                        case 'checkAndSendNotifications': await checkAndSendNotifications(currentConfig); break;
+                        case 'checkAndRevoke': await checkAndRevoke(currentConfig); break;
+                        case 'checkAndSendNewsletter': await checkAndSendNewsletter(currentConfig, true); break;
+                        case 'checkAndCleanupInactive': await checkAndCleanupInactive(currentConfig); break;
+                        case 'maintenanceRuleRun':
+                            if (!isMaintenanceExperimentalEnabled(currentConfig)) {
+                                throw new Error('Maintenance module is disabled. Enable it in Settings → System first.');
+                            }
+                            await executeMaintenanceRunBatch({ actor: req.user, dryRun: true });
+                            break;
+                        default:
+                            markTaskEnd(task, new Error('Invalid task'));
+                            return;
+                    }
+                    markTaskEnd(task, null);
+                } catch (e) {
+                    markTaskEnd(task, e);
+                    log(`[Tasks] Scheduled task "${task.name}" failed: ${e.message}`);
+                }
+            } else {
+                // system jobs handle their own markTaskStart / markTaskEnd inside their functions
+                switch (taskId) {
+                    case 'analyticsCache': await calculateAnalyticsStats(); break;
+                    case 'trendingCache': await calculateTrendingStats(); break;
+                    case 'plexStats': await buildPlexStatsCache(); break;
+                    case 'autoBackup': await runAutoBackupCycle('manual', { force: true }); break;
+                    case 'maintenanceIndex': await buildMaintenanceMediaIndex({ actor: req.user, force: true }); break;
+                }
+            }
+        } catch (e) {
+            log(`[Tasks] Fatal error in background task execution wrapper for "${task.name}": ${e.message}`);
+        }
+    })();
 });
 
 app.get('/api/admin/diagnostics', requireAdmin, async (req, res) => {
@@ -5875,7 +5940,10 @@ const summarizeLibraryHealth = (topLibraries = [], stats = {}, cachedData = {}) 
         artists: toNumber(stats.artists || stats.music, 0),
         albums: toNumber(stats.albums, 0),
         tracks: toNumber(stats.tracks, 0),
-        deltas: stats.deltas || {}
+        deltas: stats.deltas || {},
+        resolutions: stats.resolutions || null,
+        codecs: stats.codecs || null,
+        fileSizes: stats.fileSizes || null
     };
 };
 
@@ -6027,7 +6095,10 @@ app.get('/api/plex/analytics', requireAuth, requireMember, async (req, res) => {
         const hasRequestedPeriod = statsData[reqDays] != null;
         const cachedPeriod = hasRequestedPeriod ? reqDays : (statsData[30] != null ? 30 : null);
         const cachedData = statsData[reqDays] || statsData[30] || { topUsers: [], topLibraries: [], topMovies: [], topShows: [], topMusic: [], topDevices: [], peakHours: new Array(24).fill(0), totalPlaybacks: 0 };
-        const shouldObfuscateUsernames = !req.user?.isAdmin;
+        
+        const config = await loadFile(CONFIG_PATH, {});
+        const showUsernames = !!config.showUsernamesInAnalytics;
+        const shouldObfuscateUsernames = !req.user?.isAdmin && !showUsernames;
         const topUsers = (cachedData.topUsers || []).map((user, index) => ({
             ...user,
             username: shouldObfuscateUsernames ? `Viewer ${index + 1}` : (user.username || `User ${index + 1}`)
@@ -6042,7 +6113,7 @@ app.get('/api/plex/analytics', requireAuth, requireMember, async (req, res) => {
         
         // attach max stats dynamically
         const stats = await loadFile(PLEX_STATS_CACHE_PATH, {});
-        if (stats.episodes === undefined) {
+        if (stats.episodes === undefined || stats.resolutions === undefined) {
             buildPlexStatsCache().catch(() => {});
         }
         data.maxConcurrentStreams = stats.maxConcurrentStreams || 0;
