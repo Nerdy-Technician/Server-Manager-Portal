@@ -58,11 +58,13 @@ const ProgramIcon: React.FC<{ app: string; label: string }> = ({ app, label }) =
 
 const IntegrationHeading: React.FC<{ app: string; title: string; subtitle?: string; className?: string }> = ({ app, title, subtitle, className = '' }) => (
     <div className={`border-b border-border pb-3 mb-4 ${className}`}>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-4">
             <ProgramIcon app={app} label={title} />
-            <h3 className="text-xl font-bold text-text leading-tight">{title}</h3>
+            <div className="flex flex-col">
+                <h3 className="text-xl font-bold text-text leading-tight">{title}</h3>
+                {subtitle && <p className="text-xs text-muted mt-1">{subtitle}</p>}
+            </div>
         </div>
-        {subtitle && <p className="text-xs text-muted mt-1 ml-12">{subtitle}</p>}
     </div>
 );
 
