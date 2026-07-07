@@ -169,7 +169,7 @@ export const SettingsDashboard: React.FC = () => {
             ]
         },
         {
-            title: 'Integrations',
+            title: 'Media Stack',
             tabs: [
                 { id: 'plex', label: 'Media Player', keywords: ['plex', 'jellyfin', 'media', 'player', 'token', 'server', 'libraries', 'docker', 'local', 'url', 'direct', 'privacy', 'usernames', 'analytics'] },
                 { id: 'mediastack', label: 'Integrations', keywords: ['sonarr', 'radarr', 'tautulli', 'jellystat', 'seerr', 'jellyseerr'] },
