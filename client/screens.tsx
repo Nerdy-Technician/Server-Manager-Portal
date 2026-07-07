@@ -5612,6 +5612,23 @@ const StreamDetailsModal: React.FC<{ session: any, onClose: () => void, isAdmin?
     );
 };
 
+const EMPTY_STREAM_MESSAGES = [
+    "Looks like everyone is touching grass right now.",
+    "It's quiet... too quiet.",
+    "Nobody is streaming right now. Time to start watching!",
+    "A tumbling weed passes through the server.",
+    "Server is catching a quick nap.",
+    "Ghost town population: 1 (just you)",
+    "Zero active streams. Time to populate the server!",
+    "Even the server needs a break sometimes.",
+    "Nobody's watching? More bandwidth for you!"
+];
+
+const EmptyStreamsMessage: React.FC = () => {
+    const [msg] = useState(() => EMPTY_STREAM_MESSAGES[Math.floor(Math.random() * EMPTY_STREAM_MESSAGES.length)]);
+    return <div className="text-center text-muted p-8 border border-dashed border-border rounded-xl mt-4 w-full">{msg}</div>;
+};
+
 export const LibraryDashboard: React.FC<{ onBack: () => void, isAdmin?: boolean, publicConfig?: any, mediaServerType?: string }> = ({ onBack, isAdmin, publicConfig, mediaServerType }) => {
     const [dashboardData, setDashboardData] = useState<{ activeSessions: any[], recentMovies: any[], recentShows: any[], recentMusic: any[] } | null>(null);
     const [trendingStats, setTrendingStats] = useState<{ trending7Days: any[], movies30Days: any[], shows30Days: any[], top365Days: any[], allTime: any[], weekendWarriors: any[], nightOwls: any[], retroHits: any[], cultClassics: any[] } | null>(null);
@@ -5863,7 +5880,7 @@ export const LibraryDashboard: React.FC<{ onBack: () => void, isAdmin?: boolean,
                             </div>
                         </div>
                     ) : (
-                        <div className="text-center text-muted p-8 border border-dashed border-border rounded-xl mt-4 w-full">No active streams</div>
+                        <EmptyStreamsMessage />
                     )}
                 </section>
 
