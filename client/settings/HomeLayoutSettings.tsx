@@ -1,5 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import { Eye, EyeOff, GripVertical, RotateCcw } from 'lucide-react';
+import { CustomSelect } from '../shared/ui';
 import {
     DEFAULT_DASHBOARD_LAYOUT,
     DASHBOARD_SECTION_LABELS,
@@ -202,24 +203,20 @@ export const HomeLayoutSettings: React.FC<Props> = ({ layout, onChange }) => {
                     <div className="bg-background/30 p-4 rounded-xl border border-border/40">
                         <label className="block text-text font-semibold mb-1">Recently Watched Rows</label>
                         <p className="text-xs text-muted mb-3">Number of rows to display per page.</p>
-                        <select
-                            className="w-full bg-black/20 border border-border rounded-lg px-3 py-2 text-sm text-text outline-none focus:border-plex/50"
-                            value={layout.recentHistoryRows ?? 7}
-                            onChange={(e) => applyChange({ ...layout, recentHistoryRows: parseInt(e.target.value, 10) })}
-                        >
-                            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20].map(n => <option key={n} value={n}>{n} {n === 1 ? 'Row' : 'Rows'}</option>)}
-                        </select>
+                        <CustomSelect
+                            value={String(layout.recentHistoryRows ?? 7)}
+                            onChange={(val) => applyChange({ ...layout, recentHistoryRows: parseInt(val, 10) })}
+                            options={[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20].map(n => ({ value: String(n), label: `${n} ${n === 1 ? 'Row' : 'Rows'}` }))}
+                        />
                     </div>
                     <div className="bg-background/30 p-4 rounded-xl border border-border/40">
                         <label className="block text-text font-semibold mb-1">Most Watched Rows</label>
                         <p className="text-xs text-muted mb-3">Number of rows to display per page.</p>
-                        <select
-                            className="w-full bg-black/20 border border-border rounded-lg px-3 py-2 text-sm text-text outline-none focus:border-plex/50"
-                            value={layout.topWatchedRows ?? 2}
-                            onChange={(e) => applyChange({ ...layout, topWatchedRows: parseInt(e.target.value, 10) })}
-                        >
-                            {[1, 2, 3, 4, 5, 6, 8, 10].map(n => <option key={n} value={n}>{n} {n === 1 ? 'Row' : 'Rows'}</option>)}
-                        </select>
+                        <CustomSelect
+                            value={String(layout.topWatchedRows ?? 2)}
+                            onChange={(val) => applyChange({ ...layout, topWatchedRows: parseInt(val, 10) })}
+                            options={[1, 2, 3, 4, 5, 6, 8, 10].map(n => ({ value: String(n), label: `${n} ${n === 1 ? 'Row' : 'Rows'}` }))}
+                        />
                     </div>
                 </div>
             </div>

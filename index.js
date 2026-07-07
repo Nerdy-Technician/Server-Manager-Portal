@@ -2014,7 +2014,9 @@ const DEFAULT_DASHBOARD_LAYOUT = {
     ],
     recentlyAddedOrder: ['recentMovies', 'recentShows', 'recentMusic'],
     hiddenSections: [],
-    hiddenWidgets: []
+    hiddenWidgets: [],
+    recentHistoryRows: 7,
+    topWatchedRows: 2
 };
 
 const normalizeDashboardLayout = (raw) => {
@@ -2038,7 +2040,9 @@ const normalizeDashboardLayout = (raw) => {
         mainGridOrder: [...DEFAULT_DASHBOARD_LAYOUT.mainGridOrder],
         recentlyAddedOrder: [...DEFAULT_DASHBOARD_LAYOUT.recentlyAddedOrder],
         hiddenSections: uniqueValid(input.hiddenSections, ALL_SECTIONS, []),
-        hiddenWidgets: []
+        hiddenWidgets: [],
+        recentHistoryRows: typeof input.recentHistoryRows === 'number' ? input.recentHistoryRows : DEFAULT_DASHBOARD_LAYOUT.recentHistoryRows,
+        topWatchedRows: typeof input.topWatchedRows === 'number' ? input.topWatchedRows : DEFAULT_DASHBOARD_LAYOUT.topWatchedRows
     };
 };
 
