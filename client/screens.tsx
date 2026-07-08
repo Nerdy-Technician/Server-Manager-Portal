@@ -2181,6 +2181,19 @@ export const AnalyticsDashboard: React.FC<{ isAdmin: boolean, sessionInfo: any }
     }, []);
 
     useEffect(() => {
+        if (allUsers.length > 0) {
+            const hash = typeof window !== 'undefined' ? window.location.hash : '';
+            if (hash.startsWith('#user=')) {
+                const username = decodeURIComponent(hash.replace('#user=', ''));
+                const found = allUsers.find(u => u.username.toLowerCase() === username.toLowerCase());
+                if (found) {
+                    setSelectedUser({ id: found.id || found.username, username: found.username, thumb: found.thumb });
+                }
+            }
+        }
+    }, [allUsers]);
+
+    useEffect(() => {
         let cancelled = false;
         const fetchAnalytics = async () => {
             setLoading(true);
@@ -2924,12 +2937,7 @@ export const AdminDashboard: React.FC<{ onLogout: () => void, onViewUserPortal: 
     const [auditEntries, setAuditEntries] = useState<AuditEntry[]>([]);
 
     // Filters and Sorting States
-    const [searchQuery, setSearchQuery] = useState(() => {
-        if (typeof window !== 'undefined' && window.location.hash.startsWith('#search=')) {
-            return decodeURIComponent(window.location.hash.replace('#search=', ''));
-        }
-        return '';
-    });
+    const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'trial' | 'expiring' | 'expired' | 'revoked'>('all');
     const [sortBy, setSortBy] = useState<'username-asc' | 'username-desc' | 'expiry-asc' | 'expiry-desc' | 'joined-desc'>('username-asc');
     const mediaServerType = String(configSettings.mediaServerType || 'plex').toLowerCase();
@@ -5646,7 +5654,7 @@ const EmptyStreamsMessage: React.FC = () => {
     return <div className="text-center text-muted p-8 border border-dashed border-border rounded-xl mt-4 w-full">{msg}</div>;
 };
 
-export const LibraryDashboard: React.FC<{ onBack: () => void, isAdmin?: boolean, publicConfig?: any, mediaServerType?: string, onViewUsers?: () => void }> = ({ onBack, isAdmin, publicConfig, mediaServerType, onViewUsers }) => {
+export const LibraryDashboard: React.FC<{ onBack: () => void, isAdmin?: boolean, publicConfig?: any, mediaServerType?: string, onViewAnalytics?: () => void }> = ({ onBack, isAdmin, publicConfig, mediaServerType, onViewAnalytics }) => {
     const [dashboardData, setDashboardData] = useState<{ activeSessions: any[], recentMovies: any[], recentShows: any[], recentMusic: any[] } | null>(null);
     const [trendingStats, setTrendingStats] = useState<{ trending7Days: any[], movies30Days: any[], shows30Days: any[], top365Days: any[], allTime: any[], weekendWarriors: any[], nightOwls: any[], retroHits: any[], cultClassics: any[] } | null>(null);
     const [dashboardLoading, setDashboardLoading] = useState(true);
@@ -5879,13 +5887,13 @@ export const LibraryDashboard: React.FC<{ onBack: () => void, isAdmin?: boolean,
                                                                             <button 
                                                                                 type="button"
                                                                                 onClick={() => {
-                                                                                    if (onViewUsers && h.user) {
-                                                                                        window.location.hash = `#search=${encodeURIComponent(h.user)}`;
-                                                                                        onViewUsers();
+                                                                                    if (onViewAnalytics && h.user) {
+                                                                                        window.location.hash = `#user=${encodeURIComponent(h.user)}`;
+                                                                                        onViewAnalytics();
                                                                                     }
                                                                                 }}
                                                                                 className="flex items-center gap-3 md:w-1/3 min-w-[120px] text-left hover:opacity-80 transition-opacity focus:outline-none cursor-pointer group"
-                                                                                title="View user details"
+                                                                                title="View user analytics"
                                                                             >
                                                                                 {h.userThumb ? (
                                                                                     <div className="w-6 h-6 rounded-full overflow-hidden shadow-lg flex-shrink-0 border border-white/10 group-hover:ring-2 ring-plex transition-all">
