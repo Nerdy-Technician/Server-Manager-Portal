@@ -2383,7 +2383,7 @@ return (
 
             {viewTab === 'overview' && (
                 <>
-                    {analyticsData && <ServerInsightsOverview peakHours={analyticsData.peakHours} tautulliData={tautulliData} compare={compare} analyticsSourceLabel={analyticsSourceLabel} peakDate={peakDate} setPeakDate={setPeakDate} peakDateData={peakDateData} peakDateLoading={peakDateLoading} />}
+                    {/* removed erroneous ServerInsightsOverview */}
                     {analyticsData.cacheFallback && (
                         <div className="rounded-xl border border-yellow-500/30 bg-yellow-500/10 px-4 py-3 text-sm text-yellow-200">
                             Analytics cache for this period is still building. Showing cached data from the last {analyticsData.cachePeriodDays} day period instead.
@@ -2634,6 +2634,10 @@ return (
                             tautulliData={tautulliData} 
                             compare={analyticsData?.compare} 
                             analyticsSourceLabel={analyticsSourceLabel}
+                            peakDate={peakDate}
+                            setPeakDate={setPeakDate}
+                            peakDateData={peakDateData}
+                            peakDateLoading={peakDateLoading}
                         />
 
                         {/* Top Devices & Libraries Container */}
