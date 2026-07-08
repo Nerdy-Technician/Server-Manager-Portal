@@ -5664,6 +5664,27 @@ export const LibraryDashboard: React.FC<{ onBack: () => void, isAdmin?: boolean,
     const hasLoadedDashboard = useRef(false);
     const hasLoadedTrending = useRef(false);
 
+    const [discoverSearchQuery, setDiscoverSearchQuery] = useState('');
+    const [discoverSearchResults, setDiscoverSearchResults] = useState<any[] | null>(null);
+    const [isDiscoverSearching, setIsDiscoverSearching] = useState(false);
+
+    const performDiscoverSearch = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!discoverSearchQuery.trim()) return;
+        setIsDiscoverSearching(true);
+        setDiscoverSearchResults(null);
+        try {
+            const res = await apiFetch(`/api/plex/discover-search?query=${encodeURIComponent(discoverSearchQuery)}`);
+            if (!res.error) {
+                setDiscoverSearchResults(res.results || []);
+            }
+        } catch(err) {
+            // ignore
+        } finally {
+            setIsDiscoverSearching(false);
+        }
+    };
+
     useEffect(() => {
         const mq = window.matchMedia('(min-width: 1024px)');
         const onChange = (e: MediaQueryListEvent) => setIsDiscoverDesktop(e.matches);
@@ -5759,6 +5780,68 @@ export const LibraryDashboard: React.FC<{ onBack: () => void, isAdmin?: boolean,
             <main className="discover-layout-container w-full pb-8 mt-4 md:mt-0">
                 {error && <div className="toast error show">{error}</div>}
                 {pollError && !error && <div className="toast error show">{pollError}</div>}
+
+                {isAdmin && !isJellyfinPortal && (
+                    <div className="mb-6 w-full bg-card border border-border rounded-xl p-4 shadow-lg">
+                        <form onSubmit={performDiscoverSearch} className="flex gap-2">
+                            <input 
+                                type="text" 
+                                value={discoverSearchQuery}
+                                onChange={(e) => setDiscoverSearchQuery(e.target.value)}
+                                placeholder="Search library to check watch history (mimicking Tautulli)..." 
+                                className="flex-1 bg-background border border-white/10 rounded-lg px-4 py-2 text-white focus:border-plex focus:ring-1 focus:ring-plex outline-none transition-all"
+                            />
+                            <button type="submit" className="bg-plex hover:bg-orange-500 text-white px-6 py-2 rounded-lg font-bold transition-colors disabled:opacity-50" disabled={isDiscoverSearching}>
+                                {isDiscoverSearching ? 'Searching...' : 'Search'}
+                            </button>
+                        </form>
+
+                        {discoverSearchResults && (
+                            <div className="mt-4 flex flex-col gap-4 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+                                {discoverSearchResults.length === 0 ? (
+                                    <p className="text-muted text-sm text-center py-4">No results found.</p>
+                                ) : (
+                                    discoverSearchResults.map((item: any) => (
+                                        <div key={item.ratingKey} className="bg-background border border-white/5 rounded-lg p-4 flex flex-col md:flex-row gap-4">
+                                            <div className="w-16 h-24 flex-shrink-0 bg-white/5 rounded overflow-hidden">
+                                                <img src={portalUrl(`/api/plex/image?path=${encodeURIComponent(item.thumb)}&width=150&height=225`)} alt={item.title} className="w-full h-full object-cover" />
+                                            </div>
+                                            <div className="flex-1 flex flex-col min-w-0">
+                                                <div className="flex justify-between items-start">
+                                                    <div>
+                                                        <h3 className="font-bold text-lg text-white truncate">{item.title}</h3>
+                                                        <p className="text-xs text-muted mb-2">{String(item.type).toUpperCase()} • {item.year}</p>
+                                                    </div>
+                                                    <a href={item.plexUrl} target="_blank" rel="noreferrer" className="text-xs text-plex hover:underline shrink-0">View in Plex</a>
+                                                </div>
+                                                
+                                                <div className="mt-auto">
+                                                    {item.history && item.history.length > 0 ? (
+                                                        <div className="bg-status-active/10 border border-status-active/20 rounded p-3">
+                                                            <p className="text-status-active text-xs font-bold uppercase tracking-wider mb-2">Watched History ({item.history.length})</p>
+                                                            <div className="max-h-40 overflow-y-auto pr-2 custom-scrollbar space-y-1.5">
+                                                                {item.history.map((h: any, i: number) => (
+                                                                    <div key={i} className="flex justify-between items-center text-xs border-b border-white/5 pb-1.5 last:border-0 last:pb-0">
+                                                                        <span className="font-medium text-white">{h.user}</span>
+                                                                        <span className="text-muted">{new Date(h.date * 1000).toLocaleString()} • {Math.round(h.duration / 60000)} mins {h.player ? `on ${h.player}` : ''}</span>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="bg-white/5 border border-white/10 rounded p-3">
+                                                            <p className="text-muted text-xs uppercase tracking-wider font-bold">No Watch History</p>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        )}
+                    </div>
+                )}
 
                 {/* SUMMARY CARDS */}
                 {dashboardData && totalStreams > 0 && (

@@ -5053,6 +5053,90 @@ app.get('/api/plex/dashboard', requireAuth, requireMember, async (req, res) => {
     }
 });
 
+app.get('/api/plex/discover-search', requireAuth, requireAdmin, async (req, res) => {
+    try {
+        const config = await loadFile(CONFIG_PATH, null);
+        if (!config || !config.plexToken || !config.serverIdentifier) {
+            return res.status(503).json({ error: 'Plex not configured' });
+        }
+
+        const uri = await getPlexConnectionUri(config);
+        if (!uri) return res.status(503).json({ error: 'Cannot connect to Plex' });
+
+        const query = String(req.query.query || '').trim();
+        if (!query) return res.json({ results: [] });
+
+        // Search Plex Hubs
+        const searchRes = await fetch(`${uri}/hubs/search?query=${encodeURIComponent(query)}&limit=20&X-Plex-Token=${config.plexToken}`, { headers: { 'Accept': 'application/json' } }).then(r => r.json());
+        
+        let searchResults = [];
+        if (searchRes && searchRes.MediaContainer && searchRes.MediaContainer.Hub) {
+            searchRes.MediaContainer.Hub.forEach(hub => {
+                if (hub.type === 'movie' || hub.type === 'show') {
+                    if (hub.Metadata) {
+                        hub.Metadata.forEach(m => {
+                            searchResults.push({
+                                ratingKey: m.ratingKey,
+                                title: m.title,
+                                type: m.type,
+                                year: m.year,
+                                thumb: m.thumb,
+                                plexUrl: `https://app.plex.tv/desktop/#!/server/${config.serverIdentifier}/details?key=${encodeURIComponent(m.key)}`
+                            });
+                        });
+                    }
+                }
+            });
+        }
+
+        // Fetch Watch History
+        for (let item of searchResults) {
+            item.history = [];
+            try {
+                if (config.tautulliUrl && config.tautulliApiKey) {
+                    const tSearch = encodeURIComponent(item.title);
+                    const fetchUrl = `${config.tautulliUrl.replace(/\/+$/, '')}/api/v2?apikey=${config.tautulliApiKey}&cmd=get_history&search=${tSearch}&length=50`;
+                    const resData = await fetch(fetchUrl, { headers: { 'Accept': 'application/json' } }).then(r => r.json());
+                    if (resData && resData.response && resData.response.data && resData.response.data.data) {
+                        const historyData = resData.response.data.data;
+                        item.history = historyData
+                            .filter(h => String(h.rating_key) === String(item.ratingKey) || String(h.grandparent_rating_key) === String(item.ratingKey))
+                            .map(h => ({
+                                user: h.user,
+                                date: h.date,
+                                duration: h.duration,
+                                player: h.player,
+                                title: h.full_title || h.title,
+                                source: 'Tautulli'
+                            }));
+                    }
+                } else {
+                    const filterKey = item.type === 'show' ? 'grandparentID' : 'metadataItemID';
+                    const fetchUrl = `${uri}/status/sessions/history/all?sort=viewedAt%3Adesc&${filterKey}=${item.ratingKey}&X-Plex-Token=${config.plexToken}`;
+                    const resData = await fetch(fetchUrl, { headers: { 'Accept': 'application/json' } }).then(r => r.json());
+                    if (resData && resData.MediaContainer && resData.MediaContainer.Metadata) {
+                        item.history = resData.MediaContainer.Metadata.map(h => ({
+                            user: (h.User && h.User.title) ? h.User.title : 'Unknown User',
+                            date: h.viewedAt, // Unix timestamp in seconds
+                            duration: h.duration || 0, // milliseconds
+                            player: (h.Player && h.Player.title) ? h.Player.title : 'Unknown Player',
+                            title: h.title,
+                            source: 'Plex'
+                        }));
+                    }
+                }
+            } catch (e) {
+                log(`Error fetching history for ${item.title}: ${e.message}`);
+            }
+        }
+
+        res.json({ results: searchResults });
+    } catch (e) {
+        log(`Error fetching discover search: ${e.message}`);
+        res.status(500).json({ error: 'Failed to fetch search results' });
+    }
+});
+
 const jellyfinItemUrl = (config, itemId) => {
     const baseUrl = String(config?.jellyfinUrl || '').replace(/\/+$/, '');
     return baseUrl && itemId ? `${baseUrl}/web/#/details?id=${encodeURIComponent(itemId)}` : baseUrl;
