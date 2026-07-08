@@ -5801,13 +5801,24 @@ export const LibraryDashboard: React.FC<{ onBack: () => void, isAdmin?: boolean,
                 {isAdmin && !isJellyfinPortal && (
                     <div className="mb-6 w-full relative z-40">
                         <form onSubmit={handleSearchSubmit} className="flex gap-2">
-                            <input 
-                                type="text" 
-                                value={discoverSearchQuery}
-                                onChange={(e) => setDiscoverSearchQuery(e.target.value)}
-                                placeholder="Search library to check watch history..." 
-                                className="flex-1 bg-card border border-border rounded-xl px-4 py-3 text-white focus:border-plex focus:ring-1 focus:ring-plex outline-none transition-all shadow-lg"
-                            />
+                            <div className="relative flex-1">
+                                <input 
+                                    type="text" 
+                                    value={discoverSearchQuery}
+                                    onChange={(e) => setDiscoverSearchQuery(e.target.value)}
+                                    placeholder="Search library to check watch history..." 
+                                    className="w-full bg-card border border-border rounded-xl px-4 py-3 text-white focus:border-plex focus:ring-1 focus:ring-plex outline-none transition-all shadow-lg pr-12"
+                                />
+                                {discoverSearchQuery && (
+                                    <button 
+                                        type="button" 
+                                        onClick={() => { setDiscoverSearchQuery(''); setDiscoverSearchResults(null); }}
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-white transition-colors p-1"
+                                    >
+                                        <X size={20} />
+                                    </button>
+                                )}
+                            </div>
                             <button type="submit" className="bg-plex hover:bg-orange-500 text-white px-6 py-3 rounded-xl font-bold transition-colors disabled:opacity-50 shadow-lg" disabled={isDiscoverSearching || !discoverSearchQuery.trim()}>
                                 {isDiscoverSearching ? 'Searching...' : 'Search'}
                             </button>
