@@ -5668,11 +5668,12 @@ export const LibraryDashboard: React.FC<{ onBack: () => void, isAdmin?: boolean,
     const [discoverSearchResults, setDiscoverSearchResults] = useState<any[] | null>(null);
     const [isDiscoverSearching, setIsDiscoverSearching] = useState(false);
 
-    const performDiscoverSearch = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!discoverSearchQuery.trim()) return;
+    const performDiscoverSearch = async () => {
+        if (!discoverSearchQuery.trim()) {
+            setDiscoverSearchResults(null);
+            return;
+        }
         setIsDiscoverSearching(true);
-        setDiscoverSearchResults(null);
         try {
             const res = await apiFetch(`/api/plex/discover-search?query=${encodeURIComponent(discoverSearchQuery)}`);
             if (!res.error) {
@@ -5684,6 +5685,22 @@ export const LibraryDashboard: React.FC<{ onBack: () => void, isAdmin?: boolean,
             setIsDiscoverSearching(false);
         }
     };
+
+    const handleSearchSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        performDiscoverSearch();
+    };
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            if (discoverSearchQuery.trim().length >= 2) {
+                performDiscoverSearch();
+            } else if (!discoverSearchQuery.trim()) {
+                setDiscoverSearchResults(null);
+            }
+        }, 500);
+        return () => clearTimeout(timer);
+    }, [discoverSearchQuery]);
 
     useEffect(() => {
         const mq = window.matchMedia('(min-width: 1024px)');
@@ -5782,26 +5799,28 @@ export const LibraryDashboard: React.FC<{ onBack: () => void, isAdmin?: boolean,
                 {pollError && !error && <div className="toast error show">{pollError}</div>}
 
                 {isAdmin && !isJellyfinPortal && (
-                    <div className="mb-6 w-full bg-card border border-border rounded-xl p-4 shadow-lg">
-                        <form onSubmit={performDiscoverSearch} className="flex gap-2">
+                    <div className="mb-6 w-full relative z-40">
+                        <form onSubmit={handleSearchSubmit} className="flex gap-2">
                             <input 
                                 type="text" 
                                 value={discoverSearchQuery}
                                 onChange={(e) => setDiscoverSearchQuery(e.target.value)}
-                                placeholder="Search library to check watch history (mimicking Tautulli)..." 
-                                className="flex-1 bg-background border border-white/10 rounded-lg px-4 py-2 text-white focus:border-plex focus:ring-1 focus:ring-plex outline-none transition-all"
+                                placeholder="Search library to check watch history..." 
+                                className="flex-1 bg-card border border-border rounded-xl px-4 py-3 text-white focus:border-plex focus:ring-1 focus:ring-plex outline-none transition-all shadow-lg"
                             />
-                            <button type="submit" className="bg-plex hover:bg-orange-500 text-white px-6 py-2 rounded-lg font-bold transition-colors disabled:opacity-50" disabled={isDiscoverSearching}>
+                            <button type="submit" className="bg-plex hover:bg-orange-500 text-white px-6 py-3 rounded-xl font-bold transition-colors disabled:opacity-50 shadow-lg" disabled={isDiscoverSearching || !discoverSearchQuery.trim()}>
                                 {isDiscoverSearching ? 'Searching...' : 'Search'}
                             </button>
                         </form>
 
-                        {discoverSearchResults && (
-                            <div className="mt-4 flex flex-col gap-4 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
-                                {discoverSearchResults.length === 0 ? (
+                        {(discoverSearchResults || isDiscoverSearching) && discoverSearchQuery.trim() && (
+                            <div className="absolute top-full left-0 right-0 mt-2 bg-card border border-border rounded-xl shadow-2xl flex flex-col gap-4 max-h-[500px] overflow-y-auto p-4 custom-scrollbar z-50">
+                                {isDiscoverSearching ? (
+                                    <p className="text-muted text-sm text-center py-4">Searching...</p>
+                                ) : discoverSearchResults?.length === 0 ? (
                                     <p className="text-muted text-sm text-center py-4">No results found.</p>
                                 ) : (
-                                    discoverSearchResults.map((item: any) => (
+                                    discoverSearchResults?.map((item: any) => (
                                         <div key={item.ratingKey} className="bg-background border border-white/5 rounded-lg p-4 flex flex-col md:flex-row gap-4">
                                             <div className="w-16 h-24 flex-shrink-0 bg-white/5 rounded overflow-hidden">
                                                 <img src={portalUrl(`/api/plex/image?path=${encodeURIComponent(item.thumb)}&width=150&height=225`)} alt={item.title} className="w-full h-full object-cover" />
